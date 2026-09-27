@@ -241,6 +241,26 @@ console.log(`extracted 3 symptoms for ${assessmentId}`);
 
 ---
 
+## Cross-Team Integration & Failure Protocols
+
+The hardest part of this project is when one person's module fails. Here is exactly how failure is handled:
+
+### 1. AI API Timeout (Nishith → Kavya → Vivek)
+- **Nishith** does NOT crash the server. The AI gateway catches the timeout and returns `{ type: 'ERROR', message: 'Timeout' }`.
+- **Kavya** does NOT transition the state to `ANALYZING`. The state remains `SYMPTOM_COLLECTION` or `CLARIFYING`.
+- **Vivek** displays a retry-safe error to the user: *"I'm having trouble connecting. Can you say that again?"*
+
+### 2. Invalid Image Upload (Mann → Kavya → Darshil)
+- **Mann** rejects the image (e.g., too large, blurry) and returns a standard HTTP 400 error via Rutva's routes.
+- **Kavya** ignores the image, treating it as if only text was sent.
+- **Darshil** displays a toast notification: *"Image too blurry, continuing with text only."*
+
+### 3. High Uncertainty Prediction (Nisarg → Darshil)
+- **Nisarg** does NOT guess a condition. If model uncertainty is high (> 60%), Nisarg elevates the risk to `CONSULT_DOCTOR` to be safe.
+- **Darshil** renders the condition list with a "Less Likely" badge and explicitly shows the user the elevated risk warning.
+
+---
+
 ## Branch and Git Rules
 
 ```text
