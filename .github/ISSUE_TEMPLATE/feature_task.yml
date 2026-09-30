@@ -1,0 +1,41 @@
+name: Feature task
+description: One task from docs/SPRINT_PLAN.md. One issue = one branch = one PR.
+title: "[S?-XXX-?] <short task title>"
+labels: ["type:feature"]
+body:
+  - type: input
+    id: task_id
+    attributes:
+      label: Task ID
+      description: From docs/SPRINT_PLAN.md, e.g. S1-KAV-2
+    validations: { required: true }
+  - type: dropdown
+    id: owner
+    attributes:
+      label: Owner
+      options: [nisarg, rutva, harsh, kavya, nishith, vivek, darshil, mann, mohit, dimple]
+    validations: { required: true }
+  - type: input
+    id: requirements
+    attributes:
+      label: Requirement IDs
+      description: FR / NFR / DR IDs from the project report, e.g. FR-16, DR-01
+  - type: textarea
+    id: description
+    attributes:
+      label: What to build
+    validations: { required: true }
+  - type: textarea
+    id: acceptance
+    attributes:
+      label: Acceptance criteria
+      description: Testable bullet points. The PR is reviewed against these.
+      value: |
+        - [ ]
+        - [ ]
+    validations: { required: true }
+  - type: textarea
+    id: dependencies
+    attributes:
+      label: Depends on / blocks
+      description: Other issues or interfaces. If a dependency is not merged yet, mock it.

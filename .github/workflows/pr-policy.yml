@@ -1,0 +1,33 @@
+# Enforces the team PR workflow (branch name, linked issue, one feature at a time, commit format).
+# Required status check: "PR policy". Rules live in .github/scripts/pr-policy.js and CONTRIBUTING.md.
+name: PR Policy
+
+on:
+  pull_request:
+    types: [opened, edited, synchronize, reopened, ready_for_review, assigned, unassigned]
+    branches: [develop, main]
+
+permissions:
+  contents: read
+  pull-requests: read
+  issues: read
+
+concurrency:
+  group: pr-policy-${{ github.event.pull_request.number }}
+  cancel-in-progress: true
+
+jobs:
+  pr-policy:
+    name: PR policy
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    steps:
+      # Check out the BASE branch so a PR cannot edit the rules that judge it.
+      - uses: actions/checkout@v4
+        with:
+          ref: ${{ github.event.pull_request.base.sha }}
+      - uses: actions/github-script@v7
+        with:
+          script: |
+            const run = require('./.github/scripts/pr-policy.js');
+            await run({ github, context, core });

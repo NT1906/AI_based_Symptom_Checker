@@ -1,0 +1,8 @@
+# CODEOWNERS — every PR needs an approving review from a code owner before it can merge.
+# The team leader reviews and merges ALL pull requests, so the leader owns everything.
+# Module owners are listed in docs/rules.md; request their review manually when you touch their area.
+#
+# Do NOT add module owners to these lines: GitHub accepts approval from ANY listed owner,
+# which would let a PR merge without the leader's review.
+
+*   @NT1906

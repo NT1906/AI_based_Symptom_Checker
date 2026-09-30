@@ -1,0 +1,142 @@
+# Continuous integration for every PR and every push to develop/main.
+# Required status check: "CI passed" (aggregates all jobs below).
+# Module jobs switch on automatically once client/, server/ or ai/ exist, so CI works from day one.
+name: CI
+
+on:
+  pull_request:
+    branches: [develop, main]
+  push:
+    branches: [develop, main]
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: ci-${{ github.event.pull_request.number || github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  detect:
+    name: Detect modules
+    runs-on: ubuntu-latest
+    outputs:
+      client: ${{ steps.d.outputs.client }}
+      server: ${{ steps.d.outputs.server }}
+      ai: ${{ steps.d.outputs.ai }}
+    steps:
+      - uses: actions/checkout@v4
+      - id: d
+        run: |
+          echo "client=$([ -f client/package.json ] && echo true || echo false)" >> "$GITHUB_OUTPUT"
+          echo "server=$([ -f server/package.json ] && echo true || echo false)" >> "$GITHUB_OUTPUT"
+          echo "ai=$([ -f ai/requirements.txt ] && echo true || echo false)" >> "$GITHUB_OUTPUT"
+
+  hygiene:
+    name: Repo hygiene & docs
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+      - name: No secrets, .env files, node_modules or large files
+        run: bash .github/scripts/check-hygiene.sh
+      - name: Changed source files have a header comment
+        if: github.event_name == 'pull_request'
+        run: node .github/scripts/check-file-headers.js "origin/${{ github.base_ref }}"
+
+  server:
+    name: Server (lint, typecheck, test)
+    needs: detect
+    if: needs.detect.outputs.server == 'true'
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    services:
+      postgres:
+        image: postgres:15-alpine
+        env:
+          POSTGRES_DB: symptom_checker_test
+          POSTGRES_USER: test_user
+          POSTGRES_PASSWORD: test_pass
+        ports: ['5432:5432']
+        options: >-
+          --health-cmd pg_isready --health-interval 10s --health-timeout 5s --health-retries 5
+    env:
+      NODE_ENV: test
+      DATABASE_URL: postgresql://test_user:test_pass@localhost:5432/symptom_checker_test
+      JWT_SECRET: ci-test-secret-32-chars-minimum!!
+      AI_PROVIDER: mock
+    defaults:
+      run:
+        working-directory: server
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 20
+          cache: npm
+          cache-dependency-path: server/package-lock.json
+      - run: npm ci
+      - name: Apply database migrations
+        run: |
+          if [ -f prisma/schema.prisma ]; then npx prisma generate && npx prisma migrate deploy; fi
+      - run: npm run lint
+      - run: npm run typecheck
+      - run: npm test
+
+  client:
+    name: Client (lint, typecheck, test, build)
+    needs: detect
+    if: needs.detect.outputs.client == 'true'
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    defaults:
+      run:
+        working-directory: client
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 20
+          cache: npm
+          cache-dependency-path: client/package-lock.json
+      - run: npm ci
+      - run: npm run lint
+      - run: npm run typecheck
+      - run: npm test
+      - run: npm run build
+
+  ai:
+    name: AI / ML (ruff, pytest)
+    needs: detect
+    if: needs.detect.outputs.ai == 'true'
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    defaults:
+      run:
+        working-directory: ai
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+          cache: pip
+          cache-dependency-path: ai/requirements.txt
+      - run: pip install -r requirements.txt ruff pytest
+      - run: ruff check .
+      - name: pytest (exit code 5 = no tests collected yet)
+        run: pytest -q || [ $? -eq 5 ]
+
+  ci-passed:
+    name: CI passed
+    if: always()
+    needs: [detect, hygiene, server, client, ai]
+    runs-on: ubuntu-latest
+    steps:
+      - name: Fail if any job failed or was cancelled
+        run: |
+          if [ "${{ contains(needs.*.result, 'failure') || contains(needs.*.result, 'cancelled') }}" = "true" ]; then
+            echo "::error::One or more CI jobs failed."; exit 1
+          fi

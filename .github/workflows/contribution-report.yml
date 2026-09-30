@@ -1,0 +1,27 @@
+# Weekly contribution report (commits + merged PRs per member on develop).
+# Open Actions -> "Contribution Report" -> latest run -> Summary. Can also be run manually.
+name: Contribution Report
+
+on:
+  schedule:
+    - cron: '30 3 * * 1'   # Mondays 09:00 IST
+  workflow_dispatch:
+
+permissions:
+  contents: read
+  pull-requests: read
+
+jobs:
+  report:
+    name: Contribution report
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/github-script@v7
+        env:
+          PROJECT_START: '2026-10-10T00:00:00Z'
+          REPORT_BRANCH: develop
+        with:
+          script: |
+            const run = require('./.github/scripts/contribution-report.js');
+            await run({ github, context, core });

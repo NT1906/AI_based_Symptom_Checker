@@ -1,0 +1,13 @@
+{
+  "_comment": "GitHub login (lowercase) -> team name used as the branch prefix. Only the team leader edits this file.",
+  "nt1906":            { "name": "nisarg",  "role": "Team Leader · Prediction & Risk Engine" },
+  "rutva0607":         { "name": "rutva",   "role": "Backend Lead · Integration & DevOps" },
+  "harshpanchal6":     { "name": "harsh",   "role": "Database Lead" },
+  "kavy-op":           { "name": "kavya",   "role": "Assessment Orchestration Lead" },
+  "nishith1130":       { "name": "nishith", "role": "AI / NLP Lead" },
+  "panchotiyavivek18": { "name": "vivek",   "role": "Frontend Chat Lead" },
+  "darshil2501":       { "name": "darshil", "role": "Frontend Assessment UX Lead" },
+  "m1nn08":            { "name": "mann",    "role": "Image / CV Lead" },
+  "mohittigga111":     { "name": "mohit",   "role": "QA & Testing Lead" },
+  "dimplleeeee":       { "name": "dimple",  "role": "Security, Privacy & Safety Lead" }
+}

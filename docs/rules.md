@@ -28,7 +28,7 @@ project-root/
 │   │   ├── components/       ← Vivek (chat) / Darshil (layout, forms, results)
 │   │   ├── pages/            ← Darshil
 │   │   ├── services/         ← Vivek / Darshil (API client hooks)
-│   │   ├── store/            ← Vivek (chat state)
+│   │   ├── stores/           ← Vivek (chat state)
 │   │   └── types/            ← Shared (mirrors backend contracts)
 ├── server/                   ← Backend
 │   ├── src/
@@ -39,10 +39,14 @@ project-root/
 │   │   │   ├── ai/           ← Nishith (extraction, clarification prompts)
 │   │   │   ├── prediction/   ← Nisarg (risk engine, conditions mapping)
 │   │   │   └── image/        ← Mann (upload processing, CV validation)
+│   │   ├── repositories/     ← Harsh (only layer that talks to Prisma)
 │   │   ├── utils/            ← Shared
 │   │   └── config/           ← Rutva
 │   ├── prisma/               ← Harsh (schema.prisma, migrations ONLY)
+├── shared/types/             ← Kavya publishes, changes need team agreement
+├── ai/                       ← Nishith (prompts), Nisarg (datasets), Mann (cv), Mohit (evaluation)
 ├── tests/                    ← Mohit (all e2e, integration, and AI eval files)
+├── .github/                  ← Nisarg (leader) approves; Rutva maintains CI workflows
 └── docs/                     ← Everyone reads, Rutva maintains
 ```
 
@@ -263,30 +267,32 @@ The hardest part of this project is when one person's module fails. Here is exac
 
 ## Branch and Git Rules
 
+The full workflow is in [CONTRIBUTING.md](../CONTRIBUTING.md). GitHub enforces it automatically (see [github-setup.md](github-setup.md)).
+
 ```text
-main                    ← Protected. PR-only. Passing CI required.
-develop                 ← Integration branch.
-kavya/state-machine     ← Your working branch. Format: {owner}/{description}
+main                          ← Stable releases. Leader merges develop → main at each sprint review.
+develop                       ← Default/integration branch. Every feature PR targets develop.
+kavya/23-clarification-limit  ← Your working branch. Format: {name}/{issue-no}-{short-desc}
 ```
 
-**Branch naming format:** `{owner}/{description}`
-- Example: `nishith/clarification-prompt`
-- Example: `harsh/user-schema`
-
 **PR rules:**
-- PR description must include: what changed, why, how to test it, and any interface changes.
-- PRs into `main` require 1 approval from the module owner and 1 from Rutva (Backend) or Darshil/Vivek (Frontend).
-- PRs must not break any existing CI tests.
+- **One feature at a time:** one open PR per member. One PR = one issue = one task from [SPRINT_PLAN.md](SPRINT_PLAN.md).
+- The PR description follows the template: what changed, why, how to test, interface changes, and `Closes #N`.
+- **Every PR needs the team leader's approval** (CODEOWNERS), plus green `CI passed` and `PR policy` checks. Only the leader merges.
+- If a PR changes another member's interface, tag that member for review. The leader will not merge without their 👍 in the thread.
+- Merge method is **merge commit** (squash is disabled) so everyone's commits are kept.
 
-**Commit message format:**
+**Commit message format** (Conventional Commits, checked by CI):
 ```text
 feat(ai): extract severity and duration from prompt
 
 - Implements Zod validation for symptom extraction
 - Handles edge cases for missing duration
 
-Task: W1-04
+Refs: #23
 ```
+
+**Code style, naming and documentation:** see [AI_RULES.md](../AI_RULES.md). It applies to humans and AI assistants alike.
 
 ---
 
