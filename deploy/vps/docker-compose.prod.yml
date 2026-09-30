@@ -1,0 +1,62 @@
+# Production/staging stack for a self-managed VPS (docs/deployment.md §4).
+# CD copies this file to the server and runs deploy.sh with the image to deploy.
+# Secrets live only in /opt/symptom-checker/.env on the server, never in git.
+name: symptom-checker
+
+services:
+  api:
+    image: ${API_IMAGE:?API_IMAGE must be set by deploy.sh}
+    container_name: symptom-checker-api
+    restart: unless-stopped
+    env_file: .env
+    expose: ["8000"]
+    healthcheck:
+      # The slim image has no curl, so use Python's standard library.
+      test: ["CMD", "python", "-c", "import urllib.request; urllib.request.urlopen('http://localhost:8000/api/v1/health', timeout=4)"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+      start_period: 40s
+    mem_limit: 900m
+    logging:
+      driver: json-file
+      options: { max-size: "10m", max-file: "5" }
+
+  caddy:
+    # Reverse proxy with automatic HTTPS (Let's Encrypt) for API_DOMAIN.
+    image: caddy:2-alpine
+    container_name: symptom-checker-caddy
+    restart: unless-stopped
+    ports: ["80:80", "443:443"]
+    environment:
+      API_DOMAIN: ${API_DOMAIN:?set API_DOMAIN in .env}
+    volumes:
+      - ./Caddyfile:/etc/caddy/Caddyfile:ro
+      - caddy_data:/data
+      - caddy_config:/config
+    depends_on:
+      api:
+        condition: service_healthy
+
+  db:
+    # Optional self-hosted Postgres. Start with: docker compose --profile local-db up -d
+    # Default is Neon (managed), so DATABASE_URL in .env points outside this server.
+    image: postgres:16-alpine
+    container_name: symptom-checker-db
+    restart: unless-stopped
+    profiles: ["local-db"]
+    environment:
+      POSTGRES_DB: ${POSTGRES_DB:-symptom_checker}
+      POSTGRES_USER: ${POSTGRES_USER:-symptom_checker}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:?set POSTGRES_PASSWORD in .env when using local-db}
+    volumes:
+      - pgdata:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U $${POSTGRES_USER:-symptom_checker}"]
+      interval: 10s
+      retries: 5
+
+volumes:
+  caddy_data:
+  caddy_config:
+  pgdata:
