@@ -1,5 +1,5 @@
 # Dependabot keeps dependencies patched. PRs target `develop` and are reviewed like any other PR.
-# Rutva: uncomment the npm / pip blocks in Sprint 0 once client/, server/ and ai/ exist.
+# Rutva/Vivek: uncomment the npm / pip blocks in Sprint 0 once client/ and server/ exist.
 version: 2
 updates:
   - package-ecosystem: github-actions
@@ -9,17 +9,12 @@ updates:
     open-pull-requests-limit: 3
 
   # - package-ecosystem: npm
-  #   directory: /server
-  #   target-branch: develop
-  #   schedule: { interval: weekly }
-  #   open-pull-requests-limit: 3
-  # - package-ecosystem: npm
   #   directory: /client
   #   target-branch: develop
   #   schedule: { interval: weekly }
   #   open-pull-requests-limit: 3
   # - package-ecosystem: pip
-  #   directory: /ai
+  #   directory: /server
   #   target-branch: develop
   #   schedule: { interval: weekly }
   #   open-pull-requests-limit: 3
