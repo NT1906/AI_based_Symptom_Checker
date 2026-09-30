@@ -22,32 +22,38 @@ These rules exist to prevent merge conflicts, duplicated work, broken interfaces
 This is who owns which part of the codebase. **You do not create files in someone else's directory without their approval.**
 
 ```text
-project-root/
-├── client/                   ← Frontend
-│   ├── src/
-│   │   ├── components/       ← Vivek (chat) / Darshil (layout, forms, results)
-│   │   ├── pages/            ← Darshil
-│   │   ├── services/         ← Vivek / Darshil (API client hooks)
-│   │   ├── stores/           ← Vivek (chat state)
-│   │   └── types/            ← Shared (mirrors backend contracts)
-├── server/                   ← Backend
-│   ├── src/
-│   │   ├── routes/           ← Rutva (API endpoints)
-│   │   ├── middleware/       ← Rutva / Dimple (auth, security, rate-limits)
-│   │   ├── services/
-│   │   │   ├── assessment/   ← Kavya (orchestration, state machine)
-│   │   │   ├── ai/           ← Nishith (extraction, clarification prompts)
-│   │   │   ├── prediction/   ← Nisarg (risk engine, conditions mapping)
-│   │   │   └── image/        ← Mann (upload processing, CV validation)
-│   │   ├── repositories/     ← Harsh (only layer that talks to Prisma)
-│   │   ├── utils/            ← Shared
-│   │   └── config/           ← Rutva
-│   ├── prisma/               ← Harsh (schema.prisma, migrations ONLY)
-├── shared/types/             ← Kavya publishes, changes need team agreement
-├── ai/                       ← Nishith (prompts), Nisarg (datasets), Mann (cv), Mohit (evaluation)
-├── tests/                    ← Mohit (all e2e, integration, and AI eval files)
-├── .github/                  ← Nisarg (leader) approves; Rutva maintains CI workflows
-└── docs/                     ← Everyone reads, Rutva maintains
+project-root/                     (full layout and stack: docs/tech-stack.md)
+├── client/                       ← Frontend: React PWA on Vercel
+│   ├── src/components/chat/      ← Vivek
+│   ├── src/components/{layout,assessment,result,common}/ ← Darshil
+│   ├── src/components/consent/   ← Dimple
+│   ├── src/pages/                ← Darshil
+│   ├── src/stores/, src/services/← Vivek
+│   ├── src/types/api.gen.ts      ← generated from the server OpenAPI; never edit by hand
+│   └── vite.config.ts, vercel.json ← Vivek (PWA, proxy, headers)
+├── server/                       ← Backend: FastAPI on Render
+│   ├── app/main.py, app/api/     ← Rutva (app factory, routers)
+│   ├── app/core/                 ← Rutva (config, logging, errors)
+│   ├── app/middleware/           ← Dimple (security headers, rate limits)
+│   ├── app/schemas/              ← Kavya (API contracts; changes need team agreement)
+│   ├── app/services/
+│   │   ├── assessment/           ← Kavya (orchestration, state machine)
+│   │   ├── ai/                   ← Nishith (gateway, prompts)
+│   │   ├── prediction/           ← Nisarg (risk engine, condition model, result composer)
+│   │   ├── image/                ← Mann (validation, ONNX CV inference)
+│   │   └── privacy/              ← Dimple (consent, PII scrubbing, deletion)
+│   ├── app/models/, app/repositories/, app/db/ ← Harsh (only layer that touches the DB session)
+│   ├── alembic/                  ← Harsh (migrations ONLY)
+│   ├── tests/unit/<module>/      ← module owner
+│   ├── tests/integration/, tests/conftest.py ← Mohit
+│   └── Dockerfile                ← Rutva
+├── ml/                           ← Training & evaluation (never deployed)
+│   ├── cv/, datasets/images/     ← Mann
+│   ├── prediction/, datasets/conditions/ ← Nisarg
+│   └── nlp_eval/                 ← Mohit (with Nishith)
+├── tests/e2e/                    ← Mohit (Playwright)
+├── .github/, render.yaml         ← Nisarg (leader) approves; Rutva maintains CI/CD
+└── docs/                         ← Everyone reads, Rutva maintains
 ```
 
 ---
@@ -57,15 +63,15 @@ project-root/
 ---
 
 ### 👤 Rutva — Backend Lead + Integration
-**You own:** Express server foundation, API routing logic, CI/CD pipelines (GitHub Actions), Docker/Nginx configuration, logging infrastructure (Pino), and overall backend deployment architecture.
+**You own:** FastAPI app foundation, API routers, CI/CD pipelines (GitHub Actions), Dockerfile and `render.yaml`, Vercel/Render deployment, logging infrastructure (structlog), and overall backend deployment architecture.
 
 **Your hard boundaries:**
 | ✅ You do this | ❌ You do NOT do this |
 |---------------|-----------------------|
 | Write API routes in `server/src/routes/` that call Kavya/Nishith's services | Write the core assessment state machine logic (that's Kavya) |
 | Define the final REST API contract and OpenAPI spec | Write AI extraction logic (that's Nishith) |
-| Setup Pino logger, correlation IDs, and application metrics | Change Prisma schema (that's Harsh) |
-| Configure production Nginx, Health Checks, and Dockerfiles | Build the frontend application |
+| Set up structlog, request IDs, and application metrics | Change ORM models or migrations (that's Harsh) |
+| Configure Render, Vercel, health checks and the Dockerfile | Build the frontend application |
 
 **Interface you publish (others depend on this):**
 - All REST API endpoints (e.g., `POST /api/v1/assessment`, `POST /api/v1/assessment/:id/message`) with exact URL, method, request body, and response schema.
@@ -74,13 +80,13 @@ project-root/
 ---
 
 ### 👤 Harsh — Database Lead
-**You own:** PostgreSQL schema, all Prisma migrations, connection pooling, indexing, and the core database access layer.
+**You own:** PostgreSQL schema (Neon), SQLAlchemy models, all Alembic migrations, connection pooling, indexing, and the repository layer.
 
 **Your hard boundaries:**
 | ✅ You do this | ❌ You do NOT do this |
 |---------------|-----------------------|
-| Create and run `npx prisma migrate` | Let anyone else create a migration file |
-| Define all Prisma models (`User`, `Assessment`, `Message`, `Symptom`) | Allow anyone to bypass Prisma with raw SQL (unless approved for performance) |
+| Create and run `alembic revision` / `alembic upgrade` | Let anyone else create a migration file |
+| Define all SQLAlchemy models (`User`, `Assessment`, `Message`, `Symptom`, `Consent`) | Allow anyone to bypass the repositories with raw SQL (unless approved for performance) |
 | Enforce data normalization and JSONB usage constraints | Change the API contract (that's Rutva) |
 | Add and tune database indexes for performance | Write application-layer logic inside the DB layer |
 
@@ -91,42 +97,41 @@ project-root/
 ---
 
 ### 👤 Kavya — Assessment Orchestration Lead
-**You own:** The core Assessment State Machine (`START → SYMPTOM_COLLECTION → CLARIFYING → CONFIRMING → READY → ANALYZING → COMPLETED`), session coordination, and the central orchestration service (`assessmentOrchestrator.ts`).
+**You own:** The core Assessment State Machine (`START → SYMPTOM_COLLECTION → CLARIFYING → CONFIRMING → READY → ANALYZING → COMPLETED`), session coordination, and the central orchestration service (`app/services/assessment/orchestrator.py`), plus the Pydantic API contracts in `app/schemas/`.
 
 **Your hard boundaries:**
 | ✅ You do this | ❌ You do NOT do this |
 |---------------|-----------------------|
 | Enforce strict state transitions (e.g., block analysis if state != READY) | Write the actual LLM prompt (that's Nishith) |
-| Call AI extraction and save output to the database | Write Express route handlers directly (that's Rutva) |
+| Call AI extraction and save output through Harsh's repositories | Write FastAPI routers directly (that's Rutva) |
 | Manage the 3-turn clarification loop limit | Write frontend chat UI (that's Vivek) |
 | Guard assessment ownership (block cross-user access) | Write database migrations (that's Harsh) |
 
 **Interface you publish (others depend on this):**
-```typescript
-class AssessmentOrchestrator {
-  async processMessage(assessmentId: string, message: string): Promise<ProcessResult>;
-  async confirmSymptoms(assessmentId: string, symptoms: Symptom[]): Promise<void>;
-  async generateResult(assessmentId: string): Promise<AssessmentResult>;
-}
+```python
+class AssessmentOrchestrator:
+    async def process_message(self, assessment_id: UUID, message: str) -> ProcessResult: ...
+    async def confirm_symptoms(self, assessment_id: UUID, symptoms: list[Symptom]) -> None: ...
+    async def generate_result(self, assessment_id: UUID) -> AssessmentResult: ...
 ```
-Rutva's routes call these methods.
+Rutva's routers call these methods (injected with `Depends`).
 
 ---
 
 ### 👤 Nishith — AI / ML Lead
-**You own:** LLM integration (OpenAI API Gateway), prompt engineering for symptom extraction and clarification, JSON schema enforcement, multi-turn context parsing, and prompt injection defense.
+**You own:** LLM integration (the `AiGateway`, OpenAI with Gemini fallback), prompt engineering for symptom extraction and clarification, JSON schema enforcement, multi-turn context parsing, and prompt injection defense.
 
 **Your hard boundaries:**
 | ✅ You do this | ❌ You do NOT do this |
 |---------------|-----------------------|
 | Write and version extraction & clarification prompts (`ai/prompts/`) | Call LLMs directly from API routes — route through your AI gateway |
-| Parse, validate, and repair AI JSON outputs (Zod) | Write the risk calculation logic (that's Nisarg) |
+| Parse, validate, and repair AI JSON outputs (Pydantic) | Write the risk calculation logic (that's Nisarg) |
 | Handle AI API timeouts, retries, and fallback errors | Write the frontend Chat component |
 | Sanitize input against prompt injections (ignore instructions) | Write database migrations (that's Harsh) |
 
 **Critical rules:**
 - The AI Gateway is the ONLY place in the codebase that calls the LLM API.
-- All LLM outputs MUST be strictly validated against Zod schemas before returning to Kavya's orchestrator.
+- All LLM outputs MUST be strictly validated against Pydantic models before returning to Kavya's orchestrator.
 
 ---
 
@@ -137,8 +142,8 @@ Rutva's routes call these methods.
 | ✅ You do this | ❌ You do NOT do this |
 |---------------|-----------------------|
 | Calculate risk based on defined red flags (e.g., severe chest pain -> URGENT) | Let the LLM hallucinate or guess a risk level |
-| Map structured symptoms to possible condition probabilities | Write the symptom extraction LLM calls (that's Nishith) |
-| Build the Result Composer that formats final guidance and referrals | Manage Express routes or HTTP responses |
+| Map structured symptoms to possible conditions (rule baseline, then a scikit-learn model trained in `ml/prediction/` and served as ONNX) | Write the symptom extraction LLM calls (that's Nishith) |
+| Build the Result Composer that formats final guidance and referrals | Manage FastAPI routers or HTTP responses |
 
 **Critical rules:**
 - The Risk Engine must be 100% deterministic (no LLMs). Given the same structured symptoms, it must always return the exact same risk level.
@@ -156,7 +161,7 @@ Rutva's routes call these methods.
 | Implement loading states and error boundaries for the chat | Store sensitive JWT tokens in localStorage (use HttpOnly cookies) |
 
 **Interface you consume (your dependency):**
-- Rutva's API spec. If Rutva's API isn't ready, mock the responses using MSW or a hardcoded JSON timeout.
+- Rutva's API spec. If Rutva's API isn't ready, mock the responses with MSW using the generated OpenAPI types.
 
 ---
 
@@ -173,19 +178,20 @@ Rutva's routes call these methods.
 ---
 
 ### 👤 Mann — Image / CV Lead
-**You own:** Image upload endpoints, binary file validation (size, MIME type, malware scan), storage management (S3/local disk), and visual symptom extraction via Vision APIs.
+**You own:** Image upload endpoint, file validation (size, MIME type, magic bytes), in-memory preprocessing, **training the CV model** (`ml/cv/`: dataset pipeline, PyTorch/timm training on Kaggle/Colab, evaluation, ONNX export, Hugging Face Hub release), and serving it with ONNX Runtime in `app/services/image/`.
 
 **Your hard boundaries:**
 | ✅ You do this | ❌ You do NOT do this |
 |---------------|-----------------------|
 | Validate image buffers (reject oversized/invalid files) | Write the frontend image picker UI (that's Darshil/Vivek) |
-| Call Vision APIs to extract symptoms from skin condition photos | Save images to the DB without checking size limits |
-| Manage temporary image cleanup jobs | Write the main NLP extraction prompts (that's Nishith) |
+| Train, evaluate (incl. per-skin-tone fairness) and publish CV models | Store images anywhere (disk, DB, logs), because they are processed in memory only |
+| Serve the pinned ONNX model and map labels to visual symptoms | Let the CV model decide risk or show a diagnosis directly |
+| Keep datasets and checkpoints out of git | Write the main NLP extraction prompts (that's Nishith) |
 
 ---
 
 ### 👤 Mohit — QA + Testing Lead
-**You own:** Test infrastructure (Vitest/Supertest), integration tests, E2E test scripts, load testing (Artillery), and the AI Evaluation Harness.
+**You own:** Test infrastructure (pytest fixtures, Vitest setup), integration tests, E2E tests (Playwright), load testing, and the NLP evaluation harness (`ml/nlp_eval/`).
 
 **Your hard boundaries:**
 | ✅ You do this | ❌ You do NOT do this |
@@ -201,7 +207,7 @@ Rutva's routes call these methods.
 ---
 
 ### 👤 Dimple — Security, Privacy & Safety Lead
-**You own:** Consent screen logic, PII sanitization (stripping names/SSNs from chat), Helmet/CORS configuration, rate limiting, and ensuring the application remains strictly an *informational aid*.
+**You own:** Consent screen logic, PII sanitization (stripping names/SSNs from chat), security-headers/CORS configuration, rate limiting (slowapi), PWA storage rules, and ensuring the application remains strictly an *informational aid*.
 
 **Your hard boundaries:**
 | ✅ You do this | ❌ You do NOT do this |
@@ -215,10 +221,15 @@ Rutva's routes call these methods.
 ## Dependency & Integration Rules
 
 ### Rule 1 — Consume interfaces, not implementations
-Wait for Rutva/Harsh to define the TypeScript types/Prisma schema. Depend on those types.
-```typescript
-// ✅ Correct — depend on the shared type contract
-import { AssessmentResult } from '@shared/types';
+Kavya publishes the Pydantic API contracts in `server/app/schemas/`. The frontend depends on the TypeScript types generated from them. Nobody hand-writes duplicate types.
+```python
+# ✅ Correct: depend on the shared contract
+from app.schemas.assessment import AssessmentResult
+```
+```ts
+// ✅ Correct: generated from the server OpenAPI (npm run gen:api)
+import type { components } from '@/types/api.gen';
+type AssessmentResult = components['schemas']['AssessmentResult'];
 ```
 
 ### Rule 2 — Publish your interface before your implementation
@@ -231,16 +242,16 @@ For any database table, only one person's code performs `INSERT`, `UPDATE`, and 
 - `users` → Dimple/Rutva writes
 
 ### Rule 4 — Config lives in one place
-All configuration (DB URL, API keys, AI model names) lives in `.env`. Access them strictly through a centralized `config.ts` file.
+All configuration (DB URL, API keys, AI model names) lives in `.env`. Access them strictly through `server/app/core/config.py` (pydantic-settings). The frontend has no secrets.
 
 ### Rule 5 — Logging is structured
 Every log statement must be structured (JSON-compatible).
-```typescript
-// ✅ Correct
-logger.info({ event: 'extraction_complete', assessmentId, symptomCount: 3 });
+```python
+# ✅ Correct
+log.info("extraction_complete", assessment_id=assessment_id, symptom_count=3)
 
-// ❌ Wrong
-console.log(`extracted 3 symptoms for ${assessmentId}`);
+# ❌ Wrong
+print(f"extracted 3 symptoms for {assessment_id}")
 ```
 
 ---
@@ -286,7 +297,7 @@ kavya/23-clarification-limit  ← Your working branch. Format: {name}/{issue-no}
 ```text
 feat(ai): extract severity and duration from prompt
 
-- Implements Zod validation for symptom extraction
+- Implements Pydantic validation for symptom extraction
 - Handles edge cases for missing duration
 
 Refs: #23
@@ -301,7 +312,7 @@ Refs: #23
 | Violation | Consequence |
 |-----------|-------------|
 | Direct push to `main` | Revert immediately, PR required |
-| Prisma Migration by non-Harsh | Deleted, Harsh rewrites it |
+| Alembic migration by non-Harsh | Deleted, Harsh rewrites it |
 | LLM called outside Nishith's gateway | PR blocked until refactored |
 | Secret committed to git | Rotate the secret immediately, scrub git history |
 | Bypassing Kavya's state machine | Critical bug, fix before any other work |
