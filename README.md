@@ -9,6 +9,7 @@ A conversational, **informational** triage aid: users describe symptoms in plain
 | If you are… | Read |
 |---|---|
 | A team member starting a task | [CONTRIBUTING.md](CONTRIBUTING.md) → [docs/SPRINT_PLAN.md](docs/SPRINT_PLAN.md) |
+| Looking for a command (setup, daily start, run, test, git) | [docs/commands.md](docs/commands.md) |
 | An AI coding assistant | [AI_RULES.md](AI_RULES.md), before anything else |
 | Checking who owns what | [docs/rules.md](docs/rules.md) |
 | Checking the product scope | [docs/idea.md](docs/idea.md) |

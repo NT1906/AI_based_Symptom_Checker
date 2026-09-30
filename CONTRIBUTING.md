@@ -2,6 +2,8 @@
 
 Every team member follows this workflow for every task. GitHub enforces most of it automatically, so if a check fails, read its message and fix what it says.
 
+**Every command you need** (setup, daily start, running, testing, git fixes): [docs/commands.md](docs/commands.md).
+
 **Read first:** [AI_RULES.md](AI_RULES.md) (code rules; they apply to humans too) · [docs/tech-stack.md](docs/tech-stack.md) (stack and deployment) · [docs/rules.md](docs/rules.md) (ownership) · [docs/SPRINT_PLAN.md](docs/SPRINT_PLAN.md) (your tasks).
 
 ---
