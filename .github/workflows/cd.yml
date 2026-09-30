@@ -1,0 +1,122 @@
+# Continuous deployment.
+#   push to develop -> CI -> deploy STAGING    (automatic)
+#   push to main    -> CI -> deploy PRODUCTION (waits for the leader to approve the "production" environment)
+# Backend: Render deploy hook, then waits until /api/v1/health reports this commit SHA.
+# Frontend: Vercel CLI build + deploy, with the /api rewrite pointed at this environment's backend.
+# Parts that aren't configured yet (no server/Dockerfile, no client/, missing secrets) are skipped with a warning.
+# Setup: docs/github-setup.md §6. Architecture: docs/tech-stack.md.
+name: CD
+
+on:
+  push:
+    branches: [develop, main]
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: cd-${{ github.ref_name }}
+  cancel-in-progress: false   # never cancel a deployment half-way
+
+jobs:
+  ci:
+    name: CI
+    uses: ./.github/workflows/ci.yml
+
+  deploy:
+    name: Deploy ${{ github.ref_name == 'main' && 'production' || 'staging' }}
+    needs: ci
+    if: github.ref_name == 'develop' || github.ref_name == 'main'
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    environment:
+      name: ${{ github.ref_name == 'main' && 'production' || 'staging' }}
+      url: ${{ steps.frontend.outputs.url }}
+    env:
+      IS_PROD: ${{ github.ref_name == 'main' }}
+      API_ORIGIN: ${{ vars.API_ORIGIN }}                  # environment variable, e.g. https://symptom-checker-api.onrender.com
+      STAGING_API_ORIGIN: ${{ vars.STAGING_API_ORIGIN }}  # repository variable; the origin committed in client/vercel.json
+      RENDER_DEPLOY_HOOK_URL: ${{ secrets.RENDER_DEPLOY_HOOK_URL }}
+      VERCEL_TOKEN: ${{ secrets.VERCEL_TOKEN }}
+      VERCEL_ORG_ID: ${{ secrets.VERCEL_ORG_ID }}
+      VERCEL_PROJECT_ID: ${{ secrets.VERCEL_PROJECT_ID }}
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Decide what to deploy
+        id: plan
+        run: |
+          backend=false; frontend=false
+          if [ -f server/Dockerfile ]; then
+            if [ -n "$RENDER_DEPLOY_HOOK_URL" ] && [ -n "$API_ORIGIN" ]; then backend=true
+            else echo "::warning::server/Dockerfile exists but RENDER_DEPLOY_HOOK_URL or API_ORIGIN is not set for this environment. Backend deploy skipped."; fi
+          fi
+          if [ -f client/package.json ]; then
+            if [ -n "$VERCEL_TOKEN" ] && [ -n "$VERCEL_ORG_ID" ] && [ -n "$VERCEL_PROJECT_ID" ]; then frontend=true
+            else echo "::warning::client/ exists but the VERCEL_* secrets are not set. Frontend deploy skipped."; fi
+          fi
+          echo "backend=$backend" >> "$GITHUB_OUTPUT"
+          echo "frontend=$frontend" >> "$GITHUB_OUTPUT"
+          echo "Plan: backend=$backend frontend=$frontend"
+
+      # ---------- Backend (Render) ----------
+      - name: Trigger Render deploy of this commit
+        if: steps.plan.outputs.backend == 'true'
+        run: curl -fsS -X POST "${RENDER_DEPLOY_HOOK_URL}&ref=${GITHUB_SHA}" > /dev/null
+
+      - name: Wait until the backend reports this version
+        if: steps.plan.outputs.backend == 'true'
+        run: |
+          for i in $(seq 1 90); do
+            live=$(curl -fsS --max-time 15 "$API_ORIGIN/api/v1/health" | jq -r '.version // empty' 2>/dev/null || true)
+            if [ "$live" = "$GITHUB_SHA" ]; then echo "Backend $live is live."; exit 0; fi
+            echo "Waiting... live version: ${live:-unreachable}"; sleep 10
+          done
+          echo "::error::Backend did not report version $GITHUB_SHA within 15 minutes. Check the Render dashboard logs."
+          exit 1
+
+      # ---------- Frontend (Vercel) ----------
+      - uses: actions/setup-node@v4
+        if: steps.plan.outputs.frontend == 'true'
+        with:
+          node-version: 20
+
+      - name: Build and deploy to Vercel
+        id: frontend
+        if: steps.plan.outputs.frontend == 'true'
+        run: |
+          npm install --global vercel@latest
+          if [ "$IS_PROD" = "true" ]; then target=production; flag=--prod; else target=preview; flag=; fi
+          # Point the same-origin /api proxy at this environment's backend.
+          if [ -n "$STAGING_API_ORIGIN" ] && [ -n "$API_ORIGIN" ] && [ -f client/vercel.json ]; then
+            sed -i "s#${STAGING_API_ORIGIN}#${API_ORIGIN}#g" client/vercel.json
+          fi
+          vercel pull --yes --environment="$target" --token="$VERCEL_TOKEN"
+          vercel build $flag --token="$VERCEL_TOKEN"
+          url=$(vercel deploy --prebuilt $flag --token="$VERCEL_TOKEN")
+          echo "url=$url" >> "$GITHUB_OUTPUT"
+
+      - name: Smoke test
+        if: steps.plan.outputs.frontend == 'true'
+        env:
+          URL: ${{ steps.frontend.outputs.url }}
+          CHECK_API: ${{ steps.plan.outputs.backend }}
+        run: |
+          curl -fsS -o /dev/null "$URL" || { echo "::error::$URL did not return 200. If it returned 401, turn off Vercel Deployment Protection for previews."; exit 1; }
+          curl -fsS -o /dev/null "$URL/manifest.webmanifest" || { echo "::error::PWA manifest missing at $URL"; exit 1; }
+          if [ "$CHECK_API" = "true" ]; then
+            curl -fsS "$URL/api/v1/health" | jq -e --arg sha "$GITHUB_SHA" '.version == $sha' > /dev/null \
+              || { echo "::error::/api proxy on Vercel does not reach the new backend."; exit 1; }
+          fi
+          echo "Smoke test passed."
+
+      - name: Summary
+        if: always()
+        run: |
+          {
+            echo "### Deployment: ${{ github.ref_name == 'main' && 'production' || 'staging' }}"
+            echo "- Commit: \`${GITHUB_SHA::7}\`"
+            echo "- Backend deployed: ${{ steps.plan.outputs.backend }} (${API_ORIGIN:-not configured})"
+            echo "- Frontend: ${{ steps.frontend.outputs.url || 'not deployed' }}"
+          } >> "$GITHUB_STEP_SUMMARY"

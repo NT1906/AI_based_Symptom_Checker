@@ -1,0 +1,65 @@
+# Render Blueprint: backend infrastructure as code (docs/tech-stack.md).
+# The leader applies it once: Render Dashboard -> New -> Blueprint -> this repo.
+# Auto-deploy is OFF. GitHub Actions (.github/workflows/cd.yml) triggers deploys through
+# deploy hooks, and only after CI passes (and, for production, after the leader approves).
+# Secrets marked `sync: false` are entered in the Render dashboard, never in git.
+services:
+  - type: web
+    name: symptom-checker-api-staging
+    runtime: docker
+    plan: free
+    region: singapore
+    branch: develop
+    dockerContext: ./server
+    dockerfilePath: ./server/Dockerfile
+    healthCheckPath: /api/v1/health
+    autoDeploy: false
+    envVars:
+      - key: APP_ENV
+        value: staging
+      - key: DATABASE_URL        # Neon "staging" branch connection string
+        sync: false
+      - key: JWT_SECRET
+        generateValue: true
+      - key: AI_PROVIDER
+        value: openai
+      - key: AI_MODEL
+        sync: false
+      - key: OPENAI_API_KEY
+        sync: false
+      - key: CV_PROVIDER
+        value: onnx
+      - key: CV_MODEL_REPO
+        sync: false
+      - key: CV_MODEL_REVISION
+        sync: false
+
+  - type: web
+    name: symptom-checker-api
+    runtime: docker
+    plan: free                   # upgrade to "starter" before demo day to avoid cold starts
+    region: singapore
+    branch: main
+    dockerContext: ./server
+    dockerfilePath: ./server/Dockerfile
+    healthCheckPath: /api/v1/health
+    autoDeploy: false
+    envVars:
+      - key: APP_ENV
+        value: production
+      - key: DATABASE_URL        # Neon "main" branch connection string
+        sync: false
+      - key: JWT_SECRET
+        generateValue: true
+      - key: AI_PROVIDER
+        value: openai
+      - key: AI_MODEL
+        sync: false
+      - key: OPENAI_API_KEY
+        sync: false
+      - key: CV_PROVIDER
+        value: onnx
+      - key: CV_MODEL_REPO
+        sync: false
+      - key: CV_MODEL_REVISION
+        sync: false
