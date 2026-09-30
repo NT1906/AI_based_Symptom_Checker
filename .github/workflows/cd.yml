@@ -55,7 +55,7 @@ jobs:
           echo "image=$repo:$GITHUB_SHA" >> "$GITHUB_OUTPUT"
           echo "built=true" >> "$GITHUB_OUTPUT"
 
-      - uses: docker/setup-qemu-action@v3
+      - uses: docker/setup-qemu-action@v4
         if: steps.meta.outputs.built == 'true' && contains(vars.IMAGE_PLATFORMS, 'arm64')
       - uses: docker/setup-buildx-action@v3
         if: steps.meta.outputs.built == 'true'
