@@ -1,19 +1,20 @@
-# Render Blueprint: backend infrastructure as code (docs/tech-stack.md).
-# The leader applies it once: Render Dashboard -> New -> Blueprint -> this repo.
-# Auto-deploy is OFF. GitHub Actions (.github/workflows/cd.yml) triggers deploys through
-# deploy hooks, and only after CI passes (and, for production, after the leader approves).
+# Render Blueprint: backend on Render's managed platform (BACKEND_TARGET=render, docs/deployment.md §3).
+# Render does NOT build from git. It runs the Docker image that CD builds once and pushes to GHCR,
+# the same image a VPS would run. CD deploys each commit's exact image through the deploy hook.
+# Apply once (Dashboard -> New -> Blueprint) AFTER the first CD run has pushed :develop and :main images.
 # Secrets marked `sync: false` are entered in the Render dashboard, never in git.
 services:
   - type: web
     name: symptom-checker-api-staging
-    runtime: docker
+    runtime: image
+    image:
+      url: ghcr.io/nt1906/symptom-checker-api:develop
+      creds:
+        fromRegistryCreds:
+          name: ghcr            # Render → Settings → Registry Credentials (GitHub PAT with read:packages); not needed if the package is public
     plan: free
     region: singapore
-    branch: develop
-    dockerContext: ./server
-    dockerfilePath: ./server/Dockerfile
     healthCheckPath: /api/v1/health
-    autoDeploy: false
     envVars:
       - key: APP_ENV
         value: staging
@@ -36,14 +37,15 @@ services:
 
   - type: web
     name: symptom-checker-api
-    runtime: docker
+    runtime: image
+    image:
+      url: ghcr.io/nt1906/symptom-checker-api:main
+      creds:
+        fromRegistryCreds:
+          name: ghcr
     plan: free                   # upgrade to "starter" before demo day to avoid cold starts
     region: singapore
-    branch: main
-    dockerContext: ./server
-    dockerfilePath: ./server/Dockerfile
     healthCheckPath: /api/v1/health
-    autoDeploy: false
     envVars:
       - key: APP_ENV
         value: production
