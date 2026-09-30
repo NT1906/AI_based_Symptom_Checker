@@ -13,9 +13,9 @@ const { execSync } = require('child_process');
 const fs = require('fs');
 
 /** Only application code is checked. Config, generated code and migrations are exempt. */
-const SOURCE_DIRS = /^(client\/src|server\/src|server\/prisma\/seed|shared|ai|tests)\//;
+const SOURCE_DIRS = /^(client\/src|server\/app|server\/tests|server\/scripts|ml|tests)\//;
 const SOURCE_EXT = /\.(ts|tsx|js|jsx|mjs|cjs|py)$/;
-const EXEMPT = /(\.d\.ts$|\.config\.|\/migrations\/|\/generated\/|__init__\.py$)/;
+const EXEMPT = /(\.d\.ts$|\.gen\.ts$|\.config\.|\/migrations\/|\/versions\/|\/generated\/|__init__\.py$)/;
 
 /** How many leading lines may come before the `@file` tag in JS/TS files. */
 const HEADER_WINDOW = 20;

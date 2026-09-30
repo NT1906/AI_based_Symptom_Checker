@@ -6,6 +6,13 @@ __pycache__/
 *.pyc
 
 # Build output
+.vercel/
+dev-dist/
+.mypy_cache/
+.ruff_cache/
+.pytest_cache/
+.coverage
+htmlcov/
 dist/
 build/
 coverage/
@@ -19,9 +26,18 @@ coverage/
 *.pem
 *.key
 
-# Uploads, datasets and models (keep large/binary data out of git)
+# Uploads, datasets, models and experiment runs (keep large/binary data out of git)
 uploads/
-ai/models/
+ml/data/
+ml/datasets/raw/
+ml/checkpoints/
+ml/artifacts/
+wandb/
+mlruns/
+.ipynb_checkpoints/
+*.ckpt
+*.safetensors
+*.joblib
 *.pt
 *.pth
 *.onnx

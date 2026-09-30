@@ -22,16 +22,18 @@ Both `develop` and `main` have a ruleset (Settings → Rules → Rulesets):
 - Approvals are dismissed when new commits are pushed.
 - All review conversations must be resolved.
 - Required status checks: **`CI passed`** and **`PR policy`**.
-- **Bypass:** repository admins (the leader), **only when merging a pull request**. This is how the leader merges their own PRs, which GitHub doesn't let the author approve. Rule for the leader: get a teammate (e.g. Rutva) to review your PR first, then merge with the bypass.
+- **Restrict updates:** only bypass actors can update the branch, so **only the leader can merge** (even after approval, teammates see the merge button disabled).
+- **Bypass:** repository admin (the leader) with mode **always**. The leader can do anything, including merging their own PRs (GitHub doesn't let authors approve themselves) and emergency fixes. By team agreement the leader still opens PRs like everyone else.
 
 ## 3. Workflows (`.github/workflows/`)
 
 | Workflow | Trigger | What it does |
 |---|---|---|
-| `ci.yml` → **CI passed** | PRs and pushes to develop/main | Hygiene (secrets, `.env`, large files), file-header docs check, then lint/typecheck/test/build for `client/`, `server/` and `ai/`. Each module job switches on automatically once its folder exists. |
+| `ci.yml` → **CI passed** | PRs (and inside CD on every push) | Hygiene (secrets, `.env`, large files), file-header docs check, then lint/typecheck/test/build for `client/`, `server/` (FastAPI) and `ml/`. Each module job switches on automatically once its folder exists. |
 | `pr-policy.yml` → **PR policy** | PR opened / edited / pushed | Branch naming and ownership, Conventional Commits, linked and assigned issue in a milestone, ticked checklist, **one open PR per member**. Runs the policy from the base branch, so a PR can't weaken it. |
 | `contribution-report.yml` | Mondays 09:00 IST + manual | Commits and merged PRs per member since 10 Oct, flags anyone under 75% of the median |
-| Dependabot (`dependabot.yml`) | Weekly | Action updates now; npm/pip once the scaffolds exist (S0-RUT-1) |
+| `cd.yml` → **CD** | Push to develop / main | Runs CI, builds the backend Docker image (GHCR), then deploys it to Render or a VPS plus the frontend to Vercel: develop → **staging** automatically, main → **production** after the leader approves. Details in §6. |
+| Dependabot (`dependabot.yml`) | Weekly | Action updates now; npm/pip once the scaffolds exist (S0) |
 
 ## 4. Labels and milestones
 
@@ -50,14 +52,34 @@ Both `develop` and `main` have a ruleset (Settings → Rules → Rulesets):
 - Merge with **Create a merge commit**.
 
 **Sprint review (last day)**
-1. Demo from `develop`.
+1. Demo from **staging** (it always runs the latest `develop`).
 2. Open a PR `develop → main` titled `chore(release): sprint N`, and merge it.
-3. Tag the release: `git switch main && git pull && git tag v0.N.0 && git push origin v0.N.0`, then create a GitHub Release from the tag.
-4. Run **Actions → Contribution Report → Run workflow**, check the balance, and move tasks between members if needed.
+3. Actions → CD → the run for `main` → **Review deployments → Approve** to release to production.
+4. Tag the release: `git switch main && git pull && git tag v0.N.0 && git push origin v0.N.0`, then create a GitHub Release from the tag.
+5. Run **Actions → Contribution Report → Run workflow**, check the balance, and move tasks between members if needed.
 
 **Adding or replacing a member:** update `.github/team.json` (lowercase login → branch name) and `docs/rules.md` in a PR.
 
-## 6. Re-applying the settings
+## 6. Continuous deployment (one-time setup)
+
+Architecture and environments are in [tech-stack.md](tech-stack.md). The pipeline (`.github/workflows/cd.yml`) skips anything that isn't configured yet, so these steps can be done during Sprint 0/1 (task S1-RUT-4, with the leader).
+
+1. **Database (Neon):** create a project with two branches, `main` (production) and `staging`. Copy both connection strings (`postgresql+psycopg://…`).
+2. **Backend (Docker → Render or VPS):** follow [deployment.md](deployment.md): GHCR package access (§2), then either Render (§3) or a VPS (§4). Each GitHub environment gets `BACKEND_TARGET` (`render` or `vps`), `API_ORIGIN`, and that target's secrets.
+3. **Frontend (Vercel):** import the repo, set **Root Directory = `client`**, framework Vite. `client/vercel.json` turns off Vercel's own deploys of `main`/`develop`; Actions does those, and Vercel still builds PR previews. In **Settings → Deployment Protection**, turn **off** Vercel Authentication for previews (teammates can't log in to a Hobby account). Create a token (Account → Tokens) and note the Org ID and Project ID (`vercel link` → `.vercel/project.json`).
+4. **GitHub → Settings → Secrets and variables → Actions:**
+   - Repository **secrets:** `VERCEL_TOKEN`, `VERCEL_ORG_ID`, `VERCEL_PROJECT_ID`
+   - Repository **variables:** `STAGING_API_ORIGIN` = the staging API origin (the one committed in `client/vercel.json`); optional `IMAGE_PLATFORMS` for ARM servers
+5. **GitHub → Settings → Environments:**
+   - `staging`: deployment branches = `develop`; backend variables/secrets from step 2.
+   - `production`: **required reviewer = NT1906**, deployment branches = `main`; backend variables/secrets from step 2.
+6. Merge anything to `develop` and watch **Actions → CD**. The job summary shows the deployed URLs.
+
+**Rollback:** see [deployment.md](deployment.md) §6. A VPS rolls back automatically when the new container is unhealthy.
+
+**Demo day:** Render's free tier sleeps after 15 minutes idle (~50 s cold start). Upgrade the production service to Starter for the demo week, switch production to a VPS, or open the app a few minutes before presenting.
+
+## 7. Re-applying the settings
 
 The rulesets were created with the GitHub API. To inspect them:
 

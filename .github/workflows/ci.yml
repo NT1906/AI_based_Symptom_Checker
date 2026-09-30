@@ -1,13 +1,12 @@
-# Continuous integration for every PR and every push to develop/main.
-# Required status check: "CI passed" (aggregates all jobs below).
-# Module jobs switch on automatically once client/, server/ or ai/ exist, so CI works from day one.
+# Continuous integration for every PR. Pushes to develop/main run it through cd.yml (workflow_call)
+# so nothing deploys unless CI passes. Required status check: "CI passed" (aggregates all jobs).
+# Module jobs switch on automatically once client/, server/ or ml/ exist, so CI works from day one.
 name: CI
 
 on:
   pull_request:
     branches: [develop, main]
-  push:
-    branches: [develop, main]
+  workflow_call:
   workflow_dispatch:
 
 permissions:
@@ -24,14 +23,14 @@ jobs:
     outputs:
       client: ${{ steps.d.outputs.client }}
       server: ${{ steps.d.outputs.server }}
-      ai: ${{ steps.d.outputs.ai }}
+      ml: ${{ steps.d.outputs.ml }}
     steps:
       - uses: actions/checkout@v4
       - id: d
         run: |
           echo "client=$([ -f client/package.json ] && echo true || echo false)" >> "$GITHUB_OUTPUT"
-          echo "server=$([ -f server/package.json ] && echo true || echo false)" >> "$GITHUB_OUTPUT"
-          echo "ai=$([ -f ai/requirements.txt ] && echo true || echo false)" >> "$GITHUB_OUTPUT"
+          echo "server=$([ -f server/requirements.txt ] && echo true || echo false)" >> "$GITHUB_OUTPUT"
+          echo "ml=$([ -d ml ] && echo true || echo false)" >> "$GITHUB_OUTPUT"
 
   hygiene:
     name: Repo hygiene & docs
@@ -48,14 +47,14 @@ jobs:
         run: node .github/scripts/check-file-headers.js "origin/${{ github.base_ref }}"
 
   server:
-    name: Server (lint, typecheck, test)
+    name: Server (ruff, mypy, pytest, docker build)
     needs: detect
     if: needs.detect.outputs.server == 'true'
     runs-on: ubuntu-latest
-    timeout-minutes: 15
+    timeout-minutes: 20
     services:
       postgres:
-        image: postgres:15-alpine
+        image: postgres:16-alpine
         env:
           POSTGRES_DB: symptom_checker_test
           POSTGRES_USER: test_user
@@ -64,27 +63,32 @@ jobs:
         options: >-
           --health-cmd pg_isready --health-interval 10s --health-timeout 5s --health-retries 5
     env:
-      NODE_ENV: test
-      DATABASE_URL: postgresql://test_user:test_pass@localhost:5432/symptom_checker_test
-      JWT_SECRET: ci-test-secret-32-chars-minimum!!
+      APP_ENV: test
+      DATABASE_URL: postgresql+psycopg://test_user:test_pass@localhost:5432/symptom_checker_test
+      JWT_SECRET: ci-test-secret-that-is-at-least-32-characters
       AI_PROVIDER: mock
+      CV_PROVIDER: mock
     defaults:
       run:
         working-directory: server
     steps:
       - uses: actions/checkout@v4
-      - uses: actions/setup-node@v7
+      - uses: actions/setup-python@v5
         with:
-          node-version: 20
-          cache: npm
-          cache-dependency-path: server/package-lock.json
-      - run: npm ci
+          python-version: '3.12'
+          cache: pip
+          cache-dependency-path: server/requirements*.txt
+      - run: pip install -r requirements.txt -r requirements-dev.txt
+      - run: ruff check .
+      - run: ruff format --check .
+      - run: mypy app
       - name: Apply database migrations
         run: |
-          if [ -f prisma/schema.prisma ]; then npx prisma generate && npx prisma migrate deploy; fi
-      - run: npm run lint
-      - run: npm run typecheck
-      - run: npm test
+          if [ -f alembic.ini ]; then alembic upgrade head; fi
+      - run: pytest
+      - name: Docker image builds (what Render will deploy)
+        run: |
+          if [ -f Dockerfile ]; then docker build -t symptom-checker-api:ci .; fi
 
   client:
     name: Client (lint, typecheck, test, build)
@@ -107,32 +111,37 @@ jobs:
       - run: npm run typecheck
       - run: npm test
       - run: npm run build
+      - name: Build is a valid PWA (manifest + service worker)
+        run: |
+          test -f dist/manifest.webmanifest || { echo "::error::dist/manifest.webmanifest missing (vite-plugin-pwa)"; exit 1; }
+          test -f dist/sw.js || { echo "::error::dist/sw.js missing (vite-plugin-pwa)"; exit 1; }
 
-  ai:
-    name: AI / ML (ruff, pytest)
+  ml:
+    name: ML code (ruff, light pytest)
     needs: detect
-    if: needs.detect.outputs.ai == 'true'
+    if: needs.detect.outputs.ml == 'true'
     runs-on: ubuntu-latest
     timeout-minutes: 15
     defaults:
       run:
-        working-directory: ai
+        working-directory: ml
     steps:
       - uses: actions/checkout@v4
       - uses: actions/setup-python@v5
         with:
-          python-version: '3.11'
-          cache: pip
-          cache-dependency-path: ai/requirements.txt
-      - run: pip install -r requirements.txt ruff pytest
+          python-version: '3.12'
+      - run: pip install ruff pytest
       - run: ruff check .
+      # Training deps (torch etc.) are too heavy for CI; tests use requirements-ci.txt only.
       - name: pytest (exit code 5 = no tests collected yet)
-        run: pytest -q || [ $? -eq 5 ]
+        run: |
+          if [ -f requirements-ci.txt ]; then pip install -r requirements-ci.txt; fi
+          pytest -q || [ $? -eq 5 ]
 
   ci-passed:
     name: CI passed
     if: always()
-    needs: [detect, hygiene, server, client, ai]
+    needs: [detect, hygiene, server, client, ml]
     runs-on: ubuntu-latest
     steps:
       - name: Fail if any job failed or was cancelled

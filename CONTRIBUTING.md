@@ -2,7 +2,9 @@
 
 Every team member follows this workflow for every task. GitHub enforces most of it automatically, so if a check fails, read its message and fix what it says.
 
-**Read first:** [AI_RULES.md](AI_RULES.md) (code rules; they apply to humans too) · [docs/rules.md](docs/rules.md) (ownership) · [docs/SPRINT_PLAN.md](docs/SPRINT_PLAN.md) (your tasks).
+**Every command you need** (setup, daily start, running, testing, git fixes): [docs/commands.md](docs/commands.md).
+
+**Read first:** [AI_RULES.md](AI_RULES.md) (code rules; they apply to humans too) · [docs/tech-stack.md](docs/tech-stack.md) (stack and deployment) · [docs/rules.md](docs/rules.md) (ownership) · [docs/SPRINT_PLAN.md](docs/SPRINT_PLAN.md) (your tasks).
 
 ---
 
@@ -11,7 +13,7 @@ Every team member follows this workflow for every task. GitHub enforces most of 
 1. **One feature at a time.** You may have **one open PR**. Finish it and get it merged before opening the next.
 2. **Your own branch only:** `<your-name>/<issue-no>-<short-desc>`, created from `develop`.
 3. **Every PR targets `develop`** and closes exactly one issue that is assigned to you.
-4. **Only the team leader (@NT1906) approves and merges.** Nobody pushes to `develop` or `main` directly.
+4. **Only the team leader (@NT1906) approves, merges and approves production deploys.** Nobody else can push to or merge into `develop` or `main`.
 5. **Commits and PR titles use Conventional Commits:** `feat(chat): add typing indicator`.
 6. **Commit regularly:** at least 3 meaningful commits per PR. Padding commits are rejected.
 7. **Stay in your module.** Need a change in someone else's area? Ask in the issue.
@@ -64,8 +66,10 @@ git commit -m "feat(chat): add MessageBubble component"
 git add client/src/components/chat/MessageBubble.test.tsx
 git commit -m "test(chat): cover own vs bot message alignment"
 
-# 3. Run the checks locally (in client/ or server/)
-npm run lint && npm run typecheck && npm test
+# 3. Run the checks locally
+#    server/:  ruff check . && ruff format --check . && mypy app && pytest
+#    client/:  npm run lint && npm run typecheck && npm test && npm run build
+#    ml/:      ruff check . && pytest
 
 # 4. Push and open a PR into develop
 git push -u origin vivek/12-chat-bubbles
@@ -77,7 +81,7 @@ Then fill in **every** section of the PR template and make sure it contains `Clo
 **While the PR is in review:**
 - Reply to every review comment, and push fixes as new commits (don't force-push).
 - If `develop` moved on and you have conflicts: `git fetch origin && git merge origin/develop`, fix the conflicts, commit, push.
-- When the leader merges, the branch is deleted automatically and the issue closes.
+- When the leader merges, the branch is deleted automatically, the issue closes, and the change **deploys to staging automatically**. Check it there.
 
 **Then start the next task:**
 ```bash
@@ -119,28 +123,38 @@ Fix a bad commit message on your own branch with `git commit --amend` (latest co
 | Check | What it verifies | How to fix |
 |---|---|---|
 | **PR policy** | branch name, author owns the branch, PR title and commit format, `Closes #N` matches the branch, issue is assigned to you and has a milestone, checklist fully ticked, no other open PR by you | Follow the error list in the job summary. Edit the PR title/body, or amend commits. The check re-runs automatically. |
-| **CI passed** | no secrets / `.env` / large files; file headers on changed source files; lint, typecheck, tests and build for `client/`, `server/`, `ai/` | Run the same commands locally and fix them |
+| **CI passed** | no secrets / `.env` / large files; file headers on changed source files; `server/`: ruff, mypy, pytest (with Postgres), Docker build; `client/`: lint, typecheck, tests, build, PWA manifest + service worker; `ml/`: ruff, light pytest | Run the same commands locally and fix them |
 
-Both checks must be green **and** the leader must approve before the PR can merge.
+Both checks must be green **and** the leader must approve. The leader then merges.
+
+Your PR also gets a **Vercel preview URL** (posted by the Vercel bot) once `client/` exists. Use it to show UI changes.
 
 If "PR policy" failed only because your previous PR was still open, re-run it after that PR is merged (Actions tab → the failed run → **Re-run jobs**), or push a commit.
 
 ---
 
-## Required npm scripts (for the Sprint 0 scaffolds)
+## Local setup (after the Sprint 0 scaffolds)
 
-CI runs these, so `client/package.json` and `server/package.json` must define them:
+```bash
+docker compose up -d db                      # Postgres 16
+cd server && python3.12 -m venv .venv && source .venv/bin/activate
+pip install -r requirements.txt -r requirements-dev.txt
+cp ../.env.example ../.env                   # AI_PROVIDER=mock, CV_PROVIDER=mock: no API keys needed
+alembic upgrade head && uvicorn app.main:app --reload       # http://localhost:8000/docs
+cd ../client && npm ci && npm run dev        # http://localhost:5173 (proxies /api to :8000)
+```
 
-| Script | client | server |
+## Tooling contract (for the Sprint 0 scaffolds)
+
+CI runs exactly these, so the scaffolds must support them:
+
+| Folder | Must contain | CI runs |
 |---|---|---|
-| `lint` | `eslint .` (with `eslint-plugin-jsdoc`, `publicOnly` for exported functions) | same |
-| `typecheck` | `tsc --noEmit` | same |
-| `test` | `vitest run` | `vitest run` |
-| `build` | `vite build` | — |
+| `server/` | `requirements.txt`, `requirements-dev.txt`, `pyproject.toml` (ruff, mypy, pytest config), `alembic.ini`, `Dockerfile` | `ruff check .`, `ruff format --check .`, `mypy app`, `alembic upgrade head`, `pytest`, `docker build` |
+| `client/` | `package.json` + `package-lock.json` with scripts `lint`, `typecheck`, `test`, `build`, `gen:api`; `vite-plugin-pwa` | `npm ci`, lint, typecheck, test, build, and a check that `dist/manifest.webmanifest` and `dist/sw.js` exist |
+| `ml/` | `requirements.txt` (training), `requirements-ci.txt` (light) | `ruff check .`, `pytest` |
 
-Commit `package-lock.json`. The Python code in `ai/` needs `requirements.txt` and passes `ruff check .` and `pytest`.
-
----
+`/api/v1/health` must return `{"status": "ok", "version": "<APP_VERSION>"}`, because CD uses it to confirm the new version is live. The full Docker image contract is in [docs/deployment.md](docs/deployment.md) §1.
 
 ## When you're blocked
 

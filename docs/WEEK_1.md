@@ -1,5 +1,8 @@
 # AI-Based Symptom Checker — Week 1 Development Roadmap
 
+> **Stack update (30 Sep 2026):** the backend is now **FastAPI (Python)**, not Node/Express/Prisma, and the frontend is a **PWA on Vercel**. See [tech-stack.md](tech-stack.md) and [SPRINT_PLAN.md](SPRINT_PLAN.md). The goals and flows below still apply; translate the code snippets into their FastAPI / SQLAlchemy / Pydantic / pytest equivalents.
+
+
 **Project:** AI-Based Symptom Checker  
 **Duration:** Week 1 of 3  
 **Team Size:** 10 members  

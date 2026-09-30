@@ -1,0 +1,15 @@
+# Caddy reverse proxy: HTTPS for the API, with certificates issued automatically.
+# API_DOMAIN comes from .env, e.g. api.example.com or 203-0-113-7.sslip.io
+{$API_DOMAIN} {
+	encode gzip
+	reverse_proxy api:8000
+	header {
+		Strict-Transport-Security "max-age=31536000; includeSubDomains"
+		X-Content-Type-Options "nosniff"
+		-Server
+	}
+	log {
+		output stdout
+		format json
+	}
+}

@@ -1,0 +1,67 @@
+# Render Blueprint: backend on Render's managed platform (BACKEND_TARGET=render, docs/deployment.md §3).
+# Render does NOT build from git. It runs the Docker image that CD builds once and pushes to GHCR,
+# the same image a VPS would run. CD deploys each commit's exact image through the deploy hook.
+# Apply once (Dashboard -> New -> Blueprint) AFTER the first CD run has pushed :develop and :main images.
+# Secrets marked `sync: false` are entered in the Render dashboard, never in git.
+services:
+  - type: web
+    name: symptom-checker-api-staging
+    runtime: image
+    image:
+      url: ghcr.io/nt1906/symptom-checker-api:develop
+      creds:
+        fromRegistryCreds:
+          name: ghcr            # Render → Settings → Registry Credentials (GitHub PAT with read:packages); not needed if the package is public
+    plan: free
+    region: singapore
+    healthCheckPath: /api/v1/health
+    envVars:
+      - key: APP_ENV
+        value: staging
+      - key: DATABASE_URL        # Neon "staging" branch connection string
+        sync: false
+      - key: JWT_SECRET
+        generateValue: true
+      - key: AI_PROVIDER
+        value: openai
+      - key: AI_MODEL
+        sync: false
+      - key: OPENAI_API_KEY
+        sync: false
+      - key: CV_PROVIDER
+        value: onnx
+      - key: CV_MODEL_REPO
+        sync: false
+      - key: CV_MODEL_REVISION
+        sync: false
+
+  - type: web
+    name: symptom-checker-api
+    runtime: image
+    image:
+      url: ghcr.io/nt1906/symptom-checker-api:main
+      creds:
+        fromRegistryCreds:
+          name: ghcr
+    plan: free                   # upgrade to "starter" before demo day to avoid cold starts
+    region: singapore
+    healthCheckPath: /api/v1/health
+    envVars:
+      - key: APP_ENV
+        value: production
+      - key: DATABASE_URL        # Neon "main" branch connection string
+        sync: false
+      - key: JWT_SECRET
+        generateValue: true
+      - key: AI_PROVIDER
+        value: openai
+      - key: AI_MODEL
+        sync: false
+      - key: OPENAI_API_KEY
+        sync: false
+      - key: CV_PROVIDER
+        value: onnx
+      - key: CV_MODEL_REPO
+        sync: false
+      - key: CV_MODEL_REVISION
+        sync: false

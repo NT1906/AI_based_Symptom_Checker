@@ -1,0 +1,220 @@
+# Continuous deployment ("build once, deploy anywhere").
+#   push to develop -> CI -> build image -> deploy STAGING    (automatic)
+#   push to main    -> CI -> build image -> deploy PRODUCTION (waits for the leader to approve the "production" environment)
+#
+# Backend: one Docker image per commit, pushed to GHCR as ghcr.io/<owner>/symptom-checker-api:<sha>.
+#          Each environment picks where it runs with the variable BACKEND_TARGET:
+#            render (default) -> Render image-backed service, deployed through its deploy hook
+#            vps              -> any Linux server with Docker, deployed over SSH with deploy/vps/deploy.sh
+#          Either way CD waits until /api/v1/health reports this commit SHA.
+# Frontend: Vercel CLI build + deploy, with the /api rewrite pointed at this environment's backend.
+# Parts that aren't configured yet are skipped with a warning.
+# Setup: docs/deployment.md. Architecture: docs/tech-stack.md.
+name: CD
+
+on:
+  push:
+    branches: [develop, main]
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: cd-${{ github.ref_name }}
+  cancel-in-progress: false   # never cancel a deployment half-way
+
+jobs:
+  ci:
+    name: CI
+    uses: ./.github/workflows/ci.yml
+
+  image:
+    name: Build backend image
+    needs: ci
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    permissions:
+      contents: read
+      packages: write
+    outputs:
+      built: ${{ steps.meta.outputs.built }}
+      image: ${{ steps.meta.outputs.image }}
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Image name
+        id: meta
+        run: |
+          if [ ! -f server/Dockerfile ]; then
+            echo "::warning::server/Dockerfile not found. No backend image built."
+            echo "built=false" >> "$GITHUB_OUTPUT"; exit 0
+          fi
+          repo="ghcr.io/${GITHUB_REPOSITORY_OWNER,,}/symptom-checker-api"
+          echo "repo=$repo" >> "$GITHUB_OUTPUT"
+          echo "image=$repo:$GITHUB_SHA" >> "$GITHUB_OUTPUT"
+          echo "built=true" >> "$GITHUB_OUTPUT"
+
+      - uses: docker/setup-qemu-action@v3
+        if: steps.meta.outputs.built == 'true' && contains(vars.IMAGE_PLATFORMS, 'arm64')
+      - uses: docker/setup-buildx-action@v3
+        if: steps.meta.outputs.built == 'true'
+      - uses: docker/login-action@v3
+        if: steps.meta.outputs.built == 'true'
+        with:
+          registry: ghcr.io
+          username: ${{ github.actor }}
+          password: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Build and push
+        if: steps.meta.outputs.built == 'true'
+        uses: docker/build-push-action@v6
+        with:
+          context: ./server
+          push: true
+          # linux/amd64 by default; set repository variable IMAGE_PLATFORMS=linux/amd64,linux/arm64 for ARM VPSes.
+          platforms: ${{ vars.IMAGE_PLATFORMS || 'linux/amd64' }}
+          build-args: GIT_SHA=${{ github.sha }}
+          # :<sha> is what gets deployed; :<branch> (develop/main) is the stable tag Render's blueprint starts from.
+          tags: |
+            ${{ steps.meta.outputs.image }}
+            ${{ steps.meta.outputs.repo }}:${{ github.ref_name }}
+          labels: org.opencontainers.image.source=${{ github.server_url }}/${{ github.repository }}
+          cache-from: type=gha
+          cache-to: type=gha,mode=max
+
+  deploy:
+    name: Deploy ${{ github.ref_name == 'main' && 'production' || 'staging' }}
+    needs: image
+    if: github.ref_name == 'develop' || github.ref_name == 'main'
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    permissions:
+      contents: read
+      packages: write   # to move the :staging / :production tag
+    environment:
+      name: ${{ github.ref_name == 'main' && 'production' || 'staging' }}
+      url: ${{ steps.frontend.outputs.url }}
+    env:
+      ENV_NAME: ${{ github.ref_name == 'main' && 'production' || 'staging' }}
+      IS_PROD: ${{ github.ref_name == 'main' }}
+      IMAGE: ${{ needs.image.outputs.image }}
+      IMAGE_BUILT: ${{ needs.image.outputs.built }}
+      BACKEND_TARGET: ${{ vars.BACKEND_TARGET || 'render' }}   # environment variable: render | vps
+      API_ORIGIN: ${{ vars.API_ORIGIN }}                        # environment variable: public https origin of the API
+      STAGING_API_ORIGIN: ${{ vars.STAGING_API_ORIGIN }}        # repository variable: origin committed in client/vercel.json
+      RENDER_DEPLOY_HOOK_URL: ${{ secrets.RENDER_DEPLOY_HOOK_URL }}
+      VPS_HOST: ${{ secrets.VPS_HOST }}
+      VPS_USER: ${{ secrets.VPS_USER }}
+      VPS_SSH_KEY: ${{ secrets.VPS_SSH_KEY }}
+      VPS_KNOWN_HOSTS: ${{ secrets.VPS_KNOWN_HOSTS }}
+      VPS_APP_DIR: ${{ vars.VPS_APP_DIR || '/opt/symptom-checker' }}
+      VERCEL_TOKEN: ${{ secrets.VERCEL_TOKEN }}
+      VERCEL_ORG_ID: ${{ secrets.VERCEL_ORG_ID }}
+      VERCEL_PROJECT_ID: ${{ secrets.VERCEL_PROJECT_ID }}
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Decide what to deploy
+        id: plan
+        run: |
+          backend=false; frontend=false
+          if [ "$IMAGE_BUILT" = "true" ]; then
+            case "$BACKEND_TARGET" in
+              render) [ -n "$RENDER_DEPLOY_HOOK_URL" ] && [ -n "$API_ORIGIN" ] && backend=true \
+                        || echo "::warning::BACKEND_TARGET=render but RENDER_DEPLOY_HOOK_URL or API_ORIGIN is missing. Backend deploy skipped." ;;
+              vps)    [ -n "$VPS_HOST" ] && [ -n "$VPS_USER" ] && [ -n "$VPS_SSH_KEY" ] && [ -n "$VPS_KNOWN_HOSTS" ] && [ -n "$API_ORIGIN" ] && backend=true \
+                        || echo "::warning::BACKEND_TARGET=vps but a VPS_* secret or API_ORIGIN is missing. Backend deploy skipped." ;;
+              *)      echo "::error::Unknown BACKEND_TARGET '$BACKEND_TARGET' (use render or vps)."; exit 1 ;;
+            esac
+          fi
+          if [ -f client/package.json ]; then
+            [ -n "$VERCEL_TOKEN" ] && [ -n "$VERCEL_ORG_ID" ] && [ -n "$VERCEL_PROJECT_ID" ] && frontend=true \
+              || echo "::warning::client/ exists but the VERCEL_* secrets are not set. Frontend deploy skipped."
+          fi
+          echo "backend=$backend" >> "$GITHUB_OUTPUT"
+          echo "frontend=$frontend" >> "$GITHUB_OUTPUT"
+          echo "Plan: target=$BACKEND_TARGET backend=$backend frontend=$frontend image=${IMAGE:-none}"
+
+      # ---------- Backend: Render ----------
+      - name: Deploy image to Render
+        if: steps.plan.outputs.backend == 'true' && env.BACKEND_TARGET == 'render'
+        run: |
+          encoded=$(jq -rn --arg v "$IMAGE" '$v|@uri')
+          curl -fsS -X POST "${RENDER_DEPLOY_HOOK_URL}&imgURL=${encoded}" > /dev/null
+
+      # ---------- Backend: VPS ----------
+      - name: Deploy image to VPS over SSH
+        if: steps.plan.outputs.backend == 'true' && env.BACKEND_TARGET == 'vps'
+        run: |
+          install -m 700 -d ~/.ssh
+          printf '%s\n' "$VPS_SSH_KEY" > ~/.ssh/id_deploy && chmod 600 ~/.ssh/id_deploy
+          printf '%s\n' "$VPS_KNOWN_HOSTS" > ~/.ssh/known_hosts   # pinned host key, no blind trust
+          SSH="ssh -i ~/.ssh/id_deploy -o BatchMode=yes $VPS_USER@$VPS_HOST"
+          # Ship the versioned stack definition, then deploy the exact image built above.
+          scp -i ~/.ssh/id_deploy -o BatchMode=yes deploy/vps/docker-compose.prod.yml deploy/vps/Caddyfile deploy/vps/deploy.sh \
+            "$VPS_USER@$VPS_HOST:$VPS_APP_DIR/"
+          $SSH "chmod +x $VPS_APP_DIR/deploy.sh && $VPS_APP_DIR/deploy.sh '$IMAGE'"
+
+      - name: Wait until the backend reports this version
+        if: steps.plan.outputs.backend == 'true'
+        run: |
+          for i in $(seq 1 90); do
+            live=$(curl -fsS --max-time 15 "$API_ORIGIN/api/v1/health" | jq -r '.version // empty' 2>/dev/null || true)
+            if [ "$live" = "$GITHUB_SHA" ]; then echo "Backend $live is live."; exit 0; fi
+            echo "Waiting... live version: ${live:-unreachable}"; sleep 10
+          done
+          echo "::error::Backend at $API_ORIGIN did not report version $GITHUB_SHA within 15 minutes."
+          exit 1
+
+      - name: Tag image as ${{ env.ENV_NAME }}
+        if: steps.plan.outputs.backend == 'true'
+        run: |
+          echo "${{ secrets.GITHUB_TOKEN }}" | docker login ghcr.io -u "${{ github.actor }}" --password-stdin
+          docker buildx imagetools create -t "${IMAGE%:*}:$ENV_NAME" "$IMAGE"
+
+      # ---------- Frontend: Vercel ----------
+      - uses: actions/setup-node@v4
+        if: steps.plan.outputs.frontend == 'true'
+        with:
+          node-version: 20
+
+      - name: Build and deploy to Vercel
+        id: frontend
+        if: steps.plan.outputs.frontend == 'true'
+        run: |
+          npm install --global vercel@latest
+          if [ "$IS_PROD" = "true" ]; then target=production; flag=--prod; else target=preview; flag=; fi
+          # Point the same-origin /api proxy at this environment's backend.
+          if [ -n "$STAGING_API_ORIGIN" ] && [ -n "$API_ORIGIN" ] && [ -f client/vercel.json ]; then
+            sed -i "s#${STAGING_API_ORIGIN}#${API_ORIGIN}#g" client/vercel.json
+          fi
+          vercel pull --yes --environment="$target" --token="$VERCEL_TOKEN"
+          vercel build $flag --token="$VERCEL_TOKEN"
+          url=$(vercel deploy --prebuilt $flag --token="$VERCEL_TOKEN")
+          echo "url=$url" >> "$GITHUB_OUTPUT"
+
+      - name: Smoke test
+        if: steps.plan.outputs.frontend == 'true'
+        env:
+          URL: ${{ steps.frontend.outputs.url }}
+          CHECK_API: ${{ steps.plan.outputs.backend }}
+        run: |
+          curl -fsS -o /dev/null "$URL" || { echo "::error::$URL did not return 200. If it returned 401, turn off Vercel Deployment Protection for previews."; exit 1; }
+          curl -fsS -o /dev/null "$URL/manifest.webmanifest" || { echo "::error::PWA manifest missing at $URL"; exit 1; }
+          if [ "$CHECK_API" = "true" ]; then
+            curl -fsS "$URL/api/v1/health" | jq -e --arg sha "$GITHUB_SHA" '.version == $sha' > /dev/null \
+              || { echo "::error::/api proxy on Vercel does not reach the new backend."; exit 1; }
+          fi
+          echo "Smoke test passed."
+
+      - name: Summary
+        if: always()
+        run: |
+          {
+            echo "### Deployment: $ENV_NAME"
+            echo "- Commit: \`${GITHUB_SHA::7}\`"
+            echo "- Backend: ${{ steps.plan.outputs.backend == 'true' && 'deployed' || 'skipped' }} → target \`$BACKEND_TARGET\` (${API_ORIGIN:-no API_ORIGIN})"
+            echo "- Image: \`${IMAGE:-not built}\`"
+            echo "- Frontend: ${{ steps.frontend.outputs.url || 'not deployed' }}"
+          } >> "$GITHUB_STEP_SUMMARY"
