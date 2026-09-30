@@ -17,7 +17,7 @@
 6. `docs/idea.md`: product scope, including what is **out of scope**.
 7. The files you are about to change, plus their tests.
 
-**Stack summary:** React 18 + TypeScript + Vite PWA (`client/`, Vercel) · Python 3.12 + FastAPI + Pydantic v2 + SQLAlchemy 2.0 + Alembic (`server/`, Render) · PyTorch/timm training and scikit-learn (`ml/`, never deployed) · ONNX Runtime for serving models.
+**Stack summary:** React 18 + TypeScript + Vite PWA (`client/`, Vercel) · Python 3.12 + FastAPI + Pydantic v2 + SQLAlchemy 2.0 + Alembic (`server/`, Docker image on Render or a VPS) · PyTorch/timm training and scikit-learn (`ml/`, never deployed) · ONNX Runtime for serving models.
 The `WEEK_*.md` files contain older Node/Express/Prisma snippets. Use their FastAPI/Python equivalents.
 
 ---
@@ -37,7 +37,7 @@ Then check:
 - **Ownership.** Only edit files in the member's own module (see `docs/SPRINT_PLAN.md` §3 and `docs/rules.md`). If the task needs a change in someone else's module, **don't make it**. Write down exactly what change is needed and tell the human to request it in the issue.
 - **One task only.** Implement only what the issue asks. Don't fix unrelated things, don't refactor other code, don't add bonus features. Note other problems in your final message instead.
 - **Scope.** Refuse to build anything out of scope (`docs/idea.md`, `docs/SPRINT_PLAN.md` §2): appointment booking, doctor accounts/dashboards/ratings/availability, a doctor directory, voice input, prescriptions, a general-purpose chatbot, payments.
-- **Published interfaces.** Don't change `server/app/schemas/`, the Alembic migrations, env var names, `render.yaml`, `client/vercel.json` or `.github/` unless the task says so. Those changes need team agreement and leader approval.
+- **Published interfaces.** Don't change `server/app/schemas/`, the Alembic migrations, env var names, `server/Dockerfile`, `render.yaml`, `deploy/`, `client/vercel.json` or `.github/` unless the task says so. Those changes need team agreement and leader approval.
 
 ---
 
@@ -220,7 +220,7 @@ Comment every non-obvious decision, business rule (cite the FR/DR ID), workaroun
 
 - A new module or package gets a short `README.md`: purpose, public interface, how to test.
 - A schema/API change updates `docs/api-contract.md`. A DB change updates `docs/database.md`. Both in the same PR.
-- A new env var goes into `.env.example`, `docs/tech-stack.md` §7 and, if deployed, `render.yaml`.
+- A new env var goes into `.env.example`, `docs/tech-stack.md` §7 and, if deployed, `render.yaml` and `deploy/vps/.env.example`.
 - A new model version comes with an updated model card (data, metrics, limits).
 - `TODO` comments must reference an issue: `# TODO(#42): support multiple images`.
 
@@ -246,10 +246,10 @@ Comment every non-obvious decision, business rule (cite the FR/DR ID), workaroun
 1. Work on the member's feature branch `<name>/<issue>-<desc>`, created from an up-to-date `develop`. **Never** commit to `develop` or `main`.
 2. Make **small, logical commits** with Conventional Commit messages, typically 3 or more per task (e.g. scaffold → logic → tests → docs). Never make empty, whitespace-only or padding commits.
 3. Commits are authored by the human team member (their git identity). Do not change `git config`.
-4. **Never:** force-push to shared branches, rewrite `develop`/`main` history, merge PRs, approve PRs, approve deployments, trigger production deploys, skip hooks (`--no-verify`), edit `.github/`, `render.yaml` or CI checks to make a failing check pass, or delete other people's branches. **Merging and production deployment belong to the team leader only.**
+4. **Never:** force-push to shared branches, rewrite `develop`/`main` history, merge PRs, approve PRs, approve deployments, trigger production deploys, skip hooks (`--no-verify`), edit `.github/`, `deploy/`, `render.yaml` or CI checks to make a failing check pass, or delete other people's branches. **Merging and production deployment belong to the team leader only.**
 5. When asked to open a PR: target `develop`, use the PR template, fill **every** section, put `Closes #<issue>` in the body, and tick the checklist only for items that are actually true.
 6. If the member already has another open PR, say so. The team rule is one feature at a time.
-7. Never add, commit or print secrets. `.env` is git-ignored, and only `.env.example` (with placeholder values) is committed. Deployment secrets live only in GitHub Environments and the Render/Vercel dashboards.
+7. Never add, commit or print secrets. `.env` is git-ignored, and only `.env.example` (with placeholder values) is committed. Deployment secrets live only in GitHub Environments, the server `.env` on a VPS, and the Render/Vercel dashboards.
 8. Never commit datasets, checkpoints, `.onnx`/`.pt` files or notebooks with outputs containing images. Models go to Hugging Face Hub.
 
 ---

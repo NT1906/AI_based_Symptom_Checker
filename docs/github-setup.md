@@ -32,7 +32,7 @@ Both `develop` and `main` have a ruleset (Settings → Rules → Rulesets):
 | `ci.yml` → **CI passed** | PRs (and inside CD on every push) | Hygiene (secrets, `.env`, large files), file-header docs check, then lint/typecheck/test/build for `client/`, `server/` (FastAPI) and `ml/`. Each module job switches on automatically once its folder exists. |
 | `pr-policy.yml` → **PR policy** | PR opened / edited / pushed | Branch naming and ownership, Conventional Commits, linked and assigned issue in a milestone, ticked checklist, **one open PR per member**. Runs the policy from the base branch, so a PR can't weaken it. |
 | `contribution-report.yml` | Mondays 09:00 IST + manual | Commits and merged PRs per member since 10 Oct, flags anyone under 75% of the median |
-| `cd.yml` → **CD** | Push to develop / main | Runs CI, then deploys: develop → **staging** automatically, main → **production** after the leader approves. Details in §6. |
+| `cd.yml` → **CD** | Push to develop / main | Runs CI, builds the backend Docker image (GHCR), then deploys it to Render or a VPS plus the frontend to Vercel: develop → **staging** automatically, main → **production** after the leader approves. Details in §6. |
 | Dependabot (`dependabot.yml`) | Weekly | Action updates now; npm/pip once the scaffolds exist (S0) |
 
 ## 4. Labels and milestones
@@ -65,19 +65,19 @@ Both `develop` and `main` have a ruleset (Settings → Rules → Rulesets):
 Architecture and environments are in [tech-stack.md](tech-stack.md). The pipeline (`.github/workflows/cd.yml`) skips anything that isn't configured yet, so these steps can be done during Sprint 0/1 (task S1-RUT-4, with the leader).
 
 1. **Database (Neon):** create a project with two branches, `main` (production) and `staging`. Copy both connection strings (`postgresql+psycopg://…`).
-2. **Backend (Render):** Dashboard → New → **Blueprint** → select this repo. It creates `symptom-checker-api-staging` (develop) and `symptom-checker-api` (main) from `render.yaml`. Fill the `sync: false` env vars (`DATABASE_URL`, `OPENAI_API_KEY`, `AI_MODEL`, `CV_MODEL_*`). For each service copy **Settings → Deploy Hook** and the service URL.
+2. **Backend (Docker → Render or VPS):** follow [deployment.md](deployment.md): GHCR package access (§2), then either Render (§3) or a VPS (§4). Each GitHub environment gets `BACKEND_TARGET` (`render` or `vps`), `API_ORIGIN`, and that target's secrets.
 3. **Frontend (Vercel):** import the repo, set **Root Directory = `client`**, framework Vite. `client/vercel.json` turns off Vercel's own deploys of `main`/`develop`; Actions does those, and Vercel still builds PR previews. In **Settings → Deployment Protection**, turn **off** Vercel Authentication for previews (teammates can't log in to a Hobby account). Create a token (Account → Tokens) and note the Org ID and Project ID (`vercel link` → `.vercel/project.json`).
 4. **GitHub → Settings → Secrets and variables → Actions:**
    - Repository **secrets:** `VERCEL_TOKEN`, `VERCEL_ORG_ID`, `VERCEL_PROJECT_ID`
-   - Repository **variable:** `STAGING_API_ORIGIN` = the staging Render URL (the one committed in `client/vercel.json`)
+   - Repository **variables:** `STAGING_API_ORIGIN` = the staging API origin (the one committed in `client/vercel.json`); optional `IMAGE_PLATFORMS` for ARM servers
 5. **GitHub → Settings → Environments:**
-   - `staging`: deployment branches = `develop`; secret `RENDER_DEPLOY_HOOK_URL` (staging hook); variable `API_ORIGIN` (staging URL).
-   - `production`: **required reviewer = NT1906**, deployment branches = `main`; secret `RENDER_DEPLOY_HOOK_URL` (production hook); variable `API_ORIGIN` (production URL).
+   - `staging`: deployment branches = `develop`; backend variables/secrets from step 2.
+   - `production`: **required reviewer = NT1906**, deployment branches = `main`; backend variables/secrets from step 2.
 6. Merge anything to `develop` and watch **Actions → CD**. The job summary shows the deployed URLs.
 
-**Rollback:** Render → service → Events → pick the previous deploy → **Rollback**. Vercel → Deployments → previous production deployment → **Promote to Production**. Then revert the bad commit through a PR.
+**Rollback:** see [deployment.md](deployment.md) §6. A VPS rolls back automatically when the new container is unhealthy.
 
-**Demo day:** Render's free tier sleeps after 15 minutes idle (~50 s cold start). Upgrade the production service to Starter for the demo week, or open the app a few minutes before presenting.
+**Demo day:** Render's free tier sleeps after 15 minutes idle (~50 s cold start). Upgrade the production service to Starter for the demo week, switch production to a VPS, or open the app a few minutes before presenting.
 
 ## 7. Re-applying the settings
 

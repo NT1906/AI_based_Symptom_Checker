@@ -32,12 +32,13 @@ Changing anything here needs a PR approved by the leader.
 | **Testing** | pytest + httpx (backend), Vitest + React Testing Library + MSW (frontend), Playwright (E2E) | Standard for each language |
 | Quality | ruff (lint + format), mypy, ESLint + Prettier | Enforced in CI |
 | **Hosting: frontend** | **Vercel** (Hobby) | Global CDN, PR preview URLs, zero-config Vite |
-| **Hosting: backend** | **Render** web service (Docker), region Singapore | Runs the full FastAPI + ONNX process with no bundle-size limit |
+| **Backend packaging** | **Docker** image per commit, pushed to GHCR (`ghcr.io/nt1906/symptom-checker-api:<sha>`) | Build once, run the identical artifact anywhere |
+| **Hosting: backend** | **Render** (image-backed web service, Singapore) by default, **or any VPS** with Docker + Caddy. Chosen per environment with `BACKEND_TARGET` ([deployment.md](deployment.md)) | Managed and free to start; a VPS gives full control, no cold starts and more RAM |
 | CI / CD | GitHub Actions | One pipeline for everything, gated by the leader |
-| Monitoring | Render logs + health checks, UptimeRobot, Sentry (free tier) | Enough for a course project |
+| Monitoring | Platform/Docker logs + health checks, UptimeRobot, Sentry (free tier) | Enough for a course project |
 
 ### Why the backend is not on Vercel
-Vercel's Python functions have a 250 MB bundle limit, a short execution time, cold starts on every idle period, and no background jobs. The API needs ONNX Runtime, NumPy and scikit-learn in memory, scheduled clean-up jobs, and stable latency (NFR-01). A Docker service on Render handles that. The frontend stays on Vercel.
+Vercel's Python functions have a 250 MB bundle limit, a short execution time, cold starts on every idle period, and no background jobs. The API needs ONNX Runtime, NumPy and scikit-learn in memory, scheduled clean-up jobs, and stable latency (NFR-01). A Docker container (on Render or a VPS) handles that. The frontend stays on Vercel.
 
 ### Why no PyTorch in production
 Training uses PyTorch, but the server only runs exported ONNX models. That keeps the Docker image around 300 MB instead of 2 GB and inference fast on CPU.
@@ -53,7 +54,7 @@ AI_based_Symptom_Checker/
 │   ├── public/icons/           PWA icons
 │   ├── vite.config.ts          PWA plugin + /api dev proxy
 │   └── vercel.json             SPA fallback, /api rewrite, security headers
-├── server/                     FastAPI → Render
+├── server/                     FastAPI → Docker image → Render or VPS
 │   ├── app/
 │   │   ├── main.py             app factory
 │   │   ├── api/v1/             routers (HTTP only)
@@ -78,7 +79,8 @@ AI_based_Symptom_Checker/
 │   ├── requirements.txt        full training deps (torch, timm, …)
 │   └── requirements-ci.txt     light deps for CI tests
 ├── tests/e2e/                  Playwright
-├── render.yaml                 Render blueprint (backend infrastructure as code)
+├── deploy/vps/                 VPS stack: docker-compose.prod.yml, Caddyfile, deploy.sh
+├── render.yaml                 Render blueprint (image-backed services)
 └── docs/
 ```
 
@@ -92,7 +94,7 @@ AI_based_Symptom_Checker/
  installed PWA)       │  /api/*  ──rewrite (same-origin proxy)──┐                      │
                       └─────────────────────────────────────────┼──────────────────────┘
                                                                 ▼
-                      ┌──────────────────────────── Render ────────────────────────────┐
+                      ┌───────────── Render  or  VPS (Docker + Caddy) ─────────────────┐
                       │  FastAPI (Docker) — ONNX Runtime (CV + condition model)        │
                       │  /api/v1/health returns the deployed git SHA                   │
                       └──────────┬──────────────────────────┬──────────────────────────┘
@@ -102,7 +104,7 @@ AI_based_Symptom_Checker/
          Hugging Face Hub (model files, pinned revision) ──► downloaded at startup
 ```
 
-**Same-origin API.** The frontend always calls relative `/api/...` URLs. Vercel rewrites them to the Render backend, so there is no CORS setup and the auth cookie is first-party (cross-site cookies are blocked by Safari). Locally, the Vite dev server proxies `/api` to `http://localhost:8000`.
+**Same-origin API.** The frontend always calls relative `/api/...` URLs. Vercel rewrites them to the backend (Render or VPS), so there is no CORS setup and the auth cookie is first-party (cross-site cookies are blocked by Safari). Locally, the Vite dev server proxies `/api` to `http://localhost:8000`.
 
 ## 4. Environments
 
@@ -110,8 +112,8 @@ AI_based_Symptom_Checker/
 |---|---|---|---|---|---|
 | Local | `npm run dev` :5173 | `uvicorn` :8000 | Docker Postgres | — | — |
 | Preview | Vercel preview per PR (Vercel Git integration) | staging API | staging | every PR push | none |
-| **Staging** | Vercel preview build of `develop` | `symptom-checker-api-staging` | Neon `staging` branch | every merge to `develop` (after CI) | automatic |
-| **Production** | Vercel production | `symptom-checker-api` | Neon `main` branch | every merge to `main` (after CI) | **leader approves the deployment** |
+| **Staging** | Vercel preview build of `develop` | image `:<sha>` on Render (`symptom-checker-api-staging`) or VPS | Neon `staging` branch | every merge to `develop` (after CI) | automatic |
+| **Production** | Vercel production | image `:<sha>` on Render (`symptom-checker-api`) or VPS | Neon `main` branch | every merge to `main` (after CI) | **leader approves the deployment** |
 
 Migrations run automatically at container start (`alembic upgrade head`). Migrations must be backward-compatible (add → migrate data → remove in a later release), so a rollback never breaks the database.
 
@@ -135,7 +137,7 @@ datasets/ manifest + download script ──► ml/cv/train.py on Kaggle/Colab GP
 
 - **Candidate datasets:** Google SCIN (consumer phone photos of skin conditions), Fitzpatrick17k, DermNet. Check each licence before use and record it in `ml/datasets/README.md`.
 - **Output classes:** a small set of common visible conditions **plus `unclear`**. The model abstains below a confidence threshold, and the chat continues with text only.
-- **Size budget:** ≤ 25 MB per ONNX model, ≤ 1 s inference on Render's free CPU, total RAM < 512 MB.
+- **Size budget:** ≤ 25 MB per ONNX model, ≤ 1 s inference on a shared CPU, total RAM < 512 MB (so it fits Render's free tier; a VPS has headroom).
 - Datasets, checkpoints and `.onnx` files are **never committed**. They live in Kaggle/Drive/HF Hub.
 - CV output is **one more input** to the deterministic risk engine. It can raise the risk tier or add symptoms, but never lower the risk or diagnose on its own.
 
@@ -145,9 +147,10 @@ datasets/ manifest + download script ──► ml/cv/train.py on Kaggle/Colab GP
 |---|---|---|
 | `APP_ENV` | `local` / `staging` / `production` | |
 | `DATABASE_URL` | `postgresql+psycopg://…` | Neon connection string |
-| `JWT_SECRET` | random 64 chars | Render generates it |
+| `JWT_SECRET` | random 64 chars | Render generates it; on a VPS put it in the server `.env` |
 | `AI_PROVIDER` / `AI_MODEL` / `OPENAI_API_KEY` | `openai` / (current small model) / `sk-…` | `mock` in local and CI |
 | `CV_PROVIDER` / `CV_MODEL_REPO` / `CV_MODEL_REVISION` | `onnx` / `NT1906/skin-cv` / commit hash | `mock` in local and CI |
-| `RENDER_GIT_COMMIT` | set by Render | Returned by `/api/v1/health` so CD can confirm what was deployed |
+| `APP_VERSION` | git SHA, baked into the image (`--build-arg GIT_SHA`) | Returned by `/api/v1/health` so CD can confirm what was deployed, on any target |
+| `PORT` | `8000` (Render sets its own) | Port Uvicorn listens on |
 
 Frontend: nothing secret. Everything in the browser is public.

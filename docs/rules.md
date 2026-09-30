@@ -31,7 +31,7 @@ project-root/                     (full layout and stack: docs/tech-stack.md)
 │   ├── src/stores/, src/services/← Vivek
 │   ├── src/types/api.gen.ts      ← generated from the server OpenAPI; never edit by hand
 │   └── vite.config.ts, vercel.json ← Vivek (PWA, proxy, headers)
-├── server/                       ← Backend: FastAPI on Render
+├── server/                       ← Backend: FastAPI, shipped as a Docker image (Render or VPS)
 │   ├── app/main.py, app/api/     ← Rutva (app factory, routers)
 │   ├── app/core/                 ← Rutva (config, logging, errors)
 │   ├── app/middleware/           ← Dimple (security headers, rate limits)
@@ -52,7 +52,7 @@ project-root/                     (full layout and stack: docs/tech-stack.md)
 │   ├── prediction/, datasets/conditions/ ← Nisarg
 │   └── nlp_eval/                 ← Mohit (with Nishith)
 ├── tests/e2e/                    ← Mohit (Playwright)
-├── .github/, render.yaml         ← Nisarg (leader) approves; Rutva maintains CI/CD
+├── .github/, render.yaml, deploy/ ← Nisarg (leader) approves; Rutva maintains CI/CD and deployment
 └── docs/                         ← Everyone reads, Rutva maintains
 ```
 
@@ -63,7 +63,7 @@ project-root/                     (full layout and stack: docs/tech-stack.md)
 ---
 
 ### 👤 Rutva — Backend Lead + Integration
-**You own:** FastAPI app foundation, API routers, CI/CD pipelines (GitHub Actions), Dockerfile and `render.yaml`, Vercel/Render deployment, logging infrastructure (structlog), and overall backend deployment architecture.
+**You own:** FastAPI app foundation, API routers, CI/CD pipelines (GitHub Actions), Dockerfile and image registry, `render.yaml`, `deploy/vps/`, Vercel/Render/VPS deployment, logging infrastructure (structlog), and overall backend deployment architecture.
 
 **Your hard boundaries:**
 | ✅ You do this | ❌ You do NOT do this |
@@ -71,7 +71,7 @@ project-root/                     (full layout and stack: docs/tech-stack.md)
 | Write API routes in `server/src/routes/` that call Kavya/Nishith's services | Write the core assessment state machine logic (that's Kavya) |
 | Define the final REST API contract and OpenAPI spec | Write AI extraction logic (that's Nishith) |
 | Set up structlog, request IDs, and application metrics | Change ORM models or migrations (that's Harsh) |
-| Configure Render, Vercel, health checks and the Dockerfile | Build the frontend application |
+| Configure the Docker image, Render or VPS, Vercel, and health checks | Build the frontend application |
 
 **Interface you publish (others depend on this):**
 - All REST API endpoints (e.g., `POST /api/v1/assessment`, `POST /api/v1/assessment/:id/message`) with exact URL, method, request body, and response schema.

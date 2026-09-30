@@ -152,7 +152,7 @@ CI runs exactly these, so the scaffolds must support them:
 | `client/` | `package.json` + `package-lock.json` with scripts `lint`, `typecheck`, `test`, `build`, `gen:api`; `vite-plugin-pwa` | `npm ci`, lint, typecheck, test, build, and a check that `dist/manifest.webmanifest` and `dist/sw.js` exist |
 | `ml/` | `requirements.txt` (training), `requirements-ci.txt` (light) | `ruff check .`, `pytest` |
 
-`/api/v1/health` must return `{"status": "ok", "version": "<RENDER_GIT_COMMIT>"}`, because CD uses it to confirm the new version is live.
+`/api/v1/health` must return `{"status": "ok", "version": "<APP_VERSION>"}`, because CD uses it to confirm the new version is live. The full Docker image contract is in [docs/deployment.md](docs/deployment.md) §1.
 
 ## When you're blocked
 

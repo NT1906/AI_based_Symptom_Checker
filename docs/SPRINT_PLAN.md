@@ -2,7 +2,7 @@
 
 **Timeline:** Saturday 10 October 2026 → Friday 20 November 2026 (6 weeks). Dates may shift slightly. The leader updates this file and the GitHub milestones together.
 **Team:** 10 members, each owning one module (see [rules.md](rules.md)).
-**Scope source of truth:** [idea.md](idea.md). **Stack:** [tech-stack.md](tech-stack.md) (React PWA on Vercel, FastAPI on Render, CV models trained in `ml/`). Requirement IDs (FR / NFR / DR) come from the Lab 6 report, `Group_14_project_report.pdf`.
+**Scope source of truth:** [idea.md](idea.md). **Stack:** [tech-stack.md](tech-stack.md) (React PWA on Vercel, FastAPI in Docker on Render or a VPS, CV models trained in `ml/`). Requirement IDs (FR / NFR / DR) come from the Lab 6 report, `Group_14_project_report.pdf`.
 
 ---
 
@@ -50,7 +50,7 @@ Stack and folder layout: [tech-stack.md](tech-stack.md).
 | Code | Member | Module |
 |---|---|---|
 | NIS | Nisarg (leader) | Prediction, risk engine, result composer: `server/app/services/prediction/`, `ml/prediction/`, `ml/datasets/conditions/` |
-| RUT | Rutva | FastAPI foundation, routers, config, Docker, CI/CD, deployment: `server/app/{main.py,api,core}`, `server/Dockerfile`, `render.yaml` |
+| RUT | Rutva | FastAPI foundation, routers, config, Docker, CI/CD, deployment: `server/app/{main.py,api,core}`, `server/Dockerfile`, `render.yaml`, `deploy/` |
 | HAR | Harsh | Database: `server/app/{models,repositories,db}/`, `server/alembic/` |
 | KAV | Kavya | Assessment orchestration, state machine, API contracts: `server/app/services/assessment/`, `server/app/schemas/` |
 | NIT | Nishith | AI gateway, prompts, extraction: `server/app/services/ai/` |
@@ -69,7 +69,7 @@ Unit tests for a module are written by its owner in the same PR (`server/tests/u
 
 | ID | Task | Req. |
 |---|---|---|
-| S0-RUT-1 | Scaffold `server/`: FastAPI app factory, pydantic-settings config, structlog JSON logging, central error handler, `GET /api/v1/health` returning `{status, version}` (version = `RENDER_GIT_COMMIT`), `Dockerfile` (python:3.12-slim, non-root user, `alembic upgrade head && uvicorn`), `docker-compose.yml` (Postgres 16), `requirements.txt` + `requirements-dev.txt`, `pyproject.toml` (ruff, mypy, pytest), `.env.example`. Enable pip in `dependabot.yml`. | NFR-08 |
+| S0-RUT-1 | Scaffold `server/`: FastAPI app factory, pydantic-settings config, structlog JSON logging, central error handler, `GET /api/v1/health` returning `{status, version}` (version = `APP_VERSION`), `Dockerfile` + `.dockerignore` meeting the image contract in [deployment.md](deployment.md) §1, `docker-compose.yml` (Postgres 16), `requirements.txt` + `requirements-dev.txt`, `pyproject.toml` (ruff, mypy, pytest), `.env.example`. Enable pip in `dependabot.yml`. | NFR-08 |
 | S0-VIV-1 | Scaffold `client/`: Vite + React 18 + TS, Tailwind, React Router, Zustand, TanStack Query, `vite-plugin-pwa` (manifest, app-shell caching, API `NetworkOnly`), Vite dev proxy `/api → :8000`, Vitest + RTL + MSW, ESLint (+ `eslint-plugin-jsdoc`) + Prettier, `vercel.json` (SPA fallback, `/api` rewrite to staging, security headers, `git.deploymentEnabled` off for `main`/`develop`). Scripts: `lint`, `typecheck`, `test`, `build`. Enable npm in `dependabot.yml`. | NFR-08, NFR-09 |
 | S0-KAV-1 | API contracts as Pydantic models in `server/app/schemas/`: `AssessmentState`, `Symptom`, `Message`, `Condition`, `ConfidenceLabel`, `RiskLevel`, `AssessmentResult`. Contract doc `docs/api-contract.md` with example JSON for every endpoint. | — |
 | S0-HAR-1 | SQLAlchemy 2.0 models (`User`, `Assessment`, `Message`, `Symptom`, `Consent`), DB session, Alembic init + first migration, seed script, ER diagram in `docs/database.md`. With the leader: Neon project with `staging` and `main` branches. | FR-01 |
@@ -91,7 +91,7 @@ Unit tests for a module are written by its owner in the same PR (`server/tests/u
 | S1-RUT-1 | Routers for all assessment endpoints with stub responses (`POST /assessments`, `POST /assessments/{id}/messages`, `PUT /assessments/{id}/symptoms`, `POST /assessments/{id}/confirm`, `GET /assessments/{id}/result`). OpenAPI export script + `npm run gen:api` in client + CI check that generated types are up to date. | — |
 | S1-RUT-2 | Error model (`AppError` → JSON error body with code), request-ID middleware, access logging. | NFR-05, NFR-10 |
 | S1-RUT-3 | Replace stubs: routers → services through FastAPI `Depends` (dependency injection). | — |
-| S1-RUT-4 | CD live end-to-end: Render services from `render.yaml`, Vercel project, GitHub environments/variables filled; a merge to `develop` deploys staging automatically. | NFR-05 |
+| S1-RUT-4 | CD live end-to-end: GHCR package access, Render services from `render.yaml` (or a VPS per `deploy/vps/`), Vercel project, GitHub environments filled; a merge to `develop` deploys staging automatically. | NFR-05 |
 | S1-HAR-1 | Repository layer: `assessment_repository.py`, `message_repository.py` (typed CRUD). | — |
 | S1-HAR-2 | Symptom persistence with structured JSONB (severity, duration, body site) + `symptom_repository.py`. | FR-17 |
 | S1-HAR-3 | Guest sessions: anonymous session token model, assessment ownership by session. | idea §10 |
@@ -187,7 +187,7 @@ Unit tests for a module are written by its owner in the same PR (`server/tests/u
 | ID | Task | Req. |
 |---|---|---|
 | S3-RUT-1 | First production release through CD (leader-approved), Sentry for client and server, UptimeRobot on the health endpoint. | NFR-05 |
-| S3-RUT-2 | Rollback drill on staging (Render + Vercel) + demo-day plan (paid instance or warm-up). | NFR-05 |
+| S3-RUT-2 | Rollback drill on staging (backend target + Vercel) + demo-day plan (paid instance, VPS, or warm-up). | NFR-05 |
 | S3-RUT-3 | Release `v1.0.0`: changelog, release notes, final README. | NFR-08 |
 | S3-HAR-1 | Query performance review (`EXPLAIN ANALYZE`) + index fixes. | NFR-01 |
 | S3-HAR-2 | Backup and restore procedure on Neon, tested once. | NFR-05 |
@@ -208,7 +208,7 @@ Unit tests for a module are written by its owner in the same PR (`server/tests/u
 | S3-DAR-2 | Usability test with 5 users + top-5 fixes. | NFR-06 |
 | S3-DAR-3 | Final visual polish + demo script walkthrough. | — |
 | S3-MAN-1 | Final CV evaluation: fairness across skin tones, failure tests (irrelevant, blurry, edge images). | NFR-07 |
-| S3-MAN-2 | Inference performance on Render CPU: ≤ 1 s per image, total RAM < 512 MB. | NFR-01 |
+| S3-MAN-2 | Inference performance on the production CPU (Render free tier or VPS): ≤ 1 s per image, total RAM < 512 MB. | NFR-01 |
 | S3-MAN-3 | CV model card + limitations in `docs/`. | NFR-08 |
 | S3-MOH-1 | Full regression + E2E matrix (browsers × devices, installed PWA). | NFR-09 |
 | S3-MOH-2 | Load test (Locust or Artillery) against staging. | NFR-02 |

@@ -27,7 +27,7 @@ A conversational, **informational** triage aid: users describe symptoms in plain
 ## Tech stack
 
 **Frontend:** React 18 + TypeScript + Vite, installable **PWA**, Tailwind, Zustand, TanStack Query, deployed on **Vercel**.
-**Backend:** Python 3.12 + **FastAPI**, Pydantic v2, SQLAlchemy 2.0 + Alembic, PostgreSQL (Neon), deployed on **Render** (Docker).
+**Backend:** Python 3.12 + **FastAPI**, Pydantic v2, SQLAlchemy 2.0 + Alembic, PostgreSQL (Neon), shipped as a **Docker** image and deployed on **Render** or any **VPS** ([deployment guide](docs/deployment.md)).
 **AI/ML:** OpenAI through a single AI gateway (mock provider for dev); CV models trained with PyTorch + timm on Kaggle/Colab, served as ONNX; scikit-learn condition model.
 **Quality:** pytest, Vitest, Playwright, ruff, mypy, ESLint; GitHub Actions CI/CD (staging on every merge, production after leader approval).
 
