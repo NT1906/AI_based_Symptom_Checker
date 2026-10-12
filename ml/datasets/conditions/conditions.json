@@ -1,0 +1,2675 @@
+{
+  "schema_version": "1.0",
+  "dataset_version": "v0",
+  "intended_use": "Reference data for an informational triage aid. It ranks possible conditions and routes red-flag symptoms to urgent care. It is not a diagnostic tool and has not been clinically validated.",
+  "weights": {
+    "3": "hallmark symptom",
+    "2": "common symptom",
+    "1": "sometimes present"
+  },
+  "specialties": [
+    {
+      "id": "general_physician",
+      "name": "General physician",
+      "map_query": "general physician"
+    },
+    {
+      "id": "ent",
+      "name": "ENT specialist",
+      "map_query": "ENT doctor"
+    },
+    {
+      "id": "gastroenterology",
+      "name": "Gastroenterologist",
+      "map_query": "gastroenterologist"
+    },
+    {
+      "id": "neurology",
+      "name": "Neurologist",
+      "map_query": "neurologist"
+    },
+    {
+      "id": "cardiology",
+      "name": "Cardiologist",
+      "map_query": "cardiologist"
+    },
+    {
+      "id": "pulmonology",
+      "name": "Pulmonologist (chest specialist)",
+      "map_query": "pulmonologist"
+    },
+    {
+      "id": "dermatology",
+      "name": "Dermatologist",
+      "map_query": "dermatologist"
+    },
+    {
+      "id": "ophthalmology",
+      "name": "Eye specialist",
+      "map_query": "ophthalmologist"
+    },
+    {
+      "id": "orthopedics",
+      "name": "Orthopaedic doctor",
+      "map_query": "orthopedic doctor"
+    },
+    {
+      "id": "urology",
+      "name": "Urologist",
+      "map_query": "urologist"
+    },
+    {
+      "id": "endocrinology",
+      "name": "Endocrinologist (diabetes specialist)",
+      "map_query": "diabetologist"
+    },
+    {
+      "id": "general_surgery",
+      "name": "General surgeon",
+      "map_query": "general surgeon"
+    },
+    {
+      "id": "emergency_medicine",
+      "name": "Emergency department",
+      "map_query": "hospital emergency department"
+    }
+  ],
+  "symptoms": [
+    {
+      "id": "fever",
+      "name": "Fever",
+      "body_system": "general"
+    },
+    {
+      "id": "chills",
+      "name": "Chills or shivering",
+      "body_system": "general"
+    },
+    {
+      "id": "fatigue",
+      "name": "Tiredness or weakness",
+      "body_system": "general"
+    },
+    {
+      "id": "body_aches",
+      "name": "Body or muscle aches",
+      "body_system": "general"
+    },
+    {
+      "id": "sweating",
+      "name": "Sweating",
+      "body_system": "general"
+    },
+    {
+      "id": "night_sweats",
+      "name": "Night sweats",
+      "body_system": "general"
+    },
+    {
+      "id": "weight_loss",
+      "name": "Unintended weight loss",
+      "body_system": "general"
+    },
+    {
+      "id": "loss_of_appetite",
+      "name": "Loss of appetite",
+      "body_system": "general"
+    },
+    {
+      "id": "dizziness",
+      "name": "Dizziness or light-headedness",
+      "body_system": "general"
+    },
+    {
+      "id": "fainting",
+      "name": "Fainting",
+      "body_system": "general"
+    },
+    {
+      "id": "swollen_neck_glands",
+      "name": "Swollen glands in the neck",
+      "body_system": "general"
+    },
+    {
+      "id": "excessive_thirst",
+      "name": "Excessive thirst",
+      "body_system": "general"
+    },
+    {
+      "id": "pale_skin",
+      "name": "Pale skin",
+      "body_system": "general"
+    },
+    {
+      "id": "little_or_no_urine",
+      "name": "Passing little or no urine",
+      "body_system": "general"
+    },
+    {
+      "id": "unable_to_keep_fluids_down",
+      "name": "Unable to keep fluids down",
+      "body_system": "general"
+    },
+    {
+      "id": "slow_healing_wounds",
+      "name": "Wounds that heal slowly",
+      "body_system": "general"
+    },
+    {
+      "id": "headache",
+      "name": "Headache",
+      "body_system": "neurological"
+    },
+    {
+      "id": "sudden_severe_headache",
+      "name": "Sudden, very severe headache",
+      "body_system": "neurological"
+    },
+    {
+      "id": "light_sensitivity",
+      "name": "Sensitivity to light",
+      "body_system": "neurological"
+    },
+    {
+      "id": "sound_sensitivity",
+      "name": "Sensitivity to sound",
+      "body_system": "neurological"
+    },
+    {
+      "id": "visual_aura",
+      "name": "Flashing lights or zig-zag lines in vision",
+      "body_system": "neurological"
+    },
+    {
+      "id": "stiff_neck",
+      "name": "Stiff neck",
+      "body_system": "neurological"
+    },
+    {
+      "id": "neck_or_shoulder_tension",
+      "name": "Tight neck or shoulder muscles",
+      "body_system": "musculoskeletal"
+    },
+    {
+      "id": "confusion",
+      "name": "Confusion or unusual drowsiness",
+      "body_system": "neurological"
+    },
+    {
+      "id": "seizure",
+      "name": "Seizure (fit)",
+      "body_system": "neurological"
+    },
+    {
+      "id": "facial_droop",
+      "name": "Face drooping on one side",
+      "body_system": "neurological"
+    },
+    {
+      "id": "one_sided_weakness",
+      "name": "Weakness or numbness on one side of the body",
+      "body_system": "neurological"
+    },
+    {
+      "id": "slurred_speech",
+      "name": "Slurred or difficult speech",
+      "body_system": "neurological"
+    },
+    {
+      "id": "sudden_vision_loss",
+      "name": "Sudden loss of vision",
+      "body_system": "neurological"
+    },
+    {
+      "id": "saddle_numbness",
+      "name": "Numbness around the groin or buttocks",
+      "body_system": "neurological"
+    },
+    {
+      "id": "loss_of_bladder_or_bowel_control",
+      "name": "Loss of bladder or bowel control",
+      "body_system": "neurological"
+    },
+    {
+      "id": "runny_nose",
+      "name": "Runny nose",
+      "body_system": "ent"
+    },
+    {
+      "id": "nasal_congestion",
+      "name": "Blocked or stuffy nose",
+      "body_system": "ent"
+    },
+    {
+      "id": "sneezing",
+      "name": "Sneezing",
+      "body_system": "ent"
+    },
+    {
+      "id": "sore_throat",
+      "name": "Sore throat",
+      "body_system": "ent"
+    },
+    {
+      "id": "painful_swallowing",
+      "name": "Pain when swallowing",
+      "body_system": "ent"
+    },
+    {
+      "id": "facial_pain_or_pressure",
+      "name": "Pain or pressure around the cheeks, eyes or forehead",
+      "body_system": "ent"
+    },
+    {
+      "id": "thick_nasal_discharge",
+      "name": "Thick yellow or green nasal discharge",
+      "body_system": "ent"
+    },
+    {
+      "id": "loss_of_smell_or_taste",
+      "name": "Loss of smell or taste",
+      "body_system": "ent"
+    },
+    {
+      "id": "throat_or_tongue_swelling",
+      "name": "Swelling of the throat, lips or tongue",
+      "body_system": "ent"
+    },
+    {
+      "id": "bleeding_gums_or_nose",
+      "name": "Bleeding gums or nosebleeds",
+      "body_system": "ent"
+    },
+    {
+      "id": "cough",
+      "name": "Cough",
+      "body_system": "respiratory"
+    },
+    {
+      "id": "productive_cough",
+      "name": "Cough with mucus",
+      "body_system": "respiratory"
+    },
+    {
+      "id": "coughing_blood",
+      "name": "Coughing up blood",
+      "body_system": "respiratory"
+    },
+    {
+      "id": "shortness_of_breath",
+      "name": "Shortness of breath",
+      "body_system": "respiratory"
+    },
+    {
+      "id": "wheezing",
+      "name": "Wheezing",
+      "body_system": "respiratory"
+    },
+    {
+      "id": "chest_tightness",
+      "name": "Tight chest",
+      "body_system": "respiratory"
+    },
+    {
+      "id": "bluish_lips_or_face",
+      "name": "Bluish lips or face",
+      "body_system": "respiratory"
+    },
+    {
+      "id": "red_eye",
+      "name": "Red eye",
+      "body_system": "eye"
+    },
+    {
+      "id": "itchy_eyes",
+      "name": "Itchy eyes",
+      "body_system": "eye"
+    },
+    {
+      "id": "watery_eyes",
+      "name": "Watery eyes",
+      "body_system": "eye"
+    },
+    {
+      "id": "eye_discharge",
+      "name": "Sticky discharge from the eye",
+      "body_system": "eye"
+    },
+    {
+      "id": "pain_behind_eyes",
+      "name": "Pain behind the eyes",
+      "body_system": "eye"
+    },
+    {
+      "id": "blurred_vision",
+      "name": "Blurred vision",
+      "body_system": "eye"
+    },
+    {
+      "id": "chest_pain",
+      "name": "Chest pain",
+      "body_system": "cardiovascular"
+    },
+    {
+      "id": "pain_spreading_to_arm_jaw_or_back",
+      "name": "Pain spreading to the arm, jaw or back",
+      "body_system": "cardiovascular"
+    },
+    {
+      "id": "palpitations",
+      "name": "Fast or pounding heartbeat",
+      "body_system": "cardiovascular"
+    },
+    {
+      "id": "nausea",
+      "name": "Nausea",
+      "body_system": "gastrointestinal"
+    },
+    {
+      "id": "vomiting",
+      "name": "Vomiting",
+      "body_system": "gastrointestinal"
+    },
+    {
+      "id": "diarrhea",
+      "name": "Diarrhoea",
+      "body_system": "gastrointestinal"
+    },
+    {
+      "id": "constipation",
+      "name": "Constipation",
+      "body_system": "gastrointestinal"
+    },
+    {
+      "id": "abdominal_pain",
+      "name": "Abdominal (stomach) pain",
+      "body_system": "gastrointestinal"
+    },
+    {
+      "id": "lower_right_abdominal_pain",
+      "name": "Pain in the lower right side of the abdomen",
+      "body_system": "gastrointestinal"
+    },
+    {
+      "id": "upper_right_abdominal_pain",
+      "name": "Pain in the upper right side of the abdomen",
+      "body_system": "gastrointestinal"
+    },
+    {
+      "id": "heartburn",
+      "name": "Heartburn (burning behind the breastbone)",
+      "body_system": "gastrointestinal"
+    },
+    {
+      "id": "acid_regurgitation",
+      "name": "Sour taste or acid coming up into the mouth",
+      "body_system": "gastrointestinal"
+    },
+    {
+      "id": "bloating",
+      "name": "Bloating",
+      "body_system": "gastrointestinal"
+    },
+    {
+      "id": "vomiting_blood",
+      "name": "Vomiting blood",
+      "body_system": "gastrointestinal"
+    },
+    {
+      "id": "black_or_bloody_stool",
+      "name": "Black or bloody stool",
+      "body_system": "gastrointestinal"
+    },
+    {
+      "id": "yellow_skin_or_eyes",
+      "name": "Yellow skin or eyes",
+      "body_system": "gastrointestinal"
+    },
+    {
+      "id": "dark_urine",
+      "name": "Dark urine",
+      "body_system": "gastrointestinal"
+    },
+    {
+      "id": "pale_stool",
+      "name": "Pale stool",
+      "body_system": "gastrointestinal"
+    },
+    {
+      "id": "burning_urination",
+      "name": "Burning or pain when passing urine",
+      "body_system": "urinary"
+    },
+    {
+      "id": "frequent_urination",
+      "name": "Needing to pass urine often",
+      "body_system": "urinary"
+    },
+    {
+      "id": "lower_abdominal_pain",
+      "name": "Pain low in the abdomen",
+      "body_system": "urinary"
+    },
+    {
+      "id": "cloudy_or_smelly_urine",
+      "name": "Cloudy or strong-smelling urine",
+      "body_system": "urinary"
+    },
+    {
+      "id": "blood_in_urine",
+      "name": "Blood in urine",
+      "body_system": "urinary"
+    },
+    {
+      "id": "flank_pain",
+      "name": "Pain in the side or back, below the ribs",
+      "body_system": "urinary"
+    },
+    {
+      "id": "joint_pain",
+      "name": "Joint pain",
+      "body_system": "musculoskeletal"
+    },
+    {
+      "id": "joint_swelling",
+      "name": "Joint swelling",
+      "body_system": "musculoskeletal"
+    },
+    {
+      "id": "lower_back_pain",
+      "name": "Lower back pain",
+      "body_system": "musculoskeletal"
+    },
+    {
+      "id": "muscle_stiffness",
+      "name": "Muscle stiffness",
+      "body_system": "musculoskeletal"
+    },
+    {
+      "id": "skin_rash",
+      "name": "Skin rash",
+      "body_system": "skin"
+    },
+    {
+      "id": "itchy_skin",
+      "name": "Itchy skin",
+      "body_system": "skin"
+    },
+    {
+      "id": "dry_skin",
+      "name": "Dry skin",
+      "body_system": "skin"
+    },
+    {
+      "id": "scaly_skin",
+      "name": "Scaly or flaky skin",
+      "body_system": "skin"
+    },
+    {
+      "id": "ring_shaped_rash",
+      "name": "Ring-shaped rash",
+      "body_system": "skin"
+    },
+    {
+      "id": "hives",
+      "name": "Raised, itchy welts (hives)",
+      "body_system": "skin"
+    },
+    {
+      "id": "skin_swelling",
+      "name": "Swollen skin",
+      "body_system": "skin"
+    },
+    {
+      "id": "small_itchy_bumps",
+      "name": "Small itchy bumps",
+      "body_system": "skin"
+    },
+    {
+      "id": "skin_burrows",
+      "name": "Thin lines or tracks on the skin",
+      "body_system": "skin"
+    },
+    {
+      "id": "pimples",
+      "name": "Pimples",
+      "body_system": "skin"
+    },
+    {
+      "id": "blackheads_or_whiteheads",
+      "name": "Blackheads or whiteheads",
+      "body_system": "skin"
+    },
+    {
+      "id": "oily_skin",
+      "name": "Oily skin",
+      "body_system": "skin"
+    },
+    {
+      "id": "fluid_filled_blisters",
+      "name": "Fluid-filled blisters",
+      "body_system": "skin"
+    },
+    {
+      "id": "spreading_redness",
+      "name": "Red skin that is spreading",
+      "body_system": "skin"
+    },
+    {
+      "id": "warm_tender_skin",
+      "name": "Warm, painful skin",
+      "body_system": "skin"
+    },
+    {
+      "id": "non_blanching_rash",
+      "name": "Rash that does not fade when a glass is pressed on it",
+      "body_system": "skin"
+    },
+    {
+      "id": "hot_dry_skin",
+      "name": "Hot, dry skin",
+      "body_system": "skin"
+    },
+    {
+      "id": "thoughts_of_self_harm",
+      "name": "Thoughts of self-harm or suicide",
+      "body_system": "mental_health"
+    }
+  ],
+  "red_flags": [
+    {
+      "id": "rf_cardiac_chest_pain",
+      "category": "cardiac",
+      "label": "Severe chest pain, or chest pain with breathlessness, sweating, fainting or pain spreading to the arm, jaw or back",
+      "triggers": [
+        {
+          "all_of": [
+            {
+              "symptom": "chest_pain",
+              "min_severity": "SEVERE"
+            }
+          ]
+        },
+        {
+          "all_of": [
+            {
+              "symptom": "chest_pain"
+            },
+            {
+              "symptom": "pain_spreading_to_arm_jaw_or_back"
+            }
+          ]
+        },
+        {
+          "all_of": [
+            {
+              "symptom": "chest_pain"
+            },
+            {
+              "symptom": "shortness_of_breath"
+            }
+          ]
+        },
+        {
+          "all_of": [
+            {
+              "symptom": "chest_pain"
+            },
+            {
+              "symptom": "sweating"
+            }
+          ]
+        },
+        {
+          "all_of": [
+            {
+              "symptom": "chest_pain"
+            },
+            {
+              "symptom": "fainting"
+            }
+          ]
+        }
+      ],
+      "rationale": "Possible heart attack; every minute without treatment matters.",
+      "sources": [
+        "nhs",
+        "who_cvd"
+      ]
+    },
+    {
+      "id": "rf_stroke_signs",
+      "category": "stroke",
+      "label": "Face drooping, one-sided weakness, slurred speech or sudden vision loss",
+      "triggers": [
+        {
+          "all_of": [
+            {
+              "symptom": "facial_droop"
+            }
+          ]
+        },
+        {
+          "all_of": [
+            {
+              "symptom": "one_sided_weakness"
+            }
+          ]
+        },
+        {
+          "all_of": [
+            {
+              "symptom": "slurred_speech"
+            }
+          ]
+        },
+        {
+          "all_of": [
+            {
+              "symptom": "sudden_vision_loss"
+            }
+          ]
+        }
+      ],
+      "rationale": "BE-FAST stroke signs; treatment is time-critical.",
+      "sources": [
+        "nhs",
+        "who_stroke"
+      ]
+    },
+    {
+      "id": "rf_thunderclap_headache",
+      "category": "neurological",
+      "label": "Sudden, very severe headache",
+      "triggers": [
+        {
+          "all_of": [
+            {
+              "symptom": "sudden_severe_headache"
+            }
+          ]
+        }
+      ],
+      "rationale": "A sudden worst-ever headache can be a bleed in the brain.",
+      "sources": [
+        "nhs",
+        "nice_cks"
+      ]
+    },
+    {
+      "id": "rf_altered_consciousness",
+      "category": "neurological",
+      "label": "Confusion, unusual drowsiness or a seizure",
+      "triggers": [
+        {
+          "all_of": [
+            {
+              "symptom": "confusion"
+            }
+          ]
+        },
+        {
+          "all_of": [
+            {
+              "symptom": "seizure"
+            }
+          ]
+        }
+      ],
+      "rationale": "Altered consciousness can signal sepsis, meningitis, severe malaria or heat stroke.",
+      "sources": [
+        "nhs",
+        "who_malaria"
+      ]
+    },
+    {
+      "id": "rf_severe_breathing_difficulty",
+      "category": "breathing",
+      "label": "Severe breathlessness or bluish lips or face",
+      "triggers": [
+        {
+          "all_of": [
+            {
+              "symptom": "shortness_of_breath",
+              "min_severity": "SEVERE"
+            }
+          ]
+        },
+        {
+          "all_of": [
+            {
+              "symptom": "bluish_lips_or_face"
+            }
+          ]
+        }
+      ],
+      "rationale": "Signs of not getting enough oxygen.",
+      "sources": [
+        "nhs",
+        "nice_cks"
+      ]
+    },
+    {
+      "id": "rf_anaphylaxis",
+      "category": "anaphylaxis",
+      "label": "Swelling of the throat, lips or tongue, or hives with breathing problems",
+      "triggers": [
+        {
+          "all_of": [
+            {
+              "symptom": "throat_or_tongue_swelling"
+            }
+          ]
+        },
+        {
+          "all_of": [
+            {
+              "symptom": "hives"
+            },
+            {
+              "symptom": "shortness_of_breath"
+            }
+          ]
+        },
+        {
+          "all_of": [
+            {
+              "symptom": "hives"
+            },
+            {
+              "symptom": "wheezing"
+            }
+          ]
+        }
+      ],
+      "rationale": "Possible anaphylaxis; airway can close quickly.",
+      "sources": [
+        "nhs",
+        "nice_cks"
+      ]
+    },
+    {
+      "id": "rf_meningitis_signs",
+      "category": "infection",
+      "label": "Fever with a stiff neck, or a rash that does not fade under a glass",
+      "triggers": [
+        {
+          "all_of": [
+            {
+              "symptom": "fever"
+            },
+            {
+              "symptom": "stiff_neck"
+            }
+          ]
+        },
+        {
+          "all_of": [
+            {
+              "symptom": "non_blanching_rash"
+            }
+          ]
+        }
+      ],
+      "rationale": "Classic warning signs of meningitis or meningococcal sepsis.",
+      "sources": [
+        "nhs",
+        "who_meningitis"
+      ]
+    },
+    {
+      "id": "rf_serious_bleeding",
+      "category": "bleeding",
+      "label": "Vomiting blood, coughing up blood, or black or bloody stool",
+      "triggers": [
+        {
+          "all_of": [
+            {
+              "symptom": "vomiting_blood"
+            }
+          ]
+        },
+        {
+          "all_of": [
+            {
+              "symptom": "coughing_blood"
+            }
+          ]
+        },
+        {
+          "all_of": [
+            {
+              "symptom": "black_or_bloody_stool"
+            }
+          ]
+        }
+      ],
+      "rationale": "Possible internal bleeding.",
+      "sources": [
+        "nhs",
+        "nice_cks"
+      ]
+    },
+    {
+      "id": "rf_fever_with_bleeding",
+      "category": "bleeding",
+      "label": "Fever with bleeding gums or nosebleeds",
+      "triggers": [
+        {
+          "all_of": [
+            {
+              "symptom": "fever"
+            },
+            {
+              "symptom": "bleeding_gums_or_nose"
+            }
+          ]
+        }
+      ],
+      "rationale": "Mucosal bleeding is a dengue warning sign.",
+      "sources": [
+        "who_dengue",
+        "ncvbdc"
+      ]
+    },
+    {
+      "id": "rf_severe_abdominal_pain",
+      "category": "abdominal",
+      "label": "Severe abdominal pain",
+      "triggers": [
+        {
+          "all_of": [
+            {
+              "symptom": "abdominal_pain",
+              "min_severity": "SEVERE"
+            }
+          ]
+        },
+        {
+          "all_of": [
+            {
+              "symptom": "lower_right_abdominal_pain",
+              "min_severity": "SEVERE"
+            }
+          ]
+        }
+      ],
+      "rationale": "Possible appendicitis, perforation or a dengue warning sign.",
+      "sources": [
+        "nhs",
+        "who_dengue"
+      ]
+    },
+    {
+      "id": "rf_severe_dehydration",
+      "category": "dehydration",
+      "label": "Unable to keep fluids down, or passing little or no urine",
+      "triggers": [
+        {
+          "all_of": [
+            {
+              "symptom": "unable_to_keep_fluids_down"
+            }
+          ]
+        },
+        {
+          "all_of": [
+            {
+              "symptom": "little_or_no_urine"
+            }
+          ]
+        }
+      ],
+      "rationale": "Severe dehydration; persistent vomiting is also a dengue warning sign.",
+      "sources": [
+        "nhs",
+        "who_dengue"
+      ]
+    },
+    {
+      "id": "rf_cauda_equina",
+      "category": "neurological",
+      "label": "Loss of bladder or bowel control, or back pain with numbness around the groin",
+      "triggers": [
+        {
+          "all_of": [
+            {
+              "symptom": "loss_of_bladder_or_bowel_control"
+            }
+          ]
+        },
+        {
+          "all_of": [
+            {
+              "symptom": "lower_back_pain"
+            },
+            {
+              "symptom": "saddle_numbness"
+            }
+          ]
+        }
+      ],
+      "rationale": "Possible spinal nerve compression (cauda equina syndrome).",
+      "sources": [
+        "nhs",
+        "nice_cks"
+      ]
+    },
+    {
+      "id": "rf_self_harm",
+      "category": "mental_health",
+      "label": "Thoughts of self-harm or suicide",
+      "triggers": [
+        {
+          "all_of": [
+            {
+              "symptom": "thoughts_of_self_harm"
+            }
+          ]
+        }
+      ],
+      "rationale": "Mental-health crisis; needs immediate support.",
+      "sources": [
+        "nhs",
+        "tele_manas"
+      ]
+    }
+  ],
+  "conditions": [
+    {
+      "id": "common_cold",
+      "name": "Common cold",
+      "icd10": "J00",
+      "group": "primary_care",
+      "specialty": "general_physician",
+      "base_risk": "SELF_CARE",
+      "visual": false,
+      "symptoms": [
+        {
+          "id": "nasal_congestion",
+          "weight": 3
+        },
+        {
+          "id": "runny_nose",
+          "weight": 3
+        },
+        {
+          "id": "sneezing",
+          "weight": 3
+        },
+        {
+          "id": "cough",
+          "weight": 2
+        },
+        {
+          "id": "sore_throat",
+          "weight": 2
+        },
+        {
+          "id": "fatigue",
+          "weight": 1
+        },
+        {
+          "id": "fever",
+          "weight": 1
+        },
+        {
+          "id": "headache",
+          "weight": 1
+        }
+      ],
+      "red_flags": [],
+      "sources": [
+        "icd10_who",
+        "nhs"
+      ]
+    },
+    {
+      "id": "influenza",
+      "name": "Influenza (flu)",
+      "icd10": "J11.1",
+      "group": "primary_care",
+      "specialty": "general_physician",
+      "base_risk": "SELF_CARE",
+      "visual": false,
+      "symptoms": [
+        {
+          "id": "body_aches",
+          "weight": 3
+        },
+        {
+          "id": "fever",
+          "weight": 3
+        },
+        {
+          "id": "chills",
+          "weight": 2
+        },
+        {
+          "id": "cough",
+          "weight": 2
+        },
+        {
+          "id": "fatigue",
+          "weight": 2
+        },
+        {
+          "id": "headache",
+          "weight": 2
+        },
+        {
+          "id": "runny_nose",
+          "weight": 1
+        },
+        {
+          "id": "sore_throat",
+          "weight": 1
+        }
+      ],
+      "red_flags": [
+        "rf_severe_breathing_difficulty",
+        "rf_altered_consciousness"
+      ],
+      "sources": [
+        "icd10_who",
+        "nhs",
+        "who_influenza"
+      ]
+    },
+    {
+      "id": "covid_19",
+      "name": "COVID-19",
+      "icd10": "U07.1",
+      "group": "primary_care",
+      "specialty": "general_physician",
+      "base_risk": "SELF_CARE",
+      "visual": false,
+      "symptoms": [
+        {
+          "id": "cough",
+          "weight": 3
+        },
+        {
+          "id": "loss_of_smell_or_taste",
+          "weight": 3
+        },
+        {
+          "id": "fatigue",
+          "weight": 2
+        },
+        {
+          "id": "fever",
+          "weight": 2
+        },
+        {
+          "id": "sore_throat",
+          "weight": 2
+        },
+        {
+          "id": "body_aches",
+          "weight": 1
+        },
+        {
+          "id": "headache",
+          "weight": 1
+        },
+        {
+          "id": "shortness_of_breath",
+          "weight": 1
+        }
+      ],
+      "red_flags": [
+        "rf_severe_breathing_difficulty",
+        "rf_cardiac_chest_pain"
+      ],
+      "sources": [
+        "icd10_who",
+        "nhs",
+        "who_covid"
+      ]
+    },
+    {
+      "id": "acute_pharyngitis",
+      "name": "Sore throat (pharyngitis)",
+      "icd10": "J02.9",
+      "group": "primary_care",
+      "specialty": "general_physician",
+      "base_risk": "SELF_CARE",
+      "visual": false,
+      "symptoms": [
+        {
+          "id": "painful_swallowing",
+          "weight": 3
+        },
+        {
+          "id": "sore_throat",
+          "weight": 3
+        },
+        {
+          "id": "fever",
+          "weight": 2
+        },
+        {
+          "id": "swollen_neck_glands",
+          "weight": 2
+        },
+        {
+          "id": "headache",
+          "weight": 1
+        }
+      ],
+      "red_flags": [
+        "rf_anaphylaxis"
+      ],
+      "sources": [
+        "icd10_who",
+        "nhs"
+      ]
+    },
+    {
+      "id": "acute_sinusitis",
+      "name": "Sinusitis",
+      "icd10": "J01.9",
+      "group": "primary_care",
+      "specialty": "ent",
+      "base_risk": "SELF_CARE",
+      "visual": false,
+      "symptoms": [
+        {
+          "id": "facial_pain_or_pressure",
+          "weight": 3
+        },
+        {
+          "id": "nasal_congestion",
+          "weight": 3
+        },
+        {
+          "id": "thick_nasal_discharge",
+          "weight": 3
+        },
+        {
+          "id": "headache",
+          "weight": 2
+        },
+        {
+          "id": "cough",
+          "weight": 1
+        },
+        {
+          "id": "fever",
+          "weight": 1
+        },
+        {
+          "id": "loss_of_smell_or_taste",
+          "weight": 1
+        }
+      ],
+      "red_flags": [],
+      "sources": [
+        "icd10_who",
+        "nhs"
+      ]
+    },
+    {
+      "id": "acute_bronchitis",
+      "name": "Chest infection (acute bronchitis)",
+      "icd10": "J20.9",
+      "group": "primary_care",
+      "specialty": "general_physician",
+      "base_risk": "SELF_CARE",
+      "visual": false,
+      "symptoms": [
+        {
+          "id": "cough",
+          "weight": 3
+        },
+        {
+          "id": "productive_cough",
+          "weight": 3
+        },
+        {
+          "id": "chest_tightness",
+          "weight": 1
+        },
+        {
+          "id": "fatigue",
+          "weight": 1
+        },
+        {
+          "id": "fever",
+          "weight": 1
+        },
+        {
+          "id": "wheezing",
+          "weight": 1
+        }
+      ],
+      "red_flags": [
+        "rf_severe_breathing_difficulty"
+      ],
+      "sources": [
+        "icd10_who",
+        "nhs"
+      ]
+    },
+    {
+      "id": "allergic_rhinitis",
+      "name": "Allergic rhinitis (hay fever)",
+      "icd10": "J30.4",
+      "group": "primary_care",
+      "specialty": "ent",
+      "base_risk": "SELF_CARE",
+      "visual": false,
+      "symptoms": [
+        {
+          "id": "itchy_eyes",
+          "weight": 3
+        },
+        {
+          "id": "runny_nose",
+          "weight": 3
+        },
+        {
+          "id": "sneezing",
+          "weight": 3
+        },
+        {
+          "id": "nasal_congestion",
+          "weight": 2
+        },
+        {
+          "id": "watery_eyes",
+          "weight": 2
+        }
+      ],
+      "red_flags": [
+        "rf_anaphylaxis"
+      ],
+      "sources": [
+        "icd10_who",
+        "nhs"
+      ]
+    },
+    {
+      "id": "gastroenteritis",
+      "name": "Gastroenteritis (stomach bug)",
+      "icd10": "A09.0",
+      "group": "primary_care",
+      "specialty": "general_physician",
+      "base_risk": "SELF_CARE",
+      "visual": false,
+      "symptoms": [
+        {
+          "id": "diarrhea",
+          "weight": 3
+        },
+        {
+          "id": "abdominal_pain",
+          "weight": 2
+        },
+        {
+          "id": "nausea",
+          "weight": 2
+        },
+        {
+          "id": "vomiting",
+          "weight": 2
+        },
+        {
+          "id": "fever",
+          "weight": 1
+        }
+      ],
+      "red_flags": [
+        "rf_severe_dehydration",
+        "rf_serious_bleeding"
+      ],
+      "sources": [
+        "icd10_who",
+        "nhs"
+      ]
+    },
+    {
+      "id": "gerd",
+      "name": "Acid reflux (GERD)",
+      "icd10": "K21.9",
+      "group": "primary_care",
+      "specialty": "gastroenterology",
+      "base_risk": "SELF_CARE",
+      "visual": false,
+      "symptoms": [
+        {
+          "id": "acid_regurgitation",
+          "weight": 3
+        },
+        {
+          "id": "heartburn",
+          "weight": 3
+        },
+        {
+          "id": "bloating",
+          "weight": 1
+        },
+        {
+          "id": "nausea",
+          "weight": 1
+        }
+      ],
+      "red_flags": [
+        "rf_cardiac_chest_pain",
+        "rf_serious_bleeding"
+      ],
+      "sources": [
+        "icd10_who",
+        "nhs"
+      ]
+    },
+    {
+      "id": "migraine",
+      "name": "Migraine",
+      "icd10": "G43.9",
+      "group": "primary_care",
+      "specialty": "neurology",
+      "base_risk": "SELF_CARE",
+      "visual": false,
+      "symptoms": [
+        {
+          "id": "headache",
+          "weight": 3
+        },
+        {
+          "id": "light_sensitivity",
+          "weight": 3
+        },
+        {
+          "id": "nausea",
+          "weight": 2
+        },
+        {
+          "id": "sound_sensitivity",
+          "weight": 2
+        },
+        {
+          "id": "visual_aura",
+          "weight": 2
+        },
+        {
+          "id": "vomiting",
+          "weight": 1
+        }
+      ],
+      "red_flags": [
+        "rf_thunderclap_headache",
+        "rf_stroke_signs"
+      ],
+      "sources": [
+        "icd10_who",
+        "nhs"
+      ]
+    },
+    {
+      "id": "tension_headache",
+      "name": "Tension-type headache",
+      "icd10": "G44.2",
+      "group": "primary_care",
+      "specialty": "general_physician",
+      "base_risk": "SELF_CARE",
+      "visual": false,
+      "symptoms": [
+        {
+          "id": "headache",
+          "weight": 3
+        },
+        {
+          "id": "neck_or_shoulder_tension",
+          "weight": 2
+        },
+        {
+          "id": "fatigue",
+          "weight": 1
+        }
+      ],
+      "red_flags": [
+        "rf_thunderclap_headache"
+      ],
+      "sources": [
+        "icd10_who",
+        "nhs"
+      ]
+    },
+    {
+      "id": "urinary_tract_infection",
+      "name": "Urinary tract infection (UTI)",
+      "icd10": "N39.0",
+      "group": "primary_care",
+      "specialty": "general_physician",
+      "base_risk": "CONSULT_DOCTOR",
+      "visual": false,
+      "symptoms": [
+        {
+          "id": "burning_urination",
+          "weight": 3
+        },
+        {
+          "id": "frequent_urination",
+          "weight": 3
+        },
+        {
+          "id": "cloudy_or_smelly_urine",
+          "weight": 2
+        },
+        {
+          "id": "lower_abdominal_pain",
+          "weight": 2
+        },
+        {
+          "id": "blood_in_urine",
+          "weight": 1
+        },
+        {
+          "id": "fever",
+          "weight": 1
+        }
+      ],
+      "red_flags": [
+        "rf_altered_consciousness"
+      ],
+      "sources": [
+        "icd10_who",
+        "nhs"
+      ]
+    },
+    {
+      "id": "kidney_stones",
+      "name": "Kidney stones",
+      "icd10": "N20.9",
+      "group": "primary_care",
+      "specialty": "urology",
+      "base_risk": "CONSULT_DOCTOR",
+      "visual": false,
+      "symptoms": [
+        {
+          "id": "flank_pain",
+          "weight": 3
+        },
+        {
+          "id": "blood_in_urine",
+          "weight": 2
+        },
+        {
+          "id": "burning_urination",
+          "weight": 1
+        },
+        {
+          "id": "nausea",
+          "weight": 1
+        },
+        {
+          "id": "vomiting",
+          "weight": 1
+        }
+      ],
+      "red_flags": [
+        "rf_severe_dehydration"
+      ],
+      "sources": [
+        "icd10_who",
+        "nhs"
+      ]
+    },
+    {
+      "id": "iron_deficiency_anaemia",
+      "name": "Iron deficiency anaemia",
+      "icd10": "D50.9",
+      "group": "primary_care",
+      "specialty": "general_physician",
+      "base_risk": "CONSULT_DOCTOR",
+      "visual": false,
+      "symptoms": [
+        {
+          "id": "fatigue",
+          "weight": 3
+        },
+        {
+          "id": "pale_skin",
+          "weight": 3
+        },
+        {
+          "id": "dizziness",
+          "weight": 2
+        },
+        {
+          "id": "headache",
+          "weight": 1
+        },
+        {
+          "id": "palpitations",
+          "weight": 1
+        },
+        {
+          "id": "shortness_of_breath",
+          "weight": 1
+        }
+      ],
+      "red_flags": [
+        "rf_serious_bleeding"
+      ],
+      "sources": [
+        "icd10_who",
+        "nhs",
+        "who_anaemia"
+      ]
+    },
+    {
+      "id": "type_2_diabetes",
+      "name": "Type 2 diabetes",
+      "icd10": "E11.9",
+      "group": "primary_care",
+      "specialty": "endocrinology",
+      "base_risk": "CONSULT_DOCTOR",
+      "visual": false,
+      "symptoms": [
+        {
+          "id": "excessive_thirst",
+          "weight": 3
+        },
+        {
+          "id": "frequent_urination",
+          "weight": 3
+        },
+        {
+          "id": "blurred_vision",
+          "weight": 1
+        },
+        {
+          "id": "fatigue",
+          "weight": 1
+        },
+        {
+          "id": "slow_healing_wounds",
+          "weight": 1
+        },
+        {
+          "id": "weight_loss",
+          "weight": 1
+        }
+      ],
+      "red_flags": [
+        "rf_altered_consciousness",
+        "rf_severe_dehydration"
+      ],
+      "sources": [
+        "icd10_who",
+        "nhs",
+        "who_diabetes"
+      ]
+    },
+    {
+      "id": "conjunctivitis",
+      "name": "Conjunctivitis (pink eye)",
+      "icd10": "H10.9",
+      "group": "primary_care",
+      "specialty": "ophthalmology",
+      "base_risk": "SELF_CARE",
+      "visual": true,
+      "symptoms": [
+        {
+          "id": "eye_discharge",
+          "weight": 3
+        },
+        {
+          "id": "red_eye",
+          "weight": 3
+        },
+        {
+          "id": "itchy_eyes",
+          "weight": 2
+        },
+        {
+          "id": "watery_eyes",
+          "weight": 2
+        }
+      ],
+      "red_flags": [],
+      "sources": [
+        "icd10_who",
+        "nhs"
+      ]
+    },
+    {
+      "id": "low_back_pain",
+      "name": "Low back pain",
+      "icd10": "M54.5",
+      "group": "primary_care",
+      "specialty": "orthopedics",
+      "base_risk": "SELF_CARE",
+      "visual": false,
+      "symptoms": [
+        {
+          "id": "lower_back_pain",
+          "weight": 3
+        },
+        {
+          "id": "muscle_stiffness",
+          "weight": 2
+        }
+      ],
+      "red_flags": [
+        "rf_cauda_equina"
+      ],
+      "sources": [
+        "icd10_who",
+        "nhs"
+      ]
+    },
+    {
+      "id": "dengue",
+      "name": "Dengue",
+      "icd10": "A90",
+      "group": "infection",
+      "specialty": "general_physician",
+      "base_risk": "CONSULT_DOCTOR",
+      "visual": false,
+      "symptoms": [
+        {
+          "id": "fever",
+          "weight": 3
+        },
+        {
+          "id": "pain_behind_eyes",
+          "weight": 3
+        },
+        {
+          "id": "body_aches",
+          "weight": 2
+        },
+        {
+          "id": "headache",
+          "weight": 2
+        },
+        {
+          "id": "joint_pain",
+          "weight": 2
+        },
+        {
+          "id": "skin_rash",
+          "weight": 2
+        },
+        {
+          "id": "fatigue",
+          "weight": 1
+        },
+        {
+          "id": "nausea",
+          "weight": 1
+        },
+        {
+          "id": "vomiting",
+          "weight": 1
+        }
+      ],
+      "red_flags": [
+        "rf_fever_with_bleeding",
+        "rf_severe_abdominal_pain",
+        "rf_severe_dehydration",
+        "rf_altered_consciousness"
+      ],
+      "sources": [
+        "icd10_who",
+        "who_dengue",
+        "ncvbdc"
+      ]
+    },
+    {
+      "id": "malaria",
+      "name": "Malaria",
+      "icd10": "B54",
+      "group": "infection",
+      "specialty": "general_physician",
+      "base_risk": "CONSULT_DOCTOR",
+      "visual": false,
+      "symptoms": [
+        {
+          "id": "chills",
+          "weight": 3
+        },
+        {
+          "id": "fever",
+          "weight": 3
+        },
+        {
+          "id": "body_aches",
+          "weight": 2
+        },
+        {
+          "id": "headache",
+          "weight": 2
+        },
+        {
+          "id": "sweating",
+          "weight": 2
+        },
+        {
+          "id": "fatigue",
+          "weight": 1
+        },
+        {
+          "id": "nausea",
+          "weight": 1
+        },
+        {
+          "id": "vomiting",
+          "weight": 1
+        }
+      ],
+      "red_flags": [
+        "rf_altered_consciousness",
+        "rf_severe_breathing_difficulty",
+        "rf_serious_bleeding"
+      ],
+      "sources": [
+        "icd10_who",
+        "who_malaria",
+        "ncvbdc"
+      ]
+    },
+    {
+      "id": "typhoid",
+      "name": "Typhoid fever",
+      "icd10": "A01.0",
+      "group": "infection",
+      "specialty": "general_physician",
+      "base_risk": "CONSULT_DOCTOR",
+      "visual": false,
+      "symptoms": [
+        {
+          "id": "fever",
+          "weight": 3
+        },
+        {
+          "id": "abdominal_pain",
+          "weight": 2
+        },
+        {
+          "id": "fatigue",
+          "weight": 2
+        },
+        {
+          "id": "headache",
+          "weight": 2
+        },
+        {
+          "id": "loss_of_appetite",
+          "weight": 2
+        },
+        {
+          "id": "constipation",
+          "weight": 1
+        },
+        {
+          "id": "diarrhea",
+          "weight": 1
+        }
+      ],
+      "red_flags": [
+        "rf_severe_abdominal_pain",
+        "rf_altered_consciousness",
+        "rf_serious_bleeding"
+      ],
+      "sources": [
+        "icd10_who",
+        "who_typhoid"
+      ]
+    },
+    {
+      "id": "chikungunya",
+      "name": "Chikungunya",
+      "icd10": "A92.0",
+      "group": "infection",
+      "specialty": "general_physician",
+      "base_risk": "CONSULT_DOCTOR",
+      "visual": false,
+      "symptoms": [
+        {
+          "id": "fever",
+          "weight": 3
+        },
+        {
+          "id": "joint_pain",
+          "weight": 3
+        },
+        {
+          "id": "joint_swelling",
+          "weight": 2
+        },
+        {
+          "id": "body_aches",
+          "weight": 1
+        },
+        {
+          "id": "fatigue",
+          "weight": 1
+        },
+        {
+          "id": "headache",
+          "weight": 1
+        },
+        {
+          "id": "skin_rash",
+          "weight": 1
+        }
+      ],
+      "red_flags": [
+        "rf_altered_consciousness"
+      ],
+      "sources": [
+        "icd10_who",
+        "who_chikungunya",
+        "ncvbdc"
+      ]
+    },
+    {
+      "id": "tuberculosis",
+      "name": "Tuberculosis (lungs)",
+      "icd10": "A16.2",
+      "group": "infection",
+      "specialty": "pulmonology",
+      "base_risk": "CONSULT_DOCTOR",
+      "visual": false,
+      "symptoms": [
+        {
+          "id": "cough",
+          "weight": 3
+        },
+        {
+          "id": "night_sweats",
+          "weight": 3
+        },
+        {
+          "id": "weight_loss",
+          "weight": 3
+        },
+        {
+          "id": "coughing_blood",
+          "weight": 2
+        },
+        {
+          "id": "fever",
+          "weight": 2
+        },
+        {
+          "id": "fatigue",
+          "weight": 1
+        },
+        {
+          "id": "loss_of_appetite",
+          "weight": 1
+        }
+      ],
+      "red_flags": [
+        "rf_serious_bleeding",
+        "rf_severe_breathing_difficulty"
+      ],
+      "sources": [
+        "icd10_who",
+        "who_tb"
+      ]
+    },
+    {
+      "id": "viral_hepatitis",
+      "name": "Viral hepatitis (A or E)",
+      "icd10": "B17.9",
+      "group": "infection",
+      "specialty": "gastroenterology",
+      "base_risk": "CONSULT_DOCTOR",
+      "visual": false,
+      "symptoms": [
+        {
+          "id": "dark_urine",
+          "weight": 3
+        },
+        {
+          "id": "yellow_skin_or_eyes",
+          "weight": 3
+        },
+        {
+          "id": "fatigue",
+          "weight": 2
+        },
+        {
+          "id": "loss_of_appetite",
+          "weight": 2
+        },
+        {
+          "id": "nausea",
+          "weight": 2
+        },
+        {
+          "id": "fever",
+          "weight": 1
+        },
+        {
+          "id": "pale_stool",
+          "weight": 1
+        },
+        {
+          "id": "upper_right_abdominal_pain",
+          "weight": 1
+        }
+      ],
+      "red_flags": [
+        "rf_altered_consciousness",
+        "rf_serious_bleeding"
+      ],
+      "sources": [
+        "icd10_who",
+        "who_hepatitis_a",
+        "who_hepatitis_e"
+      ]
+    },
+    {
+      "id": "atopic_dermatitis",
+      "name": "Eczema (atopic dermatitis)",
+      "icd10": "L20.9",
+      "group": "skin",
+      "specialty": "dermatology",
+      "base_risk": "SELF_CARE",
+      "visual": true,
+      "symptoms": [
+        {
+          "id": "dry_skin",
+          "weight": 3
+        },
+        {
+          "id": "itchy_skin",
+          "weight": 3
+        },
+        {
+          "id": "scaly_skin",
+          "weight": 2
+        },
+        {
+          "id": "skin_rash",
+          "weight": 2
+        }
+      ],
+      "red_flags": [],
+      "sources": [
+        "icd10_who",
+        "nhs"
+      ]
+    },
+    {
+      "id": "fungal_skin_infection",
+      "name": "Fungal skin infection (ringworm)",
+      "icd10": "B35.9",
+      "group": "skin",
+      "specialty": "dermatology",
+      "base_risk": "SELF_CARE",
+      "visual": true,
+      "symptoms": [
+        {
+          "id": "itchy_skin",
+          "weight": 3
+        },
+        {
+          "id": "ring_shaped_rash",
+          "weight": 3
+        },
+        {
+          "id": "scaly_skin",
+          "weight": 2
+        },
+        {
+          "id": "skin_rash",
+          "weight": 1
+        }
+      ],
+      "red_flags": [],
+      "sources": [
+        "icd10_who",
+        "nhs"
+      ]
+    },
+    {
+      "id": "urticaria",
+      "name": "Hives (urticaria)",
+      "icd10": "L50.9",
+      "group": "skin",
+      "specialty": "dermatology",
+      "base_risk": "SELF_CARE",
+      "visual": true,
+      "symptoms": [
+        {
+          "id": "hives",
+          "weight": 3
+        },
+        {
+          "id": "itchy_skin",
+          "weight": 3
+        },
+        {
+          "id": "skin_swelling",
+          "weight": 1
+        }
+      ],
+      "red_flags": [
+        "rf_anaphylaxis"
+      ],
+      "sources": [
+        "icd10_who",
+        "nhs"
+      ]
+    },
+    {
+      "id": "scabies",
+      "name": "Scabies",
+      "icd10": "B86",
+      "group": "skin",
+      "specialty": "dermatology",
+      "base_risk": "CONSULT_DOCTOR",
+      "visual": true,
+      "symptoms": [
+        {
+          "id": "itchy_skin",
+          "weight": 3
+        },
+        {
+          "id": "small_itchy_bumps",
+          "weight": 3
+        },
+        {
+          "id": "skin_burrows",
+          "weight": 2
+        },
+        {
+          "id": "skin_rash",
+          "weight": 2
+        }
+      ],
+      "red_flags": [],
+      "sources": [
+        "icd10_who",
+        "nhs",
+        "who_scabies"
+      ]
+    },
+    {
+      "id": "acne",
+      "name": "Acne",
+      "icd10": "L70.0",
+      "group": "skin",
+      "specialty": "dermatology",
+      "base_risk": "SELF_CARE",
+      "visual": true,
+      "symptoms": [
+        {
+          "id": "blackheads_or_whiteheads",
+          "weight": 3
+        },
+        {
+          "id": "pimples",
+          "weight": 3
+        },
+        {
+          "id": "oily_skin",
+          "weight": 1
+        }
+      ],
+      "red_flags": [],
+      "sources": [
+        "icd10_who",
+        "nhs"
+      ]
+    },
+    {
+      "id": "chickenpox",
+      "name": "Chickenpox",
+      "icd10": "B01.9",
+      "group": "skin",
+      "specialty": "general_physician",
+      "base_risk": "SELF_CARE",
+      "visual": true,
+      "symptoms": [
+        {
+          "id": "fluid_filled_blisters",
+          "weight": 3
+        },
+        {
+          "id": "fever",
+          "weight": 2
+        },
+        {
+          "id": "itchy_skin",
+          "weight": 2
+        },
+        {
+          "id": "fatigue",
+          "weight": 1
+        },
+        {
+          "id": "headache",
+          "weight": 1
+        },
+        {
+          "id": "loss_of_appetite",
+          "weight": 1
+        }
+      ],
+      "red_flags": [
+        "rf_severe_breathing_difficulty",
+        "rf_altered_consciousness"
+      ],
+      "sources": [
+        "icd10_who",
+        "nhs"
+      ]
+    },
+    {
+      "id": "cellulitis",
+      "name": "Cellulitis (skin infection)",
+      "icd10": "L03.9",
+      "group": "skin",
+      "specialty": "general_physician",
+      "base_risk": "CONSULT_DOCTOR",
+      "visual": true,
+      "symptoms": [
+        {
+          "id": "skin_swelling",
+          "weight": 3
+        },
+        {
+          "id": "spreading_redness",
+          "weight": 3
+        },
+        {
+          "id": "warm_tender_skin",
+          "weight": 3
+        },
+        {
+          "id": "fever",
+          "weight": 1
+        }
+      ],
+      "red_flags": [
+        "rf_altered_consciousness"
+      ],
+      "sources": [
+        "icd10_who",
+        "nhs"
+      ]
+    },
+    {
+      "id": "heart_attack",
+      "name": "Heart attack",
+      "icd10": "I21.9",
+      "group": "emergency",
+      "specialty": "cardiology",
+      "base_risk": "URGENT",
+      "visual": false,
+      "symptoms": [
+        {
+          "id": "chest_pain",
+          "weight": 3
+        },
+        {
+          "id": "pain_spreading_to_arm_jaw_or_back",
+          "weight": 3
+        },
+        {
+          "id": "shortness_of_breath",
+          "weight": 2
+        },
+        {
+          "id": "sweating",
+          "weight": 2
+        },
+        {
+          "id": "dizziness",
+          "weight": 1
+        },
+        {
+          "id": "nausea",
+          "weight": 1
+        }
+      ],
+      "red_flags": [
+        "rf_cardiac_chest_pain"
+      ],
+      "sources": [
+        "icd10_who",
+        "nhs",
+        "who_cvd"
+      ]
+    },
+    {
+      "id": "stroke",
+      "name": "Stroke",
+      "icd10": "I64",
+      "group": "emergency",
+      "specialty": "neurology",
+      "base_risk": "URGENT",
+      "visual": false,
+      "symptoms": [
+        {
+          "id": "facial_droop",
+          "weight": 3
+        },
+        {
+          "id": "one_sided_weakness",
+          "weight": 3
+        },
+        {
+          "id": "slurred_speech",
+          "weight": 3
+        },
+        {
+          "id": "confusion",
+          "weight": 1
+        },
+        {
+          "id": "dizziness",
+          "weight": 1
+        },
+        {
+          "id": "sudden_severe_headache",
+          "weight": 1
+        },
+        {
+          "id": "sudden_vision_loss",
+          "weight": 1
+        }
+      ],
+      "red_flags": [
+        "rf_stroke_signs",
+        "rf_thunderclap_headache"
+      ],
+      "sources": [
+        "icd10_who",
+        "nhs",
+        "who_stroke"
+      ]
+    },
+    {
+      "id": "appendicitis",
+      "name": "Appendicitis",
+      "icd10": "K35.8",
+      "group": "emergency",
+      "specialty": "general_surgery",
+      "base_risk": "URGENT",
+      "visual": false,
+      "symptoms": [
+        {
+          "id": "lower_right_abdominal_pain",
+          "weight": 3
+        },
+        {
+          "id": "abdominal_pain",
+          "weight": 2
+        },
+        {
+          "id": "loss_of_appetite",
+          "weight": 2
+        },
+        {
+          "id": "nausea",
+          "weight": 2
+        },
+        {
+          "id": "vomiting",
+          "weight": 2
+        },
+        {
+          "id": "fever",
+          "weight": 1
+        }
+      ],
+      "red_flags": [
+        "rf_severe_abdominal_pain"
+      ],
+      "sources": [
+        "icd10_who",
+        "nhs"
+      ]
+    },
+    {
+      "id": "anaphylaxis",
+      "name": "Severe allergic reaction (anaphylaxis)",
+      "icd10": "T78.2",
+      "group": "emergency",
+      "specialty": "emergency_medicine",
+      "base_risk": "URGENT",
+      "visual": false,
+      "symptoms": [
+        {
+          "id": "shortness_of_breath",
+          "weight": 3
+        },
+        {
+          "id": "throat_or_tongue_swelling",
+          "weight": 3
+        },
+        {
+          "id": "dizziness",
+          "weight": 2
+        },
+        {
+          "id": "hives",
+          "weight": 2
+        },
+        {
+          "id": "wheezing",
+          "weight": 2
+        },
+        {
+          "id": "vomiting",
+          "weight": 1
+        }
+      ],
+      "red_flags": [
+        "rf_anaphylaxis",
+        "rf_severe_breathing_difficulty"
+      ],
+      "sources": [
+        "icd10_who",
+        "nhs"
+      ]
+    },
+    {
+      "id": "meningitis",
+      "name": "Meningitis",
+      "icd10": "G03.9",
+      "group": "emergency",
+      "specialty": "neurology",
+      "base_risk": "URGENT",
+      "visual": false,
+      "symptoms": [
+        {
+          "id": "fever",
+          "weight": 3
+        },
+        {
+          "id": "headache",
+          "weight": 3
+        },
+        {
+          "id": "stiff_neck",
+          "weight": 3
+        },
+        {
+          "id": "confusion",
+          "weight": 2
+        },
+        {
+          "id": "light_sensitivity",
+          "weight": 2
+        },
+        {
+          "id": "non_blanching_rash",
+          "weight": 2
+        },
+        {
+          "id": "vomiting",
+          "weight": 1
+        }
+      ],
+      "red_flags": [
+        "rf_meningitis_signs",
+        "rf_altered_consciousness"
+      ],
+      "sources": [
+        "icd10_who",
+        "nhs",
+        "who_meningitis"
+      ]
+    },
+    {
+      "id": "asthma",
+      "name": "Asthma",
+      "icd10": "J45.9",
+      "group": "emergency",
+      "specialty": "pulmonology",
+      "base_risk": "CONSULT_DOCTOR",
+      "visual": false,
+      "symptoms": [
+        {
+          "id": "chest_tightness",
+          "weight": 3
+        },
+        {
+          "id": "shortness_of_breath",
+          "weight": 3
+        },
+        {
+          "id": "wheezing",
+          "weight": 3
+        },
+        {
+          "id": "cough",
+          "weight": 2
+        }
+      ],
+      "red_flags": [
+        "rf_severe_breathing_difficulty"
+      ],
+      "sources": [
+        "icd10_who",
+        "nhs",
+        "who_asthma"
+      ]
+    },
+    {
+      "id": "pneumonia",
+      "name": "Pneumonia",
+      "icd10": "J18.9",
+      "group": "emergency",
+      "specialty": "pulmonology",
+      "base_risk": "CONSULT_DOCTOR",
+      "visual": false,
+      "symptoms": [
+        {
+          "id": "cough",
+          "weight": 3
+        },
+        {
+          "id": "fever",
+          "weight": 3
+        },
+        {
+          "id": "chest_pain",
+          "weight": 2
+        },
+        {
+          "id": "chills",
+          "weight": 2
+        },
+        {
+          "id": "productive_cough",
+          "weight": 2
+        },
+        {
+          "id": "shortness_of_breath",
+          "weight": 2
+        },
+        {
+          "id": "fatigue",
+          "weight": 1
+        }
+      ],
+      "red_flags": [
+        "rf_severe_breathing_difficulty",
+        "rf_altered_consciousness"
+      ],
+      "sources": [
+        "icd10_who",
+        "nhs",
+        "who_pneumonia"
+      ]
+    },
+    {
+      "id": "heat_stroke",
+      "name": "Heat stroke",
+      "icd10": "T67.0",
+      "group": "emergency",
+      "specialty": "emergency_medicine",
+      "base_risk": "URGENT",
+      "visual": false,
+      "symptoms": [
+        {
+          "id": "confusion",
+          "weight": 3
+        },
+        {
+          "id": "hot_dry_skin",
+          "weight": 3
+        },
+        {
+          "id": "fever",
+          "weight": 2
+        },
+        {
+          "id": "dizziness",
+          "weight": 1
+        },
+        {
+          "id": "headache",
+          "weight": 1
+        },
+        {
+          "id": "nausea",
+          "weight": 1
+        },
+        {
+          "id": "palpitations",
+          "weight": 1
+        }
+      ],
+      "red_flags": [
+        "rf_altered_consciousness",
+        "rf_severe_dehydration"
+      ],
+      "sources": [
+        "icd10_who",
+        "nhs",
+        "ndma_heatwave"
+      ]
+    }
+  ],
+  "sources": [
+    {
+      "id": "icd10_who",
+      "title": "WHO ICD-10 Version 2019 (online browser)",
+      "url": "https://icd.who.int/browse10/2019/en"
+    },
+    {
+      "id": "nhs",
+      "title": "NHS Health A to Z (conditions, symptoms and when to get urgent help)",
+      "url": "https://www.nhs.uk/conditions/"
+    },
+    {
+      "id": "nice_cks",
+      "title": "NICE Clinical Knowledge Summaries (red flags and referral criteria)",
+      "url": "https://cks.nice.org.uk/"
+    },
+    {
+      "id": "who_dengue",
+      "title": "WHO fact sheet: Dengue and severe dengue (warning signs)",
+      "url": "https://www.who.int/news-room/fact-sheets/detail/dengue-and-severe-dengue"
+    },
+    {
+      "id": "who_malaria",
+      "title": "WHO fact sheet: Malaria",
+      "url": "https://www.who.int/news-room/fact-sheets/detail/malaria"
+    },
+    {
+      "id": "who_typhoid",
+      "title": "WHO fact sheet: Typhoid",
+      "url": "https://www.who.int/news-room/fact-sheets/detail/typhoid"
+    },
+    {
+      "id": "who_chikungunya",
+      "title": "WHO fact sheet: Chikungunya",
+      "url": "https://www.who.int/news-room/fact-sheets/detail/chikungunya"
+    },
+    {
+      "id": "who_tb",
+      "title": "WHO fact sheet: Tuberculosis",
+      "url": "https://www.who.int/news-room/fact-sheets/detail/tuberculosis"
+    },
+    {
+      "id": "who_hepatitis_a",
+      "title": "WHO fact sheet: Hepatitis A",
+      "url": "https://www.who.int/news-room/fact-sheets/detail/hepatitis-a"
+    },
+    {
+      "id": "who_hepatitis_e",
+      "title": "WHO fact sheet: Hepatitis E",
+      "url": "https://www.who.int/news-room/fact-sheets/detail/hepatitis-e"
+    },
+    {
+      "id": "who_influenza",
+      "title": "WHO fact sheet: Influenza (seasonal)",
+      "url": "https://www.who.int/news-room/fact-sheets/detail/influenza-(seasonal)"
+    },
+    {
+      "id": "who_covid",
+      "title": "WHO fact sheet: Coronavirus disease (COVID-19)",
+      "url": "https://www.who.int/news-room/fact-sheets/detail/coronavirus-disease-(covid-19)"
+    },
+    {
+      "id": "who_anaemia",
+      "title": "WHO fact sheet: Anaemia",
+      "url": "https://www.who.int/news-room/fact-sheets/detail/anaemia"
+    },
+    {
+      "id": "who_diabetes",
+      "title": "WHO fact sheet: Diabetes",
+      "url": "https://www.who.int/news-room/fact-sheets/detail/diabetes"
+    },
+    {
+      "id": "who_scabies",
+      "title": "WHO fact sheet: Scabies",
+      "url": "https://www.who.int/news-room/fact-sheets/detail/scabies"
+    },
+    {
+      "id": "who_cvd",
+      "title": "WHO fact sheet: Cardiovascular diseases",
+      "url": "https://www.who.int/news-room/fact-sheets/detail/cardiovascular-diseases-(cvds)"
+    },
+    {
+      "id": "who_stroke",
+      "title": "WHO: Stroke, cerebrovascular accident",
+      "url": "https://www.who.int/health-topics/stroke"
+    },
+    {
+      "id": "who_meningitis",
+      "title": "WHO fact sheet: Meningitis",
+      "url": "https://www.who.int/news-room/fact-sheets/detail/meningitis"
+    },
+    {
+      "id": "who_asthma",
+      "title": "WHO fact sheet: Asthma",
+      "url": "https://www.who.int/news-room/fact-sheets/detail/asthma"
+    },
+    {
+      "id": "who_pneumonia",
+      "title": "WHO fact sheet: Pneumonia",
+      "url": "https://www.who.int/news-room/fact-sheets/detail/pneumonia"
+    },
+    {
+      "id": "ncvbdc",
+      "title": "India National Center for Vector Borne Diseases Control (dengue, malaria, chikungunya)",
+      "url": "https://ncvbdc.mohfw.gov.in/"
+    },
+    {
+      "id": "ndma_heatwave",
+      "title": "India National Disaster Management Authority: Heat wave guidance",
+      "url": "https://ndma.gov.in/Natural-Hazards/Heat-Wave"
+    },
+    {
+      "id": "tele_manas",
+      "title": "Tele-MANAS, India's national tele-mental-health helpline (14416)",
+      "url": "https://telemanas.mohfw.gov.in/"
+    }
+  ]
+}
