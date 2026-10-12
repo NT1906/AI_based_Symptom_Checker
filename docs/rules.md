@@ -17,6 +17,20 @@ These rules exist to prevent merge conflicts, duplicated work, broken interfaces
 
 ---
 
+## Teams
+
+Teams were re-formed on 12 Oct 2026 from the team poll. The task list for each member is in [SPRINT_PLAN.md](SPRINT_PLAN.md) §3–§7.
+
+| Team | Members |
+|---|---|
+| **AI / ML** | Nisarg (lead, ≈ 60% of the AI/ML work), Nishith (≈ 20%), Kavya (≈ 20%) |
+| **Backend** | Darshil, Harsh, Vivek, Mohit |
+| **Database** | Nishith, Kavya, Dimple |
+| **Frontend + Deployment** | Rutva, Dimple, Mann |
+| **Testing** | Mohit (lead), Rutva, Mann, Nisarg |
+
+---
+
 ## Directory Ownership Map
 
 This is who owns which part of the codebase. **You do not create files in someone else's directory without their approval.**
@@ -24,36 +38,42 @@ This is who owns which part of the codebase. **You do not create files in someon
 ```text
 project-root/                     (full layout and stack: docs/tech-stack.md)
 ├── client/                       ← Frontend: React PWA on Vercel
-│   ├── src/components/chat/      ← Vivek
-│   ├── src/components/{layout,assessment,result,common}/ ← Darshil
-│   ├── src/components/consent/   ← Dimple
-│   ├── src/pages/                ← Darshil
-│   ├── src/stores/, src/services/← Vivek
+│   ├── package.json, configs     ← Rutva (scaffold, lint/test/build tooling)
+│   ├── src/components/chat/      ← Rutva
+│   ├── src/stores/, src/services/← Rutva
+│   ├── src/components/{layout,assessment,result}/ ← Mann
+│   ├── src/pages/                ← Mann (a page created by someone else's task is theirs; Mann reviews)
+│   ├── src/i18n/                 ← Mann
+│   ├── src/components/{consent,privacy,risk}/ ← Dimple
 │   ├── src/types/api.gen.ts      ← generated from the server OpenAPI; never edit by hand
-│   └── vite.config.ts, vercel.json ← Vivek (PWA, proxy, headers)
+│   ├── vite.config.ts            ← Rutva (PWA, proxy)
+│   └── vercel.json               ← Dimple (headers, rewrites; Rutva reviews)
 ├── server/                       ← Backend: FastAPI, shipped as a Docker image (Render or VPS)
-│   ├── app/main.py, app/api/     ← Rutva (app factory, routers)
-│   ├── app/core/                 ← Rutva (config, logging, errors)
-│   ├── app/middleware/           ← Dimple (security headers, rate limits)
-│   ├── app/schemas/              ← Kavya (API contracts; changes need team agreement)
+│   ├── app/main.py, app/api/     ← Vivek (app factory, routers)
+│   ├── app/core/                 ← Vivek (config, logging, errors, security utils)
+│   ├── app/middleware/           ← Harsh (security headers, rate limits)
+│   ├── app/schemas/              ← Darshil (API contracts; changes need team agreement)
 │   ├── app/services/
-│   │   ├── assessment/           ← Kavya (orchestration, state machine)
-│   │   ├── ai/                   ← Nishith (gateway, prompts)
+│   │   ├── assessment/           ← Darshil (orchestration, state machine)
+│   │   ├── ai/                   ← Nishith (gateway, prompts, extraction)
+│   │   ├── knowledge/            ← Kavya (symptom normalization, glossary, self-care content)
 │   │   ├── prediction/           ← Nisarg (risk engine, condition model, result composer)
-│   │   ├── image/                ← Mann (validation, ONNX CV inference)
-│   │   └── privacy/              ← Dimple (consent, PII scrubbing, deletion)
-│   ├── app/models/, app/repositories/, app/db/ ← Harsh (only layer that touches the DB session)
-│   ├── alembic/                  ← Harsh (migrations ONLY)
+│   │   ├── image/                ← Nisarg (CV analyzer, ONNX inference)
+│   │   ├── upload/               ← Vivek (image upload validation)
+│   │   ├── auth/                 ← Vivek (accounts, JWT)
+│   │   └── privacy/              ← Harsh (consent, PII scrubbing, safety wording, export/deletion)
+│   ├── app/models/, app/repositories/, app/db/ ← Database team: Nishith, Kavya, Dimple
+│   ├── alembic/                  ← Database team (migrations ONLY)
 │   ├── tests/unit/<module>/      ← module owner
 │   ├── tests/integration/, tests/conftest.py ← Mohit
 │   └── Dockerfile                ← Rutva
 ├── ml/                           ← Training & evaluation (never deployed)
-│   ├── cv/, datasets/images/     ← Mann
 │   ├── prediction/, datasets/conditions/ ← Nisarg
-│   └── nlp_eval/                 ← Mohit (with Nishith)
+│   ├── cv/, datasets/images/     ← Nisarg
+│   ├── nlp_eval/, datasets/symptoms/ ← Kavya (with Nishith)
 ├── tests/e2e/                    ← Mohit (Playwright)
 ├── .github/, render.yaml, deploy/ ← Nisarg (leader) approves; Rutva maintains CI/CD and deployment
-└── docs/                         ← Everyone reads, Rutva maintains
+└── docs/                         ← Everyone reads, the leader maintains
 ```
 
 ---
@@ -62,50 +82,62 @@ project-root/                     (full layout and stack: docs/tech-stack.md)
 
 ---
 
-### 👤 Rutva — Backend Lead + Integration
-**You own:** FastAPI app foundation, API routers, CI/CD pipelines (GitHub Actions), Dockerfile and image registry, `render.yaml`, `deploy/vps/`, Vercel/Render/VPS deployment, logging infrastructure (structlog), and overall backend deployment architecture.
+### 👤 Nisarg — Team Leader · AI/ML Lead (Prediction, Risk Engine, CV)
+**You own:** The deterministic Risk Engine (Urgent vs Consult vs Self-Care), condition prediction, uncertainty escalation, red-flag rules, the Result Composer, the CV model (dataset pipeline, training, ONNX export, serving), optional vector retrieval, and verification of all of these (risk-engine test matrix, consistency runs, model evaluation and model cards).
 
 **Your hard boundaries:**
 | ✅ You do this | ❌ You do NOT do this |
 |---------------|-----------------------|
-| Write API routes in `server/src/routes/` that call Kavya/Nishith's services | Write the core assessment state machine logic (that's Kavya) |
-| Define the final REST API contract and OpenAPI spec | Write AI extraction logic (that's Nishith) |
-| Set up structlog, request IDs, and application metrics | Change ORM models or migrations (that's Harsh) |
-| Configure the Docker image, Render or VPS, Vercel, and health checks | Build the frontend application |
-
-**Interface you publish (others depend on this):**
-- All REST API endpoints (e.g., `POST /api/v1/assessment`, `POST /api/v1/assessment/:id/message`) with exact URL, method, request body, and response schema.
-- Publish this OpenAPI spec on Day 1. Vivek and Darshil mock against it immediately.
-
----
-
-### 👤 Harsh — Database Lead
-**You own:** PostgreSQL schema (Neon), SQLAlchemy models, all Alembic migrations, connection pooling, indexing, and the repository layer.
-
-**Your hard boundaries:**
-| ✅ You do this | ❌ You do NOT do this |
-|---------------|-----------------------|
-| Create and run `alembic revision` / `alembic upgrade` | Let anyone else create a migration file |
-| Define all SQLAlchemy models (`User`, `Assessment`, `Message`, `Symptom`, `Consent`) | Allow anyone to bypass the repositories with raw SQL (unless approved for performance) |
-| Enforce data normalization and JSONB usage constraints | Change the API contract (that's Rutva) |
-| Add and tune database indexes for performance | Write application-layer logic inside the DB layer |
+| Calculate risk from defined red flags (e.g., severe chest pain -> URGENT) | Let an LLM, a model or randomness decide or lower a risk level |
+| Map structured symptoms to possible conditions (rule baseline, then a scikit-learn model trained in `ml/prediction/` and served as ONNX) | Write the symptom extraction LLM calls (that's Nishith) |
+| Train, evaluate (incl. per-skin-tone fairness) and serve the CV model | Store images anywhere (disk, DB, logs); they are processed in memory only |
+| Build the Result Composer that formats final guidance and referrals | Manage FastAPI routers or HTTP responses (that's Vivek) |
 
 **Critical rules:**
-- **Only Harsh creates migration files.** If someone else needs a schema change, they request it via a GitHub Issue — Harsh creates the migration.
-- **Never drop a column in production without a two-step migration** (add new, migrate data, drop old).
+- The Risk Engine must be 100% deterministic (no LLMs). Given the same structured symptoms, it must always return the exact same risk level.
+- ML outputs (condition model, CV model, vector retrieval) are inputs to the risk engine. They can add symptoms or raise risk, never lower it.
 
 ---
 
-### 👤 Kavya — Assessment Orchestration Lead
-**You own:** The core Assessment State Machine (`START → SYMPTOM_COLLECTION → CLARIFYING → CONFIRMING → READY → ANALYZING → COMPLETED`), session coordination, and the central orchestration service (`app/services/assessment/orchestrator.py`), plus the Pydantic API contracts in `app/schemas/`.
+### 👤 Nishith — AI/ML (LLM) + Database
+**You own:** LLM integration (the `AiGateway`, OpenAI with Gemini fallback), extraction and clarification prompts, JSON schema enforcement, multi-turn context, prompt-injection defence. On the Database team: repositories, audit-log storage, query performance, backup and restore.
+
+**Your hard boundaries:**
+| ✅ You do this | ❌ You do NOT do this |
+|---------------|-----------------------|
+| Write and version extraction & clarification prompts (`ai/prompts/`) | Call LLMs from anywhere except the AI gateway |
+| Parse, validate, and repair AI JSON outputs (Pydantic) | Write the risk calculation logic (that's Nisarg) |
+| Handle AI API timeouts, retries, and fallback errors | Write the frontend chat component (that's Rutva) |
+| Write repositories and migrations as part of the Database team | Start a migration without telling the Database team first |
+
+**Critical rules:**
+- The AI Gateway is the ONLY place in the codebase that calls the LLM API.
+- All LLM outputs MUST be strictly validated against Pydantic models before returning to Darshil's orchestrator.
+
+---
+
+### 👤 Kavya — AI/ML (Normalization, Glossary, Evaluation) + Database
+**You own:** The canonical symptom vocabulary, deterministic symptom normalization, the curated symptom glossary, self-care content, and the NLP evaluation harness (`ml/nlp_eval/`). On the Database team: guest sessions, profile and history queries, data-integrity tests, migration safety.
+
+**Your hard boundaries:**
+| ✅ You do this | ❌ You do NOT do this |
+|---------------|-----------------------|
+| Map lay terms to canonical symptoms deterministically | Generate glossary or self-care text with free LLM output |
+| Run the extraction evaluation (50+ fixed cases) and report regressions | Change prompts directly (send the findings to Nishith) |
+| Write repositories and migrations as part of the Database team | Start a migration without telling the Database team first |
+
+---
+
+### 👤 Darshil — Backend: Assessment Orchestration
+**You own:** The core Assessment State Machine (`START → SYMPTOM_COLLECTION → CLARIFYING → CONFIRMING → READY → ANALYZING → COMPLETED`), session coordination, the central orchestration service (`app/services/assessment/orchestrator.py`), and the Pydantic API contracts in `app/schemas/`.
 
 **Your hard boundaries:**
 | ✅ You do this | ❌ You do NOT do this |
 |---------------|-----------------------|
 | Enforce strict state transitions (e.g., block analysis if state != READY) | Write the actual LLM prompt (that's Nishith) |
-| Call AI extraction and save output through Harsh's repositories | Write FastAPI routers directly (that's Rutva) |
-| Manage the 3-turn clarification loop limit | Write frontend chat UI (that's Vivek) |
-| Guard assessment ownership (block cross-user access) | Write database migrations (that's Harsh) |
+| Call AI extraction and save output through the Database team's repositories | Write FastAPI routers directly (that's Vivek) |
+| Manage the 3-turn clarification loop limit | Write frontend UI |
+| Guard assessment ownership (block cross-user access) | Write database migrations (Database team) |
 
 **Interface you publish (others depend on this):**
 ```python
@@ -114,107 +146,91 @@ class AssessmentOrchestrator:
     async def confirm_symptoms(self, assessment_id: UUID, symptoms: list[Symptom]) -> None: ...
     async def generate_result(self, assessment_id: UUID) -> AssessmentResult: ...
 ```
-Rutva's routers call these methods (injected with `Depends`).
+Vivek's routers call these methods (injected with `Depends`).
 
 ---
 
-### 👤 Nishith — AI / ML Lead
-**You own:** LLM integration (the `AiGateway`, OpenAI with Gemini fallback), prompt engineering for symptom extraction and clarification, JSON schema enforcement, multi-turn context parsing, and prompt injection defense.
+### 👤 Vivek — Backend: API Foundation, Auth, Uploads
+**You own:** The FastAPI app factory, routers, config, structlog logging, the error model and request IDs, auth (accounts, JWT cookies, CSRF), profile endpoints, the audit log, and image upload validation.
 
 **Your hard boundaries:**
 | ✅ You do this | ❌ You do NOT do this |
 |---------------|-----------------------|
-| Write and version extraction & clarification prompts (`ai/prompts/`) | Call LLMs directly from API routes — route through your AI gateway |
-| Parse, validate, and repair AI JSON outputs (Pydantic) | Write the risk calculation logic (that's Nisarg) |
-| Handle AI API timeouts, retries, and fallback errors | Write the frontend Chat component |
-| Sanitize input against prompt injections (ignore instructions) | Write database migrations (that's Harsh) |
+| Write routers in `server/app/api/v1/` that call the services | Write the assessment state machine logic (that's Darshil) |
+| Publish the REST API and OpenAPI spec | Write AI extraction logic (that's Nishith) |
+| Validate uploads (size, MIME, magic bytes, EXIF) in memory | Write images to disk, the DB or logs |
+| Set up structlog, request IDs and the error model | Change ORM models or migrations (Database team) |
 
-**Critical rules:**
-- The AI Gateway is the ONLY place in the codebase that calls the LLM API.
-- All LLM outputs MUST be strictly validated against Pydantic models before returning to Kavya's orchestrator.
+**Interface you publish (others depend on this):**
+- All REST API endpoints (e.g., `POST /api/v1/assessments`, `POST /api/v1/assessments/{id}/messages`) with exact URL, method, request body, and response schema. Rutva's frontend mocks against it immediately.
 
 ---
 
-### 👤 Nisarg — Prediction + Risk Engine Lead
-**You own:** The deterministic Risk Engine (Urgent vs Consult vs Self-Care), condition prediction mapping, uncertainty escalation rules, and red-flag pattern matching.
+### 👤 Harsh — Backend: Security, Privacy & Consent Services
+**You own:** Security headers, CORS, rate limits (`slowapi`), the PII scrubber, the safety-wording guard, the consent service and consent versioning, history endpoints, data export/deletion endpoints, and the guest-data purge job.
 
 **Your hard boundaries:**
 | ✅ You do this | ❌ You do NOT do this |
 |---------------|-----------------------|
-| Calculate risk based on defined red flags (e.g., severe chest pain -> URGENT) | Let the LLM hallucinate or guess a risk level |
-| Map structured symptoms to possible conditions (rule baseline, then a scikit-learn model trained in `ml/prediction/` and served as ONNX) | Write the symptom extraction LLM calls (that's Nishith) |
-| Build the Result Composer that formats final guidance and referrals | Manage FastAPI routers or HTTP responses |
-
-**Critical rules:**
-- The Risk Engine must be 100% deterministic (no LLMs). Given the same structured symptoms, it must always return the exact same risk level.
+| Scrub PII from user text before it reaches the LLM | Write LLM prompts (that's Nishith) |
+| Block banned wording in results (`assert_safe_wording()`) | Change the state machine directly (that's Darshil) |
+| Implement export and "delete my data" services | Write migrations (Database team) |
 
 ---
 
-### 👤 Vivek — Frontend Chat Engine Lead
-**You own:** The interactive React chat UI, message bubbles, real-time typing indicators, local chat state (Zustand/Context), session persistence, and connecting the chat to Rutva's API.
+### 👤 Mohit — Backend Testing + QA Lead
+**You own:** Test infrastructure (pytest fixtures, Vitest setup), integration and contract tests, E2E tests (Playwright), safety and authorization tests, load testing, the coverage gate and the release QA sign-off.
 
 **Your hard boundaries:**
 | ✅ You do this | ❌ You do NOT do this |
 |---------------|-----------------------|
-| Build the conversational interface and message history rendering | Build the final Results dashboard (that's Darshil) |
-| Handle API requests for sending/receiving messages | Define backend schemas or routes |
-| Implement loading states and error boundaries for the chat | Store sensitive JWT tokens in localStorage (use HttpOnly cookies) |
+| Mock external dependencies (LLMs, CV, DB) in tests | Call real LLM APIs in standard unit/integration tests |
+| File GitHub issues when coverage drops below 70% | Fix other people's broken production code |
 
-**Interface you consume (your dependency):**
-- Rutva's API spec. If Rutva's API isn't ready, mock the responses with MSW using the generated OpenAPI types.
+**Critical rule:** When a module is merged, write its integration tests within 24 hours.
 
 ---
 
-### 👤 Darshil — Frontend Assessment UX Lead
-**You own:** The overall app shell/layout, symptom confirmation/editing UI, and the final Results presentation (Condition bars, risk level UI, map referrals).
+### 👤 Rutva — Frontend + Deployment + Testing
+**You own:** The `client/` scaffold and tooling, the chat UI, client stores and API services, PWA behaviour, and the whole delivery pipeline: CI/CD workflows, the Dockerfile and image registry, `render.yaml`, `deploy/vps/`, Vercel, production releases and post-deploy smoke tests.
 
 **Your hard boundaries:**
 | ✅ You do this | ❌ You do NOT do this |
 |---------------|-----------------------|
-| Present the Risk Engine data beautifully and accessibly (ARIA) | Write the Backend Risk Engine logic (that's Nisarg) |
-| Build the external map referral UI and self-care cards | Build the core chat engine (that's Vivek) |
-| Implement the optional Image Upload dropzone UI | Write backend image parsing logic (that's Mann) |
+| Build the conversational interface and API calls (TanStack Query + Zustand) | Define backend schemas or routes |
+| Keep CI/CD green and deployments reproducible | Approve deployments or merge PRs (leader only) |
+| Keep API responses out of the service-worker cache | Store tokens or health data in `localStorage` |
 
 ---
 
-### 👤 Mann — Image / CV Lead
-**You own:** Image upload endpoint, file validation (size, MIME type, magic bytes), in-memory preprocessing, **training the CV model** (`ml/cv/`: dataset pipeline, PyTorch/timm training on Kaggle/Colab, evaluation, ONNX export, Hugging Face Hub release), and serving it with ONNX Runtime in `app/services/image/`.
+### 👤 Mann — Frontend + Deployment + Testing
+**You own:** The app shell and layout, symptom confirmation/editing UI, the results page, doctor referral via map, the image-attach UI, symptom tooltips and the "why" panel, i18n (Hindi), frontend component tests, and the rollback drill / demo-day plan.
 
 **Your hard boundaries:**
 | ✅ You do this | ❌ You do NOT do this |
 |---------------|-----------------------|
-| Validate image buffers (reject oversized/invalid files) | Write the frontend image picker UI (that's Darshil/Vivek) |
-| Train, evaluate (incl. per-skin-tone fairness) and publish CV models | Store images anywhere (disk, DB, logs), because they are processed in memory only |
-| Serve the pinned ONNX model and map labels to visual symptoms | Let the CV model decide risk or show a diagnosis directly |
-| Keep datasets and checkpoints out of git | Write the main NLP extraction prompts (that's Nishith) |
+| Present the risk engine's output clearly and accessibly (ARIA) | Write backend risk or CV logic (that's Nisarg) |
+| Open an external map search for the specialty | Store or show any doctor data |
 
 ---
 
-### 👤 Mohit — QA + Testing Lead
-**You own:** Test infrastructure (pytest fixtures, Vitest setup), integration tests, E2E tests (Playwright), load testing, and the NLP evaluation harness (`ml/nlp_eval/`).
+### 👤 Dimple — Frontend + Deployment + Database
+**You own:** The consent step UI, landing page and disclaimer, `RiskBadge` and the urgent-care screen (112 first), profile and privacy pages, self-care cards, `vercel.json` and client monitoring, the privacy and safety documentation, and, on the Database team, consent storage, guest-data TTL purge and cascading account deletion.
 
 **Your hard boundaries:**
 | ✅ You do this | ❌ You do NOT do this |
 |---------------|-----------------------|
-| Run automated AI evaluation scripts (testing extraction accuracy) | Write the production code for the AI |
-| Mock external dependencies (LLMs, Databases) in unit tests | Call real LLM APIs in standard unit/integration tests |
-| File GitHub issues when test coverage drops below 70% | Fix other people's broken production code |
-
-**Critical rules:**
-- Test as you go. When a module is merged, write tests for it within 24 hours.
-- The AI Extraction Evaluator must run against a fixed set of 50+ test cases to catch prompt regressions.
+| Audit every user-facing string for the mandatory disclaimer and banned phrases | Write the LLM prompts |
+| Make the urgent screen show the emergency number first | Change the state machine directly (that's Darshil) |
+| Write retention/deletion repositories with the Database team | Start a migration without telling the Database team first |
 
 ---
 
-### 👤 Dimple — Security, Privacy & Safety Lead
-**You own:** Consent screen logic, PII sanitization (stripping names/SSNs from chat), security-headers/CORS configuration, rate limiting (slowapi), PWA storage rules, and ensuring the application remains strictly an *informational aid*.
-
-**Your hard boundaries:**
-| ✅ You do this | ❌ You do NOT do this |
-|---------------|-----------------------|
-| Audit prompts and UI for mandatory medical disclaimers | Write the LLM prompts from scratch |
-| Implement data deletion logic (Right to be Forgotten) | Change the state machine directly |
-| Configure JWT expiration, secure cookies, and API rate limiters | Build the chat interface (that's Vivek) |
+### 🗄️ Database team rules (Nishith, Kavya, Dimple)
+- **Only the Database team creates migration files.** Anyone else who needs a schema change requests it in a GitHub Issue.
+- One migration at a time: announce "starting a migration" in the team channel, so two migrations never branch from the same head.
+- **Never drop a column in production without a two-step migration** (add new, migrate data, drop old).
+- Repositories are the only code that touches the SQLAlchemy session.
 
 ---
 
@@ -233,13 +249,14 @@ type AssessmentResult = components['schemas']['AssessmentResult'];
 ```
 
 ### Rule 2 — Publish your interface before your implementation
-On Day 1 of any week, every person should have their **interface stub** published (e.g., hardcoded JSON responses). This lets everyone work in parallel. Vivek cannot be blocked waiting for Nishith to finish prompt engineering.
+On Day 1 of any week, every person should have their **interface stub** published (e.g., hardcoded JSON responses). This lets everyone work in parallel. Rutva's chat UI cannot be blocked waiting for Nishith to finish prompt engineering.
 
 ### Rule 3 — Shared database tables have one writer
 For any database table, only one person's code performs `INSERT`, `UPDATE`, and `DELETE`. Others may `SELECT`.
-- `assessments` & `messages` → Kavya writes
-- `symptoms` → Kavya writes (using data from Nishith)
-- `users` → Dimple/Rutva writes
+- `assessments` & `messages` → Darshil's orchestrator writes
+- `symptoms` → Darshil's orchestrator writes (using data from Nishith)
+- `users` → Vivek's auth service writes
+- `consents` → Harsh's consent service writes
 
 ### Rule 4 — Config lives in one place
 All configuration (DB URL, API keys, AI model names) lives in `.env`. Access them strictly through `server/app/core/config.py` (pydantic-settings). The frontend has no secrets.
@@ -260,19 +277,19 @@ print(f"extracted 3 symptoms for {assessment_id}")
 
 The hardest part of this project is when one person's module fails. Here is exactly how failure is handled:
 
-### 1. AI API Timeout (Nishith → Kavya → Vivek)
+### 1. AI API Timeout (Nishith → Darshil → Rutva)
 - **Nishith** does NOT crash the server. The AI gateway catches the timeout and returns `{ type: 'ERROR', message: 'Timeout' }`.
-- **Kavya** does NOT transition the state to `ANALYZING`. The state remains `SYMPTOM_COLLECTION` or `CLARIFYING`.
-- **Vivek** displays a retry-safe error to the user: *"I'm having trouble connecting. Can you say that again?"*
+- **Darshil** does NOT transition the state to `ANALYZING`. The state remains `SYMPTOM_COLLECTION` or `CLARIFYING`.
+- **Rutva** displays a retry-safe error to the user: *"I'm having trouble connecting. Can you say that again?"*
 
-### 2. Invalid Image Upload (Mann → Kavya → Darshil)
-- **Mann** rejects the image (e.g., too large, blurry) and returns a standard HTTP 400 error via Rutva's routes.
-- **Kavya** ignores the image, treating it as if only text was sent.
-- **Darshil** displays a toast notification: *"Image too blurry, continuing with text only."*
+### 2. Invalid Image Upload (Vivek / Nisarg → Darshil → Mann)
+- **Vivek** rejects an invalid file (too large, wrong type) and **Nisarg's** analyzer returns `unclear` for an unusable photo (blurry, dark). Both come back as a standard HTTP 400 error.
+- **Darshil** ignores the image, treating it as if only text was sent.
+- **Mann** displays a toast notification: *"Image too blurry, continuing with text only."*
 
-### 3. High Uncertainty Prediction (Nisarg → Darshil)
+### 3. High Uncertainty Prediction (Nisarg → Mann / Dimple)
 - **Nisarg** does NOT guess a condition. If model uncertainty is high (> 60%), Nisarg elevates the risk to `CONSULT_DOCTOR` to be safe.
-- **Darshil** renders the condition list with a "Less Likely" badge and explicitly shows the user the elevated risk warning.
+- **Mann** renders the condition list with a "Less Likely" badge and **Dimple's** `RiskBadge` explicitly shows the user the elevated risk warning.
 
 ---
 
@@ -312,10 +329,10 @@ Refs: #23
 | Violation | Consequence |
 |-----------|-------------|
 | Direct push to `main` | Revert immediately, PR required |
-| Alembic migration by non-Harsh | Deleted, Harsh rewrites it |
+| Alembic migration from outside the Database team | Deleted, the Database team rewrites it |
 | LLM called outside Nishith's gateway | PR blocked until refactored |
 | Secret committed to git | Rotate the secret immediately, scrub git history |
-| Bypassing Kavya's state machine | Critical bug, fix before any other work |
+| Bypassing Darshil's state machine | Critical bug, fix before any other work |
 | Interface changed without notice | Revert change, open a discussion, re-agree |
 
 These are not punishments — they're guardrails that keep the team moving fast without breaking each other's work.
