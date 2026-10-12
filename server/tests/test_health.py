@@ -1,7 +1,6 @@
 ﻿"""Tests for the health endpoint."""
-from fastapi.testclient import TestClient
-
 from app.main import create_app
+from fastapi.testclient import TestClient
 
 
 def test_health_returns_status_and_version(monkeypatch) -> None:
