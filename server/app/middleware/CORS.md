@@ -30,4 +30,5 @@ protection. An unapproved simple request can still reach a route, but the
 browser cannot read its response. Route authorization and CSRF remain separate.
 
 Run from `server/`: `python -m pytest tests/unit/middleware -q`.
-Rate limiting and integration remain pending; issue #47 is not complete.
+Rate-limit controls are documented in `INTEGRATION.md`. App integration
+remains pending; issue #47 is not complete.
