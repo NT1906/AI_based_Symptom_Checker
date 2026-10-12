@@ -1,8 +1,9 @@
-﻿import { beforeEach, describe, expect, it } from "vitest";
-import {
-  useAssessmentStore,
-  type AssessmentMessage,
-} from "./assessmentStore";
+/**
+ * @file Assessment store tests.
+ * Owner: Rutva · Task: S0-RUT-1 · Requirements: NFR-08, NFR-09
+ */
+import { beforeEach, describe, expect, it } from "vitest";
+import { useAssessmentStore, type AssessmentMessage } from "./assessmentStore";
 
 const exampleMessage: AssessmentMessage = {
   id: "test-message-1",
