@@ -174,7 +174,7 @@ jobs:
           docker buildx imagetools create -t "${IMAGE%:*}:$ENV_NAME" "$IMAGE"
 
       # ---------- Frontend: Vercel ----------
-      - uses: actions/setup-node@v4
+      - uses: actions/setup-node@v7
         if: steps.plan.outputs.frontend == 'true'
         with:
           node-version: 20
