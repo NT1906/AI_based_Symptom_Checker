@@ -14,5 +14,5 @@ The middleware does not trust forwarded headers itself or enable subdomain HSTS.
 
 From `server/`, run `python -m pytest tests/unit/middleware -q`.
 
-This first part covers headers only. CORS configuration and slowapi rate limits
-are still pending under #47; the issue is not ready for completion or a final PR.
+CORS policy and integration instructions are in `CORS.md`. Slowapi rate limits
+and app integration are still pending under #47; this is not a completed PR.
