@@ -40,6 +40,7 @@ def dataset(shipped: dict[str, Any]) -> dict[str, Any]:
 
 
 def _condition(data: dict[str, Any], condition_id: str) -> dict[str, Any]:
+    """Return the condition record with the requested ID, or raise StopIteration."""
     return next(c for c in data["conditions"] if c["id"] == condition_id)
 
 
@@ -47,20 +48,24 @@ def _condition(data: dict[str, Any], condition_id: str) -> dict[str, Any]:
 
 
 def test_shipped_dataset_has_no_errors(shipped: dict[str, Any]) -> None:
+    """Verify that the committed dataset passes all validation rules."""
     assert validate_dataset(shipped) == []
 
 
 def test_shipped_dataset_has_about_thirty_five_conditions(
     shipped: dict[str, Any],
 ) -> None:
+    """Keep the shipped condition count within the agreed range of 30 to 40."""
     assert 30 <= len(shipped["conditions"]) <= 40
 
 
 def test_shipped_dataset_covers_every_condition_group(shipped: dict[str, Any]) -> None:
+    """Require all four condition groups in the shipped dataset."""
     assert {c["group"] for c in shipped["conditions"]} == REQUIRED_GROUPS
 
 
 def test_shipped_red_flags_cover_required_categories(shipped: dict[str, Any]) -> None:
+    """Require red flags for every mandatory emergency category."""
     categories = {flag["category"] for flag in shipped["red_flags"]}
     assert REQUIRED_RED_FLAG_CATEGORIES <= categories
 
@@ -68,12 +73,14 @@ def test_shipped_red_flags_cover_required_categories(shipped: dict[str, Any]) ->
 def test_every_shipped_condition_has_three_or_more_symptoms(
     shipped: dict[str, Any],
 ) -> None:
+    """Require three symptoms per condition, except the documented low back pain case."""
     too_few = [c["id"] for c in shipped["conditions"] if len(c["symptoms"]) < 3]
     # Low back pain is the one deliberate exception: two symptoms describe it fully.
     assert too_few == ["low_back_pain"]
 
 
 def test_severe_chest_pain_is_a_red_flag(shipped: dict[str, Any]) -> None:
+    """Require severe chest pain alone to satisfy a cardiac red-flag trigger."""
     cardiac = next(
         f for f in shipped["red_flags"] if f["id"] == "rf_cardiac_chest_pain"
     )
@@ -99,6 +106,7 @@ def test_severe_pain_in_any_abdominal_location_is_a_red_flag(
 
 
 def test_chest_pain_conditions_route_to_cardiology(shipped: dict[str, Any]) -> None:
+    """Verify that the heart attack condition refers to cardiology (DR-04)."""
     # DR-04 example from the project report: chest pain -> cardiology.
     assert _condition(shipped, "heart_attack")["specialty"] == "cardiology"
 
@@ -106,6 +114,7 @@ def test_chest_pain_conditions_route_to_cardiology(shipped: dict[str, Any]) -> N
 def test_every_emergency_with_urgent_base_risk_has_a_red_flag(
     shipped: dict[str, Any],
 ) -> None:
+    """Require at least one red-flag reference on every URGENT condition."""
     urgent = [c for c in shipped["conditions"] if c["base_risk"] == "URGENT"]
     assert urgent
     assert all(c["red_flags"] for c in urgent)
@@ -118,6 +127,7 @@ def test_every_emergency_with_urgent_base_risk_has_a_red_flag(
 def test_accepts_icd10_codes_with_and_without_subcategory(
     dataset: dict[str, Any], code: str
 ) -> None:
+    """Accept each supplied ICD-10 format regardless of duplicate-code errors."""
     _condition(dataset, "dengue")["icd10"] = code
     errors = validate_dataset(dataset)
     # The code may now clash with another condition; only the format matters here.
@@ -125,6 +135,7 @@ def test_accepts_icd10_codes_with_and_without_subcategory(
 
 
 def test_red_flag_trigger_without_severity_is_valid(dataset: dict[str, Any]) -> None:
+    """Allow a red-flag trigger to omit the optional severity threshold."""
     cardiac = next(
         f for f in dataset["red_flags"] if f["id"] == "rf_cardiac_chest_pain"
     )
@@ -136,6 +147,7 @@ def test_red_flag_trigger_without_severity_is_valid(dataset: dict[str, Any]) -> 
 
 
 def test_reports_missing_top_level_section(dataset: dict[str, Any]) -> None:
+    """Report a missing red_flags section before checking its contents."""
     del dataset["red_flags"]
     assert "top level: 'red_flags' must be a non-empty list" in validate_dataset(
         dataset
@@ -143,6 +155,7 @@ def test_reports_missing_top_level_section(dataset: dict[str, Any]) -> None:
 
 
 def test_reports_unknown_symptom_in_condition(dataset: dict[str, Any]) -> None:
+    """Report condition symptoms that do not reference a canonical symptom ID."""
     _condition(dataset, "dengue")["symptoms"].append({"id": "tummy_ache", "weight": 2})
     assert (
         "condition 'dengue': unknown symptom reference 'tummy_ache'"
@@ -151,11 +164,13 @@ def test_reports_unknown_symptom_in_condition(dataset: dict[str, Any]) -> None:
 
 
 def test_reports_invalid_icd10_code(dataset: dict[str, Any]) -> None:
+    """Reject an ICD-10 code whose initial letter is lowercase."""
     _condition(dataset, "dengue")["icd10"] = "a90"
     assert "condition 'dengue': invalid ICD-10 code 'a90'" in validate_dataset(dataset)
 
 
 def test_reports_duplicate_icd10_code(dataset: dict[str, Any]) -> None:
+    """Report an ICD-10 code shared by two conditions."""
     _condition(dataset, "malaria")["icd10"] = "A90"
     assert "conditions: ICD-10 code 'A90' used more than once" in validate_dataset(
         dataset
@@ -163,11 +178,13 @@ def test_reports_duplicate_icd10_code(dataset: dict[str, Any]) -> None:
 
 
 def test_reports_duplicate_condition_id(dataset: dict[str, Any]) -> None:
+    """Report duplicate condition IDs within the conditions section."""
     _condition(dataset, "malaria")["id"] = "dengue"
     assert "conditions: duplicate id 'dengue'" in validate_dataset(dataset)
 
 
 def test_reports_unknown_specialty(dataset: dict[str, Any]) -> None:
+    """Reject a condition specialty absent from the specialty catalog."""
     _condition(dataset, "dengue")["specialty"] = "astrology"
     assert "condition 'dengue': unknown specialty 'astrology'" in validate_dataset(
         dataset
@@ -175,11 +192,13 @@ def test_reports_unknown_specialty(dataset: dict[str, Any]) -> None:
 
 
 def test_reports_unknown_base_risk(dataset: dict[str, Any]) -> None:
+    """Reject a base risk outside the three supported risk tiers."""
     _condition(dataset, "dengue")["base_risk"] = "LOW"
     assert "condition 'dengue': unknown base_risk 'LOW'" in validate_dataset(dataset)
 
 
 def test_reports_unknown_red_flag_reference(dataset: dict[str, Any]) -> None:
+    """Report condition references to red-flag IDs that do not exist."""
     _condition(dataset, "dengue")["red_flags"].append("rf_missing")
     assert (
         "condition 'dengue': unknown red_flags reference 'rf_missing'"
@@ -188,6 +207,7 @@ def test_reports_unknown_red_flag_reference(dataset: dict[str, Any]) -> None:
 
 
 def test_reports_invalid_symptom_weight(dataset: dict[str, Any]) -> None:
+    """Reject a symptom weight outside the allowed values of 1, 2 and 3."""
     _condition(dataset, "dengue")["symptoms"][0]["weight"] = 5
     assert any(
         "dengue" in e and "invalid weight 5" in e for e in validate_dataset(dataset)
@@ -195,6 +215,7 @@ def test_reports_invalid_symptom_weight(dataset: dict[str, Any]) -> None:
 
 
 def test_reports_boolean_symptom_weight(dataset: dict[str, Any]) -> None:
+    """Reject boolean weights even though bool is an int subclass."""
     _condition(dataset, "dengue")["symptoms"][-1]["weight"] = True
     assert any(
         "dengue" in e and "invalid weight True" in e for e in validate_dataset(dataset)
@@ -202,6 +223,7 @@ def test_reports_boolean_symptom_weight(dataset: dict[str, Any]) -> None:
 
 
 def test_reports_condition_without_hallmark_symptom(dataset: dict[str, Any]) -> None:
+    """Require at least one symptom with hallmark weight 3 per condition."""
     for entry in _condition(dataset, "acne")["symptoms"]:
         entry["weight"] = 1
     assert (
@@ -211,11 +233,13 @@ def test_reports_condition_without_hallmark_symptom(dataset: dict[str, Any]) -> 
 
 
 def test_reports_condition_with_too_few_symptoms(dataset: dict[str, Any]) -> None:
+    """Reject a condition with fewer than two symptoms."""
     _condition(dataset, "acne")["symptoms"] = [{"id": "pimples", "weight": 3}]
     assert "condition 'acne': needs at least 2 symptoms" in validate_dataset(dataset)
 
 
 def test_reports_identical_symptom_profiles(dataset: dict[str, Any]) -> None:
+    """Report conditions with identical symptom sets."""
     _condition(dataset, "malaria")["symptoms"] = copy.deepcopy(
         _condition(dataset, "dengue")["symptoms"]
     )
@@ -226,6 +250,7 @@ def test_reports_identical_symptom_profiles(dataset: dict[str, Any]) -> None:
 
 
 def test_reports_red_flag_with_unknown_severity(dataset: dict[str, Any]) -> None:
+    """Reject a trigger severity outside MILD, MODERATE and SEVERE."""
     dataset["red_flags"][0]["triggers"] = [
         {"all_of": [{"symptom": "chest_pain", "min_severity": "HUGE"}]}
     ]
@@ -233,6 +258,7 @@ def test_reports_red_flag_with_unknown_severity(dataset: dict[str, Any]) -> None
 
 
 def test_reports_red_flag_with_empty_trigger(dataset: dict[str, Any]) -> None:
+    """Reject a red-flag trigger with no all_of requirements."""
     dataset["red_flags"][0]["triggers"] = [{"all_of": []}]
     assert any(
         "'all_of' must be a non-empty list" in e for e in validate_dataset(dataset)
@@ -240,6 +266,7 @@ def test_reports_red_flag_with_empty_trigger(dataset: dict[str, Any]) -> None:
 
 
 def test_reports_unused_symptom(dataset: dict[str, Any]) -> None:
+    """Report catalog symptoms unused by both conditions and red flags."""
     dataset["symptoms"].append(
         {"id": "hiccups", "name": "Hiccups", "body_system": "general"}
     )
@@ -250,6 +277,7 @@ def test_reports_unused_symptom(dataset: dict[str, Any]) -> None:
 
 
 def test_reports_source_without_https(dataset: dict[str, Any]) -> None:
+    """Reject source URLs that use HTTP instead of HTTPS."""
     dataset["sources"][0]["url"] = "http://example.org"
     assert any("url must start with https://" in e for e in validate_dataset(dataset))
 
@@ -277,12 +305,14 @@ def test_reports_condition_whose_symptoms_are_not_a_list(
 
 
 def test_cli_returns_zero_for_shipped_dataset() -> None:
+    """Verify that the CLI returns success for the default dataset."""
     assert main([]) == 0
 
 
 def test_cli_returns_one_for_invalid_file(
     dataset: dict[str, Any], tmp_path: Path
 ) -> None:
+    """Write an invalid dataset to a temporary file and verify CLI failure."""
     _condition(dataset, "dengue")["specialty"] = "astrology"
     broken = tmp_path / "broken.json"
     broken.write_text(json.dumps(dataset), encoding="utf-8")
