@@ -1,0 +1,37 @@
+﻿services:
+  db:
+    image: postgres:16
+    environment:
+      POSTGRES_DB: symptom_checker
+      POSTGRES_USER: symptom_checker
+      POSTGRES_PASSWORD: symptom_checker
+    ports:
+      - "5432:5432"
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U symptom_checker -d symptom_checker"]
+      interval: 5s
+      timeout: 3s
+      retries: 10
+
+  api:
+    build:
+      context: ./server
+      args:
+        GIT_SHA: ${APP_VERSION:-dev}
+    environment:
+      APP_VERSION: ${APP_VERSION:-dev}
+      ENVIRONMENT: ${ENVIRONMENT:-development}
+      PORT: 8000
+      DATABASE_URL: postgresql+psycopg://symptom_checker:symptom_checker@db:5432/symptom_checker
+      AI_PROVIDER: ${AI_PROVIDER:-mock}
+      CV_PROVIDER: ${CV_PROVIDER:-mock}
+    ports:
+      - "8000:8000"
+    depends_on:
+      db:
+        condition: service_healthy
+
+volumes:
+  postgres_data:
