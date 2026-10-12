@@ -68,7 +68,7 @@ Base risk: 18 `SELF_CARE`, 14 `CONSULT_DOCTOR`, 6 `URGENT`. `visual: true` marks
 | `rf_meningitis_signs` | infection | Fever with stiff neck, or a rash that does not fade under a glass |
 | `rf_serious_bleeding` | bleeding | Vomiting blood, coughing up blood, or black/bloody stool |
 | `rf_fever_with_bleeding` | bleeding | Fever with bleeding gums or nosebleeds (dengue warning sign) |
-| `rf_severe_abdominal_pain` | abdominal | Severe abdominal pain |
+| `rf_severe_abdominal_pain` | abdominal | Severe abdominal pain, wherever it is (general, lower right, upper right or lower abdomen) |
 | `rf_severe_dehydration` | dehydration | Unable to keep fluids down, or little or no urine |
 | `rf_self_harm` | mental_health | Thoughts of self-harm or suicide |
 

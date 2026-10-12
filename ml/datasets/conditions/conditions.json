@@ -892,6 +892,22 @@
               "min_severity": "SEVERE"
             }
           ]
+        },
+        {
+          "all_of": [
+            {
+              "symptom": "upper_right_abdominal_pain",
+              "min_severity": "SEVERE"
+            }
+          ]
+        },
+        {
+          "all_of": [
+            {
+              "symptom": "lower_abdominal_pain",
+              "min_severity": "SEVERE"
+            }
+          ]
         }
       ],
       "rationale": "Possible appendicitis, perforation or a dengue warning sign.",
