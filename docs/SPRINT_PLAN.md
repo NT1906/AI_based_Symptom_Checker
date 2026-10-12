@@ -1,7 +1,7 @@
 # Sprint Plan — AI-Based Symptom Checker (Group 14)
 
 **Timeline:** Saturday 10 October 2026 → Friday 20 November 2026 (6 weeks). Dates may shift slightly. The leader updates this file and the GitHub milestones together.
-**Team:** 10 members in 5 teams. Every member owns specific folders (§3). Folder ownership for the whole repo is in [rules.md](rules.md); where the two disagree, this file wins until rules.md is updated.
+**Team:** 10 members in 5 teams. Every member owns specific folders (§3). The full ownership map and per-member boundaries are in [rules.md](rules.md).
 **Scope source of truth:** [idea.md](idea.md). **Stack:** [tech-stack.md](tech-stack.md) (React PWA on Vercel, FastAPI in Docker on Render or a VPS, CV models trained in `ml/`). Requirement IDs (FR / NFR / DR) come from the Lab 6 report, `Group_14_project_report.pdf`.
 
 > **Team change, 12 Oct 2026.** Teams were re-formed from the team poll. Starting now, every task below is assigned to its new owner.
