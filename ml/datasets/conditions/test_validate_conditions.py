@@ -82,6 +82,22 @@ def test_severe_chest_pain_is_a_red_flag(shipped: dict[str, Any]) -> None:
     ]
 
 
+def test_severe_pain_in_any_abdominal_location_is_a_red_flag(
+    shipped: dict[str, Any],
+) -> None:
+    # The extractor may code pain by location; every location must escalate (DR-02).
+    flag = next(
+        f for f in shipped["red_flags"] if f["id"] == "rf_severe_abdominal_pain"
+    )
+    abdominal = [
+        s["id"] for s in shipped["symptoms"] if s["id"].endswith("abdominal_pain")
+    ]
+    assert len(abdominal) == 4
+    for symptom in abdominal:
+        trigger = {"all_of": [{"symptom": symptom, "min_severity": "SEVERE"}]}
+        assert trigger in flag["triggers"], symptom
+
+
 def test_chest_pain_conditions_route_to_cardiology(shipped: dict[str, Any]) -> None:
     # DR-04 example from the project report: chest pain -> cardiology.
     assert _condition(shipped, "heart_attack")["specialty"] == "cardiology"
@@ -236,6 +252,25 @@ def test_reports_unused_symptom(dataset: dict[str, Any]) -> None:
 def test_reports_source_without_https(dataset: dict[str, Any]) -> None:
     dataset["sources"][0]["url"] = "http://example.org"
     assert any("url must start with https://" in e for e in validate_dataset(dataset))
+
+
+@pytest.mark.parametrize(
+    "section", ["specialties", "symptoms", "red_flags", "conditions", "sources"]
+)
+def test_reports_non_object_record_without_crashing(
+    dataset: dict[str, Any], section: str
+) -> None:
+    dataset[section].append("not an object")
+    index = len(dataset[section]) - 1
+    errors = validate_dataset(dataset)
+    assert f"{section}[{index}]: must be an object, got 'not an object'" in errors
+
+
+def test_reports_condition_whose_symptoms_are_not_a_list(
+    dataset: dict[str, Any],
+) -> None:
+    _condition(dataset, "acne")["symptoms"] = 5
+    assert "condition 'acne': needs at least 2 symptoms" in validate_dataset(dataset)
 
 
 # --- command line -----------------------------------------------------------------

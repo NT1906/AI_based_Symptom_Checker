@@ -22,7 +22,12 @@ from collections import Counter
 from pathlib import Path
 from typing import Any
 
-from condition_checks import check_conditions, check_references, require_text
+from condition_checks import (
+    check_conditions,
+    check_references,
+    only_records,
+    require_text,
+)
 
 DATASET_PATH = Path(__file__).with_name("conditions.json")
 
@@ -95,10 +100,17 @@ def validate_dataset(data: Dataset) -> list[str]:
 
 
 def _collect_ids(items: list[Any], section: str, errors: list[str]) -> set[str]:
-    """Collect the IDs of one section, reporting malformed and duplicate IDs."""
+    """Collect the IDs of one section, reporting malformed records and IDs.
+
+    This is the one place a non-object record is reported; every other check
+    skips it through ``only_records`` so the problem is listed once.
+    """
     seen: list[str] = []
     for index, item in enumerate(items):
-        item_id = item.get("id") if isinstance(item, dict) else None
+        if not isinstance(item, dict):
+            errors.append(f"{section}[{index}]: must be an object, got {item!r}")
+            continue
+        item_id = item.get("id")
         if not isinstance(item_id, str) or not ID_PATTERN.match(item_id):
             errors.append(
                 f"{section}[{index}]: 'id' must be snake_case, got {item_id!r}"
@@ -114,7 +126,7 @@ def _collect_ids(items: list[Any], section: str, errors: list[str]) -> set[str]:
 def _check_specialties(specialties: list[dict[str, Any]]) -> list[str]:
     """Each specialty needs a display name and a map search query (S2 referral)."""
     errors: list[str] = []
-    for item in specialties:
+    for item in only_records(specialties):
         errors += require_text(
             item, ("name", "map_query"), f"specialty '{item.get('id')}'"
         )
@@ -124,7 +136,7 @@ def _check_specialties(specialties: list[dict[str, Any]]) -> list[str]:
 def _check_symptoms(symptoms: list[dict[str, Any]]) -> list[str]:
     """Each symptom needs a display name and a known body system."""
     errors: list[str] = []
-    for item in symptoms:
+    for item in only_records(symptoms):
         where = f"symptom '{item.get('id')}'"
         errors += require_text(item, ("name",), where)
         if item.get("body_system") not in BODY_SYSTEMS:
@@ -135,7 +147,7 @@ def _check_symptoms(symptoms: list[dict[str, Any]]) -> list[str]:
 def _check_sources(sources: list[dict[str, Any]]) -> list[str]:
     """Each source needs a title and an https URL."""
     errors: list[str] = []
-    for item in sources:
+    for item in only_records(sources):
         where = f"source '{item.get('id')}'"
         errors += require_text(item, ("title", "url"), where)
         if isinstance(item.get("url"), str) and not item["url"].startswith("https://"):
@@ -148,7 +160,7 @@ def _check_red_flags(
 ) -> list[str]:
     """Check red-flag fields and that every trigger is a well-formed symptom rule."""
     errors: list[str] = []
-    for item in red_flags:
+    for item in only_records(red_flags):
         where = f"red flag '{item.get('id')}'"
         errors += require_text(item, ("label", "rationale"), where)
         if item.get("category") not in RED_FLAG_CATEGORIES:
@@ -185,14 +197,11 @@ def _check_trigger(trigger: Any, symptom_ids: set[str], where: str) -> list[str]
 def _check_unused_symptoms(data: Dataset, symptom_ids: set[str]) -> list[str]:
     """Every listed symptom should be used by a condition or a red flag."""
     used: set[Any] = set()
-    for condition in data["conditions"]:
-        used.update(
-            s.get("id") for s in condition.get("symptoms") or [] if isinstance(s, dict)
-        )
-    for flag in data["red_flags"]:
-        for trigger in flag.get("triggers") or []:
-            parts = trigger.get("all_of") if isinstance(trigger, dict) else None
-            used.update(p.get("symptom") for p in parts or [] if isinstance(p, dict))
+    for condition in only_records(data["conditions"]):
+        used.update(s.get("id") for s in only_records(condition.get("symptoms")))
+    for flag in only_records(data["red_flags"]):
+        for trigger in only_records(flag.get("triggers")):
+            used.update(p.get("symptom") for p in only_records(trigger.get("all_of")))
     return [
         f"symptom '{s}' is not used by any condition or red flag"
         for s in sorted(symptom_ids - used)

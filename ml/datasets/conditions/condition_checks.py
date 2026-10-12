@@ -24,6 +24,24 @@ HALLMARK_WEIGHT = 3
 MIN_SYMPTOMS_PER_CONDITION = 2
 
 
+def only_records(items: Any) -> list[dict[str, Any]]:
+    """Keep only the object (dict) entries of a JSON list.
+
+    Malformed entries are reported once, by the ID check in
+    ``validate_conditions.py``; every other check skips them with this helper
+    so one bad record cannot crash the validator.
+
+    Args:
+        items: A parsed JSON value that should be a list of objects.
+
+    Returns:
+        The dict entries in order; an empty list if ``items`` is not a list.
+    """
+    if not isinstance(items, list):
+        return []
+    return [item for item in items if isinstance(item, dict)]
+
+
 def require_text(item: dict[str, Any], fields: Iterable[str], where: str) -> list[str]:
     """Report fields that are missing or not a non-empty string.
 
@@ -77,7 +95,7 @@ def check_conditions(
         Human-readable error messages; empty when every condition is valid.
     """
     errors: list[str] = []
-    for item in conditions:
+    for item in only_records(conditions):
         errors += _check_condition(item, ids)
     errors += _check_duplicate_icd10(conditions)
     errors += _check_identical_profiles(conditions)
@@ -141,7 +159,7 @@ def _check_condition_symptoms(
 
 def _check_duplicate_icd10(conditions: list[dict[str, Any]]) -> list[str]:
     """Two conditions with the same ICD-10 code are almost always a copy-paste mistake."""
-    codes = Counter(c.get("icd10") for c in conditions)
+    codes = Counter(c.get("icd10") for c in only_records(conditions))
     return [
         f"conditions: ICD-10 code '{code}' used more than once"
         for code, n in codes.items()
@@ -153,7 +171,7 @@ def _check_identical_profiles(conditions: list[dict[str, Any]]) -> list[str]:
     """Conditions with identical symptom sets cannot be told apart by the predictor."""
     profiles: dict[frozenset[str], str] = {}
     errors: list[str] = []
-    for item in conditions:
+    for item in only_records(conditions):
         symptoms = item.get("symptoms")
         if not isinstance(symptoms, list):
             continue
