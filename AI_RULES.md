@@ -154,7 +154,7 @@ Responsibilities:
     - Otherwise take the highest tier implied by the predicted conditions.
     - Escalate one tier when prediction confidence is low (uncertainty never lowers risk).
 
-Owner: Nisarg (prediction) · Task: S1-NIS-3 · Requirements: FR-06, FR-15, DR-02
+Owner: Nisarg (prediction) · Task: S1-NIS-2 · Requirements: FR-06, FR-15, DR-02
 """
 ```
 
