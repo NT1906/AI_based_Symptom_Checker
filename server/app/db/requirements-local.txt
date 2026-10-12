@@ -1,0 +1,5 @@
+# Standalone Sprint 0 local setup until Rutva merges server requirements.
+SQLAlchemy==2.0.54
+alembic==1.20.0
+psycopg[binary]==3.3.6
+pydantic==2.14.0
