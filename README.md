@@ -36,15 +36,17 @@ Details and reasoning: [docs/tech-stack.md](docs/tech-stack.md).
 
 ## Team
 
-| Member | Module |
-|---|---|
-| Nisarg (leader) | Prediction & risk engine |
-| Rutva | Backend foundation, integration & DevOps |
-| Harsh | Database |
-| Kavya | Assessment orchestration |
-| Nishith | AI / NLP |
-| Vivek | Frontend chat |
-| Darshil | Frontend assessment UX |
-| Mann | Image / CV |
-| Mohit | QA & testing |
-| Dimple | Security, privacy & safety |
+| Member | Teams | Module |
+|---|---|---|
+| Nisarg (leader) | AI/ML lead, Testing | Prediction, risk engine, CV model |
+| Nishith | AI/ML, Database | AI gateway, prompts, extraction |
+| Kavya | AI/ML, Database | Symptom normalization, glossary, NLP evaluation |
+| Darshil | Backend | Assessment orchestration, API contracts |
+| Harsh | Backend | Security, privacy & consent services |
+| Vivek | Backend | API foundation, auth, uploads |
+| Mohit | Backend, Testing lead | Test infrastructure, integration & E2E |
+| Rutva | Frontend + Deployment, Testing | Chat UI, PWA, CI/CD & deployment |
+| Mann | Frontend + Deployment, Testing | App shell, confirmation, results, referral |
+| Dimple | Frontend + Deployment, Database | Consent, risk/urgent UI, privacy pages, retention |
+
+Full ownership: [docs/rules.md](docs/rules.md). Tasks: [docs/SPRINT_PLAN.md](docs/SPRINT_PLAN.md).

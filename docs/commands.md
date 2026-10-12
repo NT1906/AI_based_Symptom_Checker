@@ -250,7 +250,7 @@ deactivate                       # leave the Python venv
 
 ---
 
-## 8. ML work (Mann, Nisarg, Mohit)
+## 8. ML work (Nisarg, Nishith, Kavya)
 
 ```bash
 cd ml
