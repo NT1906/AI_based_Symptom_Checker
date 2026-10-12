@@ -1,13 +1,13 @@
 {
   "_comment": "GitHub login (lowercase) -> team name used as the branch prefix. Only the team leader edits this file.",
-  "nt1906":            { "name": "nisarg",  "role": "Team Leader · Prediction & Risk Engine" },
-  "rutva0607":         { "name": "rutva",   "role": "Backend Lead · Integration & DevOps" },
-  "harshpanchal6":     { "name": "harsh",   "role": "Database Lead" },
-  "kavy-op":           { "name": "kavya",   "role": "Assessment Orchestration Lead" },
-  "nishith1130":       { "name": "nishith", "role": "AI / NLP Lead" },
-  "panchotiyavivek18": { "name": "vivek",   "role": "Frontend Chat Lead" },
-  "darshil2501":       { "name": "darshil", "role": "Frontend Assessment UX Lead" },
-  "m1nn08":            { "name": "mann",    "role": "Image / CV Lead" },
-  "mohittigga111":     { "name": "mohit",   "role": "QA & Testing Lead" },
-  "dimplleeeee":       { "name": "dimple",  "role": "Security, Privacy & Safety Lead" }
+  "nt1906":            { "name": "nisarg",  "role": "Team Leader · AI/ML Lead (Prediction, Risk Engine, CV)" },
+  "rutva0607":         { "name": "rutva",   "role": "Frontend + Deployment · Testing" },
+  "harshpanchal6":     { "name": "harsh",   "role": "Backend · Security, Privacy & Consent" },
+  "kavy-op":           { "name": "kavya",   "role": "AI/ML (Normalization, Evaluation) · Database" },
+  "nishith1130":       { "name": "nishith", "role": "AI/ML (LLM Gateway, Prompts) · Database" },
+  "panchotiyavivek18": { "name": "vivek",   "role": "Backend · API Foundation, Auth, Uploads" },
+  "darshil2501":       { "name": "darshil", "role": "Backend · Assessment Orchestration" },
+  "m1nn08":            { "name": "mann",    "role": "Frontend + Deployment · Testing" },
+  "mohittigga111":     { "name": "mohit",   "role": "Backend · QA & Testing Lead" },
+  "dimplleeeee":       { "name": "dimple",  "role": "Frontend + Deployment · Database" }
 }
