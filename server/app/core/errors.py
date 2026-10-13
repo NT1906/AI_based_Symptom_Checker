@@ -201,7 +201,6 @@ async def validation_error_handler(
         "request_validation_failed",
         path=request.url.path,
         method=request.method,
-        errors=exc.errors(),
     )
     return JSONResponse(
         status_code=status.HTTP_422_UNPROCESSABLE_ENTITY,
@@ -256,11 +255,10 @@ async def unhandled_exception_handler(request: Request, exc: Exception) -> JSONR
     Returns:
         JSONResponse: Generic internal server error payload with status 500.
     """
-    logger.exception(
+    logger.error(
         "unhandled_exception",
         path=request.url.path,
         method=request.method,
-        error=str(exc),
     )
     return JSONResponse(
         status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,

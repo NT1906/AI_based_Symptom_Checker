@@ -73,10 +73,7 @@ def upgrade() -> None:
             nullable=False,
         ),
         sa.CheckConstraint(
-            "state IN ("
-            "'START', 'SYMPTOM_COLLECTION', 'CLARIFYING', "
-            "'CONFIRMING', 'READY', 'ANALYZING', 'COMPLETED'"
-            ")",
+            "state IN ('START', 'SYMPTOM_COLLECTION', 'CLARIFYING', 'CONFIRMING', 'READY', 'ANALYZING', 'COMPLETED')",
             name=op.f("ck_assessments_state_allowed"),
         ),
         sa.ForeignKeyConstraint(

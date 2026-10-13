@@ -22,18 +22,32 @@ def run_migrations() -> None:
             literal_binds=True,
             compare_type=True,
         )
+        with context.begin_transaction():
+            context.run_migrations()
     else:
         connection = context.config.attributes.get("connection")
-        if not isinstance(connection, Connection):
+        if isinstance(connection, Connection):
+            context.configure(
+                connection=connection, target_metadata=Base.metadata, compare_type=True
+            )
+            with context.begin_transaction():
+                context.run_migrations()
+        elif getattr(context.config, "cmd_opts", None) is not None:
+            from app.core.config import get_settings
+            from app.db.session import create_db_engine
+
+            settings = get_settings()
+            engine = create_db_engine(settings.database_url)
+            with engine.begin() as conn:
+                context.configure(
+                    connection=conn, target_metadata=Base.metadata, compare_type=True
+                )
+                context.run_migrations()
+        else:
             raise RuntimeError(
                 "Supply Config.attributes['connection']; for local setup use "
                 "python -m app.db.manage upgrade. See docs/database.md."
             )
-        context.configure(
-            connection=connection, target_metadata=Base.metadata, compare_type=True
-        )
-    with context.begin_transaction():
-        context.run_migrations()
 
 
 run_migrations()

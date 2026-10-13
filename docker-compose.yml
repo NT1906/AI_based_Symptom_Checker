@@ -22,7 +22,7 @@ services:
       dockerfile: Dockerfile
     container_name: symptom-checker-api
     ports:
-      - "8000:8000"
+      - "${PORT:-8000}:${PORT:-8000}"
     env_file:
       - path: .env
         required: false
