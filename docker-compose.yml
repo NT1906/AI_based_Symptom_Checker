@@ -7,7 +7,7 @@ services:
       POSTGRES_USER: postgres
       POSTGRES_PASSWORD: postgres
     ports:
-      - "5432:5432"
+      - "127.0.0.1:5432:5432"
     volumes:
       - pgdata:/var/lib/postgresql/data
     healthcheck:
@@ -23,14 +23,17 @@ services:
     container_name: symptom-checker-api
     ports:
       - "8000:8000"
+    env_file:
+      - path: .env
+        required: false
     environment:
-      APP_ENV: local
-      APP_VERSION: local-dev
-      PORT: 8000
+      APP_ENV: ${APP_ENV:-local}
+      APP_VERSION: ${APP_VERSION:-local-dev}
+      PORT: ${PORT:-8000}
       DATABASE_URL: postgresql+psycopg://postgres:postgres@db:5432/symptom_checker
-      JWT_SECRET: local-development-secret-that-is-at-least-32-chars-long
-      AI_PROVIDER: mock
-      CV_PROVIDER: mock
+      JWT_SECRET: ${JWT_SECRET:-local-development-secret-that-is-at-least-32-chars-long}
+      AI_PROVIDER: ${AI_PROVIDER:-mock}
+      CV_PROVIDER: ${CV_PROVIDER:-mock}
     depends_on:
       db:
         condition: service_healthy

@@ -1,10 +1,11 @@
 [tool.ruff]
-line-length = 100
+line-length = 88
 target-version = "py312"
 src = ["app", "tests"]
+extend-exclude = ["alembic"]
 
 [tool.ruff.lint]
-select = ["E", "F", "I", "UP", "B"]
+select = ["E", "F", "UP", "B"]
 
 [tool.ruff.lint.flake8-bugbear]
 extend-immutable-calls = ["fastapi.Depends", "Depends"]

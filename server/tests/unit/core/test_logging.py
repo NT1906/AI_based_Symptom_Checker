@@ -21,7 +21,7 @@ def test_get_logger_returns_bound_logger() -> None:
 
 
 def test_configure_logging_executes_without_error() -> None:
-    """Verify that configure_logging executes smoothly in both JSON and console modes."""
+    """Verify configure_logging executes in both JSON and console modes."""
     # Test JSON configuration (used in staging and production)
     configure_logging(log_level="DEBUG", json_format=True)
     json_logger = get_logger("json_test")

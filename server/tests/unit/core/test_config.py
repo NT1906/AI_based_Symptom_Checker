@@ -15,11 +15,12 @@ from app.core.config import Settings, get_settings
 
 def test_default_settings_instantiation() -> None:
     """Verify that Settings can be instantiated with appropriate defaults."""
-    settings = Settings()
-    assert settings.app_env in ("local", "staging", "production", "test")
-    assert settings.port == 8000
-    assert settings.ai_provider == "mock"
-    assert settings.cv_provider == "mock"
+    with patch.dict(os.environ, {}, clear=True):
+        settings = Settings(_env_file=None)
+        assert settings.app_env in ("local", "staging", "production", "test")
+        assert settings.port == 8000
+        assert settings.ai_provider == "mock"
+        assert settings.cv_provider == "mock"
 
 
 def test_settings_environment_override() -> None:

@@ -39,7 +39,9 @@ class Settings(BaseSettings):
     app_env: Literal["local", "staging", "production", "test"] = "local"
     app_version: str = "dev"
     port: int = 8000
-    database_url: str = "postgresql+psycopg://postgres:postgres@localhost:5432/symptom_checker"
+    database_url: str = (
+        "postgresql+psycopg://postgres:postgres@localhost:5432/symptom_checker"
+    )
     jwt_secret: str = "local-development-secret-that-is-at-least-32-chars-long"
     ai_provider: str = "mock"
     ai_model: str = "gpt-4o-mini"

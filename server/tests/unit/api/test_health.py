@@ -47,7 +47,7 @@ def test_health_reflects_custom_version(app: FastAPI, client: TestClient) -> Non
 
 
 def test_health_rejects_invalid_methods(client: TestClient) -> None:
-    """Verify that non-GET requests to /api/v1/health are rejected with 405 Method Not Allowed.
+    """Verify non-GET requests to /api/v1/health are rejected with 405.
 
     Args:
         client: Synchronous HTTP test client.

@@ -14,6 +14,7 @@ from fastapi import FastAPI, Request, status
 from fastapi.exceptions import RequestValidationError
 from fastapi.responses import JSONResponse
 from pydantic import BaseModel
+from starlette.exceptions import HTTPException as StarletteHTTPException
 
 from app.core.logging import get_logger
 
@@ -69,7 +70,9 @@ class AppError(Exception):
 class NotFoundError(AppError):
     """Resource not found error."""
 
-    def __init__(self, message: str = "Resource not found", details: Any | None = None) -> None:
+    def __init__(
+        self, message: str = "Resource not found", details: Any | None = None
+    ) -> None:
         """Initialize NotFoundError with status 404."""
         super().__init__(
             message=message,
@@ -82,7 +85,9 @@ class NotFoundError(AppError):
 class ValidationError(AppError):
     """Domain or request validation error."""
 
-    def __init__(self, message: str = "Validation failed", details: Any | None = None) -> None:
+    def __init__(
+        self, message: str = "Validation failed", details: Any | None = None
+    ) -> None:
         """Initialize ValidationError with status 422."""
         super().__init__(
             message=message,
@@ -110,7 +115,9 @@ class UnauthorizedError(AppError):
 class ForbiddenError(AppError):
     """Authorization denied error."""
 
-    def __init__(self, message: str = "Permission denied", details: Any | None = None) -> None:
+    def __init__(
+        self, message: str = "Permission denied", details: Any | None = None
+    ) -> None:
         """Initialize ForbiddenError with status 403."""
         super().__init__(
             message=message,
@@ -123,7 +130,9 @@ class ForbiddenError(AppError):
 class ConflictError(AppError):
     """State conflict or duplicate resource error."""
 
-    def __init__(self, message: str = "Resource conflict", details: Any | None = None) -> None:
+    def __init__(
+        self, message: str = "Resource conflict", details: Any | None = None
+    ) -> None:
         """Initialize ConflictError with status 409."""
         super().__init__(
             message=message,
@@ -136,7 +145,9 @@ class ConflictError(AppError):
 class ExternalServiceError(AppError):
     """External dependency (AI provider, CV model, or upstream service) failure."""
 
-    def __init__(self, message: str = "Upstream service error", details: Any | None = None) -> None:
+    def __init__(
+        self, message: str = "Upstream service error", details: Any | None = None
+    ) -> None:
         """Initialize ExternalServiceError with status 502."""
         super().__init__(
             message=message,
@@ -170,11 +181,13 @@ async def app_error_handler(request: Request, exc: AppError) -> JSONResponse:
             code=exc.code,
             message=exc.message,
             details=exc.details,
-        ).model_dump(),
+        ).model_dump(mode="json"),
     )
 
 
-async def validation_error_handler(request: Request, exc: RequestValidationError) -> JSONResponse:
+async def validation_error_handler(
+    request: Request, exc: RequestValidationError
+) -> JSONResponse:
     """Handle FastAPI request validation errors and return standard JSON error payload.
 
     Args:
@@ -196,12 +209,45 @@ async def validation_error_handler(request: Request, exc: RequestValidationError
             code="VALIDATION_ERROR",
             message="Request validation failed",
             details=exc.errors(),
-        ).model_dump(),
+        ).model_dump(mode="json"),
+    )
+
+
+async def http_exception_handler(
+    request: Request, exc: StarletteHTTPException
+) -> JSONResponse:
+    """Handle Starlette HTTP exceptions and return uniform error payload.
+
+    Args:
+        request: The incoming FastAPI request.
+        exc: The captured HTTP exception.
+
+    Returns:
+        JSONResponse: Formatted error payload preserving original headers.
+    """
+    code = "HTTP_ERROR"
+    if exc.status_code == status.HTTP_404_NOT_FOUND:
+        code = "NOT_FOUND"
+    elif exc.status_code == status.HTTP_405_METHOD_NOT_ALLOWED:
+        code = "METHOD_NOT_ALLOWED"
+    elif exc.status_code == status.HTTP_401_UNAUTHORIZED:
+        code = "UNAUTHORIZED"
+    elif exc.status_code == status.HTTP_403_FORBIDDEN:
+        code = "FORBIDDEN"
+
+    return JSONResponse(
+        status_code=exc.status_code,
+        content=ErrorResponse(
+            code=code,
+            message=str(exc.detail) if exc.detail else "HTTP request error",
+            details=None,
+        ).model_dump(mode="json"),
+        headers=exc.headers,
     )
 
 
 async def unhandled_exception_handler(request: Request, exc: Exception) -> JSONResponse:
-    """Handle unexpected exceptions, log stack traces internally, and return safe 500 JSON.
+    """Handle unexpected exceptions, log stack traces, and return safe 500 JSON.
 
     Args:
         request: The incoming FastAPI request.
@@ -222,7 +268,7 @@ async def unhandled_exception_handler(request: Request, exc: Exception) -> JSONR
             code="INTERNAL_SERVER_ERROR",
             message="An unexpected error occurred. Please try again later.",
             details=None,
-        ).model_dump(),
+        ).model_dump(mode="json"),
     )
 
 
@@ -232,6 +278,7 @@ def register_error_handlers(app: FastAPI) -> None:
     Args:
         app: The FastAPI application instance.
     """
+    app.add_exception_handler(StarletteHTTPException, http_exception_handler)  # type: ignore[arg-type]
     app.add_exception_handler(AppError, app_error_handler)  # type: ignore[arg-type]
     app.add_exception_handler(RequestValidationError, validation_error_handler)  # type: ignore[arg-type]
     app.add_exception_handler(Exception, unhandled_exception_handler)

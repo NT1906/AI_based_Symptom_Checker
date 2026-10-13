@@ -23,7 +23,7 @@ from fastapi.testclient import TestClient
 
 
 def test_domain_subclasses_status_codes() -> None:
-    """Verify that domain error subclasses have correct default status codes and error codes."""
+    """Verify that domain error subclasses have correct default status codes."""
     not_found = NotFoundError("Item not found")
     assert isinstance(not_found, AppError)
     assert not_found.status_code == status.HTTP_404_NOT_FOUND
@@ -79,7 +79,7 @@ def test_app_error_handler_returns_formatted_json(error_test_app: FastAPI) -> No
 
 
 def test_unhandled_exception_masks_internal_details(error_test_app: FastAPI) -> None:
-    """Verify that unhandled exceptions return generic 500 without leaking stack traces."""
+    """Verify unhandled exceptions return generic 500 without leaking stack traces."""
     client = TestClient(error_test_app, raise_server_exceptions=False)
     response = client.get("/trigger-unhandled-error")
     assert response.status_code == status.HTTP_500_INTERNAL_SERVER_ERROR
@@ -87,3 +87,20 @@ def test_unhandled_exception_masks_internal_details(error_test_app: FastAPI) -> 
     assert data["code"] == "INTERNAL_SERVER_ERROR"
     assert "Secret database connection failed" not in data["message"]
     assert data["details"] is None
+
+
+def test_http_exception_handler_returns_uniform_schema(
+    error_test_app: FastAPI,
+) -> None:
+    """Verify that HTTP exceptions return the uniform error payload."""
+    client = TestClient(error_test_app)
+    response_404 = client.get("/non-existent-route")
+    assert response_404.status_code == status.HTTP_404_NOT_FOUND
+    data_404 = response_404.json()
+    assert data_404["code"] == "NOT_FOUND"
+
+    response_405 = client.post("/trigger-app-error")
+    assert response_405.status_code == status.HTTP_405_METHOD_NOT_ALLOWED
+    data_405 = response_405.json()
+    assert data_405["code"] == "METHOD_NOT_ALLOWED"
+    assert "Allow" in response_405.headers
