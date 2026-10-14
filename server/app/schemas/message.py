@@ -8,7 +8,7 @@ Responsibilities:
 Owner: Darshil (orchestration) · Task: S0-DAR-1 · Requirements: N/A
 """
 
-from datetime import datetime, timezone
+from datetime import datetime, UTC
 from uuid import UUID, uuid4
 
 from pydantic import Field, field_validator
@@ -33,11 +33,17 @@ class Message(SchemaBase):
     id: UUID = Field(default_factory=uuid4, description="Message unique identifier")
     assessment_id: UUID = Field(..., description="Associated assessment identifier")
     position: int = Field(default=0, ge=0, description="Sequential message order index")
-    role: MessageRole = Field(default=MessageRole.USER, description="Message sender role")
+    role: MessageRole = Field(
+        default=MessageRole.USER,
+        description="Message sender role",
+    )
     content: str = Field(..., min_length=1, max_length=4000, description="Message text")
-    message_type: MessageType = Field(default=MessageType.TEXT, description="Message type")
+    message_type: MessageType = Field(
+        default=MessageType.TEXT,
+        description="Message type",
+    )
     created_at: datetime = Field(
-        default_factory=lambda: datetime.now(timezone.utc),
+        default_factory=lambda: datetime.now(UTC),
         description="Timestamp in UTC",
     )
 
@@ -64,7 +70,12 @@ class Message(SchemaBase):
 class MessageCreate(SchemaBase):
     """Payload sent by client to append a user message."""
 
-    content: str = Field(..., min_length=1, max_length=4000, description="User response text")
+    content: str = Field(
+        ...,
+        min_length=1,
+        max_length=4000,
+        description="User response text",
+    )
 
     @field_validator("content")
     @classmethod

@@ -42,16 +42,31 @@ class Symptom(SchemaBase):
     """
 
     id: UUID = Field(default_factory=uuid4, description="Unique symptom identifier")
-    name: str = Field(..., min_length=1, max_length=128, description="Canonical symptom name")
+    name: str = Field(
+        ...,
+        min_length=1,
+        max_length=128,
+        description="Canonical symptom name",
+    )
     severity: Severity = Field(default=Severity.UNKNOWN, description="Symptom severity")
     duration: Duration | None = Field(default=None, description="Symptom duration")
-    body_location: str | None = Field(default=None, max_length=128, description="Body site")
-    source: SymptomSource = Field(default=SymptomSource.USER, description="Symptom source")
+    body_location: str | None = Field(
+        default=None,
+        max_length=128,
+        description="Body site",
+    )
+    source: SymptomSource = Field(
+        default=SymptomSource.USER,
+        description="Symptom source",
+    )
     extraction_confidence: float | None = Field(
         default=None,
         ge=0.0,
         le=1.0,
-        description="AI extraction confidence (technical metric, not medical certainty)",
+        description=(
+            "AI extraction confidence "
+            "(technical metric, not medical certainty)"
+        ),
     )
 
     @field_validator("name")
@@ -80,8 +95,15 @@ class SymptomCreate(SchemaBase):
     name: str = Field(..., min_length=1, max_length=128, description="Symptom name")
     severity: Severity = Field(default=Severity.UNKNOWN, description="Symptom severity")
     duration: Duration | None = Field(default=None, description="Symptom duration")
-    body_location: str | None = Field(default=None, max_length=128, description="Body site")
-    source: SymptomSource = Field(default=SymptomSource.USER, description="Symptom source")
+    body_location: str | None = Field(
+        default=None,
+        max_length=128,
+        description="Body site",
+    )
+    source: SymptomSource = Field(
+        default=SymptomSource.USER,
+        description="Symptom source",
+    )
 
     @field_validator("name")
     @classmethod
@@ -96,12 +118,18 @@ class SymptomCreate(SchemaBase):
 class SymptomUpdate(SchemaBase):
     """Schema for editing or confirming an existing symptom."""
 
-    id: UUID | None = Field(default=None, description="Existing symptom identifier if updating")
+    id: UUID | None = Field(
+        default=None,
+        description="Existing symptom identifier if updating",
+    )
     name: str | None = Field(default=None, min_length=1, max_length=128)
     severity: Severity | None = None
     duration: Duration | None = None
     body_location: str | None = Field(default=None, max_length=128)
-    source: SymptomSource | None = Field(default=None, description="Updated symptom source")
+    source: SymptomSource | None = Field(
+        default=None,
+        description="Updated symptom source",
+    )
 
     @field_validator("name")
     @classmethod

@@ -3,7 +3,8 @@
 Responsibilities:
     - Define canonical AssessmentState lifecycle states.
     - Define triage RiskLevel categories compliant with deterministic safety rules.
-    - Define ConfidenceLabel buckets (Likely, Possible, Less likely) for non-diagnostic display.
+    - Define ConfidenceLabel buckets
+      (Likely, Possible, Less likely) for non-diagnostic display.
     - Define symptom severity, duration units, and message categorization.
 
 Owner: Darshil (orchestration) · Task: S0-DAR-1 · Requirements: N/A
@@ -15,7 +16,8 @@ from enum import StrEnum
 class AssessmentState(StrEnum):
     """Lifecycle states of an assessment session.
 
-    Flow: START -> SYMPTOM_COLLECTION -> CLARIFYING -> CONFIRMING -> READY -> ANALYZING -> COMPLETED
+    Flow: START -> SYMPTOM_COLLECTION -> CLARIFYING -> CONFIRMING -> READY ->
+    ANALYZING -> COMPLETED
     """
 
     START = "START"

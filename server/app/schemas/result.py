@@ -8,7 +8,7 @@ Responsibilities:
 Owner: Darshil (orchestration) · Task: S0-DAR-1 · Requirements: N/A
 """
 
-from datetime import datetime, timezone
+from datetime import datetime, UTC
 from uuid import UUID
 
 from pydantic import Field, field_validator, model_validator
@@ -18,7 +18,8 @@ from app.schemas.condition import Condition
 from app.schemas.enums import RiskLevel
 
 DEFAULT_DISCLAIMER = (
-    "This is not a medical diagnosis. Always consult a qualified healthcare professional."
+    "This is not a medical diagnosis. "
+    "Always consult a qualified healthcare professional."
 )
 DEFAULT_EMERGENCY_NUMBER = "112"
 
@@ -33,8 +34,14 @@ class ReferralInfo(SchemaBase):
         emergency_number: Emergency response telephone number when risk is URGENT.
     """
 
-    required: bool = Field(default=False, description="Is medical referral recommended")
-    specialty: str | None = Field(default=None, description="Suggested medical department")
+    required: bool = Field(
+        default=False,
+        description="Is medical referral recommended",
+    )
+    specialty: str | None = Field(
+        default=None,
+        description="Suggested medical department",
+    )
     reason: str | None = Field(default=None, description="Triage referral explanation")
     emergency_number: str | None = Field(
         default=None,
@@ -84,7 +91,7 @@ class AssessmentResult(SchemaBase):
         description="Mandatory medical safety disclaimer",
     )
     created_at: datetime = Field(
-        default_factory=lambda: datetime.now(timezone.utc),
+        default_factory=lambda: datetime.now(UTC),
         description="Timestamp in UTC",
     )
 
@@ -109,11 +116,10 @@ class AssessmentResult(SchemaBase):
 
     @model_validator(mode="after")
     def enforce_urgent_referral(self) -> "AssessmentResult":
-        """Ensure URGENT risk tier requires immediate referral and provides emergency number."""
+        """Ensure URGENT risk tier enforces referral and emergency contact."""
         if self.risk_level == RiskLevel.URGENT:
             if not self.referral.required:
                 self.referral.required = True
             if not self.referral.emergency_number:
                 self.referral.emergency_number = DEFAULT_EMERGENCY_NUMBER
         return self
-

@@ -8,7 +8,7 @@ Responsibilities:
 Owner: Darshil (orchestration) · Task: S0-DAR-1 · Requirements: N/A
 """
 
-from datetime import datetime, timezone
+from datetime import datetime, UTC
 from uuid import UUID
 
 from pydantic import Field
@@ -23,7 +23,10 @@ class AssessmentCreate(SchemaBase):
     """Payload to initialize a new assessment with user consent."""
 
     consent_id: UUID = Field(..., description="Unique consent record identifier")
-    user_id: UUID | None = Field(default=None, description="Optional registered user ID")
+    user_id: UUID | None = Field(
+        default=None,
+        description="Optional registered user ID",
+    )
 
 
 class AssessmentRead(SchemaBase):
@@ -34,11 +37,11 @@ class AssessmentRead(SchemaBase):
     consent_id: UUID = Field(..., description="Associated consent identifier")
     user_id: UUID | None = Field(default=None, description="Registered user identifier")
     created_at: datetime = Field(
-        default_factory=lambda: datetime.now(timezone.utc),
+        default_factory=lambda: datetime.now(UTC),
         description="Timestamp in UTC",
     )
     updated_at: datetime = Field(
-        default_factory=lambda: datetime.now(timezone.utc),
+        default_factory=lambda: datetime.now(UTC),
         description="Timestamp in UTC",
     )
 

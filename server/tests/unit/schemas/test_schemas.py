@@ -250,8 +250,10 @@ class TestAssessmentResultSchema:
         assert len(result.conditions) == 1
         assert "This is not a medical diagnosis" in result.disclaimer
 
-    def test_result_urgent_escalation_enforces_referral_and_emergency_number(self) -> None:
-        """Verify URGENT risk tier automatically ensures referral=True and emergency_number=112."""
+    def test_result_urgent_escalation_enforces_referral_and_emergency_number(
+        self,
+    ) -> None:
+        """Verify URGENT tier enforces referral and emergency number 112."""
         assessment_id = uuid4()
         result = AssessmentResult(
             assessment_id=assessment_id,
@@ -264,7 +266,7 @@ class TestAssessmentResultSchema:
         assert result.referral.emergency_number == "112"
 
     def test_result_urgent_escalation_with_default_referral(self) -> None:
-        """Verify URGENT risk tier automatically populates emergency referral even when omitted."""
+        """Verify URGENT tier populates emergency referral when omitted."""
         assessment_id = uuid4()
         result = AssessmentResult(
             assessment_id=assessment_id,
