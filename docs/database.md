@@ -84,8 +84,40 @@ NULL hash; seed accounts deliberately have no login credential. Hashing and
 validation belong to the auth module. Never store plaintext passwords.
 
 No image column, doctor directory, profile fields, prediction scores, or medical
-recommendations are introduced. Structured symptom JSONB is S1-HAR-2. Hot-query
-indexes beyond primary/unique indexes and realistic demo content are S1-HAR-4.
+recommendations are introduced. Structured symptom JSONB is S1-HAR-2.
+
+## Sprint 1: Database Optimization (Issue #38 · Task: S1-DIM-4)
+
+Owner: Dimple · Requirements: NFR-01
+
+Revision `0002_hot_query_indexes` introduces B-tree indexes for all hot query patterns identified in the assessment lifecycle and data retention flows:
+
+| Table | Index Name | Columns | Query Pattern / Rationale |
+|---|---|---|---|
+| `assessments` | `ix_assessments_user_id` | `user_id` | Fetching past assessments for registered users (`WHERE user_id = :uid`). |
+| `assessments` | `ix_assessments_created_at` | `created_at` | Guest assessment TTL purge job (`WHERE user_id IS NULL AND created_at < :cutoff`). |
+| `assessments` | `ix_assessments_state` | `state` | Filtering active assessments by state machine state. |
+| `assessments` | `ix_assessments_user_id_created_at` | `user_id, created_at` | Composite covering index for user history ordered by recency. |
+| `messages` | `ix_messages_assessment_id` | `assessment_id` | Fast retrieval of conversation turns for an active assessment. |
+| `symptoms` | `ix_symptoms_assessment_id` | `assessment_id` | Fast retrieval of extracted/confirmed symptoms for an active assessment. |
+
+### Realistic Demo Seed Data
+`server/app/repositories/seed_repository.py` provides `seed_realistic_demo_data(session)` with three realistic, non-diagnostic triage scenarios:
+1. **Registered Patient (Completed):** User with multi-turn chat messages, normalized symptoms ("headache", "fatigue"), and `COMPLETED` state.
+2. **Anonymous Guest (Active):** Guest session with no user account, in `SYMPTOM_COLLECTION` state with active symptoms ("cough", "runny nose").
+3. **Registered Patient (Clarifying):** Assessment in `CLARIFYING` state with targeted follow-up dialogue.
+
+All demo data uses reserved `.invalid` emails, fixed deterministic UUIDs, and explicitly fictional text. Seeding is idempotent and safe to run repeatedly.
+
+### Staging Verification on Neon
+To verify migration 0002 on Neon staging:
+```powershell
+# 1. Generate offline SQL to inspect DDL before applying:
+alembic upgrade head --sql
+
+# 2. Apply online migration against Neon staging database:
+DATABASE_URL="<neon-staging-connection-string>" alembic upgrade head
+```
 
 ## Windows local setup (existing Docker database)
 
@@ -163,21 +195,3 @@ with factory.begin() as session:
 `Config.attributes["connection"]`. These patterns follow the official
 [SQLAlchemy transaction documentation](https://docs.sqlalchemy.org/en/20/orm/session_basics.html)
 and [Alembic connection-sharing cookbook](https://alembic.sqlalchemy.org/en/latest/cookbook.html).
-
-## Suggested local commits after review
-
-From the repository root, create meaningful commits with your own Git identity:
-
-```powershell
-git add server/app/models server/app/db server/app/repositories
-git commit -m "feat(db): add database models and session foundation"
-git add server/alembic server/alembic.ini
-git commit -m "feat(db): add initial database migration"
-git add server/tests/unit/db docs/database.md
-git commit -m "test(db): verify constraints and document local setup"
-```
-
-Do not claim CI, Neon, assignment, or deployment completion before verifying it.
-Push this feature branch and target `develop` when the integration dependencies
-are resolved. The leader reviews and merges; the PR must reference `Closes #9`
-and truthfully complete the repository PR template.

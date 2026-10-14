@@ -1,0 +1,41 @@
+[33mcommit f3632a95d94c26049ccb78968eab858c2734b860[m[33m ([m[1;36mHEAD[m[33m -> [m[1;32mdimple/63-consent-flow[m[33m)[m
+Author:     dimplleeeee <202401139@dau.ac.in>
+AuthorDate: Tue Oct 13 16:34:27 2026 +0530
+Commit:     dimplleeeee <202401139@dau.ac.in>
+CommitDate: Tue Oct 13 16:34:27 2026 +0530
+
+    feat(consent): improve consent modal UI  #63
+
+A	client/.gitignore
+A	client/.oxlintrc.json
+A	client/.prettierrc.json
+A	client/README.md
+A	client/eslint.config.js
+A	client/index.html
+A	client/package-lock.json
+A	client/package.json
+A	client/public/favicon.svg
+A	client/public/icons.svg
+A	client/public/icons/pwa-192.png
+A	client/public/icons/pwa-512.png
+A	client/src/App.css
+A	client/src/App.test.tsx
+A	client/src/App.tsx
+A	client/src/app/providers.tsx
+A	client/src/app/router.tsx
+A	client/src/assets/hero.png
+A	client/src/assets/react.svg
+A	client/src/assets/vite.svg
+A	client/src/index.css
+A	client/src/lib/queryClient.ts
+A	client/src/main.tsx
+A	client/src/stores/assessmentStore.test.ts
+A	client/src/stores/assessmentStore.ts
+A	client/src/test/server.ts
+A	client/src/test/setup.ts
+A	client/tsconfig.app.json
+A	client/tsconfig.json
+A	client/tsconfig.node.json
+A	client/vercel.json
+A	client/vite.config.ts
+A	client/vitest.config.ts

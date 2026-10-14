@@ -1,0 +1,73 @@
+[1mdiff --git a/docs/privacy-and-safety.md b/docs/privacy-and-safety.md[m
+[1mnew file mode 100644[m
+[1mindex 0000000..35046ee[m
+[1m--- /dev/null[m
+[1m+++ b/docs/privacy-and-safety.md[m
+[36m@@ -0,0 +1,223 @@[m
+[32m+[m[32m# Privacy, Safety, and Compliance Specification[m
+[32m+[m
+[32m+[m[32mOwner: Dimple (Frontend + Deployment, Database) · Task: S0-DIM-1 · Issue: #23 · Requirements: DR-01, DR-05, DR-06, DR-08[m
+[32m+[m
+[32m+[m[32m---[m
+[32m+[m
+[32m+[m[32m## 1. Executive Summary & Purpose[m
+[32m+[m
+[32m+[m[32mThe **AI-Based Symptom Checker** is designed and operated strictly as an **informational health-triage aid and clinical decision-support tool**, never as a diagnostic or prescribing authority.[m[41m [m
+[32m+[m
+[32m+[m[32mThis document defines the binding privacy, regulatory, safety, and client-storage policies in our project. It establishes compliance with:[m
+[32m+[m[32m- India's **Digital Personal Data Protection Act, 2023 (DPDP Act 2023)**.[m
+[32m+[m[32m- Medical safety and non-diagnostic triage boundaries (**DR-01, DR-05, DR-06, DR-08**).[m
+[32m+[m[32m- Progressive Web App (PWA) zero-persistence client caching rules.[m
+[32m+[m
+[32m+[m[32mEvery team member, service, frontend component, and database query must adhere to the rules defined herein.[m
+[32m+[m
+[32m+[m[32m---[m
+[32m+[m
+[32m+[m[32m## 2. Comprehensive Data Inventory & Classification (DR-06)[m
+[32m+[m
+[32m+[m[32mThe system enforces strict data minimization. We collect and process only the minimum information necessary to execute the conversational triage flow.[m
+[32m+[m
+[32m+[m[32m### 2.1 Data Inventory Matrix[m
+[32m+[m
+[32m+[m[32m| Data Category | Specific Elements | Ingest Method | Processing Mode | Storage Destination | Retention Policy | Sensitivity (DPDP Act) |[m
+[32m+[m[32m|---|---|---|---|---|---|---|[m
+[32m+[m[32m| **Free-Text Messages** | Natural language user descriptions of symptoms | Chat input via `POST /assessments/{id}/messages` | Ephemeral; PII scrubber removes names, phones, emails, and IDs before AI extraction | PostgreSQL `messages` table (text only) | 24 hours (Guest) / Deleted on request (Account) | Sensitive Personal Data |[m
+[32m+[m[32m| **Extracted Symptoms** | Canonical symptom name, severity, duration, body site | Extracted by AI gateway, confirmed by user | Deterministic normalization and state tracking | PostgreSQL `symptoms` table | 24 hours (Guest) / Deleted on request (Account) | Sensitive Personal Data |[m
+[32m+[m[32m| **Assessment Metadata** | `id` (UUID), `state`, `created_at`, `consent_id`, `user_id` | Server generated | State machine orchestration (`START` → `COMPLETED`) | PostgreSQL `assessments` table | 24 hours (Guest) / Deleted on request (Account) | Internal / Operational |[m
+[32m+[m[32m| **Consent Artifacts** | `consent_id` (UUID), `policy_version`, `created_at` | `POST /consents` | Checked prior to assessment persistence | PostgreSQL `consents` table | Retained for auditability | Compliance Record |[m
+[32m+[m[32m| **Optional Account** | `email` (normalized), `password_hash` (Argon2) | Registration via `POST /auth/register` | Identity and authentication | PostgreSQL `users` table | Retained until account deletion | Personal Identifiable Data |[m
+[32m+[m[32m| **Optional Symptom Images** | Visible skin/rash photos (JPEG, PNG, WebP ≤ 5 MB) | `POST /assessments/{id}/images` | **In-memory only** (Pillow + NumPy → ONNX inference); EXIF stripped | **NEVER STORED** (zero disk, zero DB, zero logs, zero cloud bucket) | Discarded immediately after in-memory inference | High (Ephemeral Biometric / Health) |[m
+[32m+[m
+[32m+[m[32m### 2.2 Prohibited Data Categories (Strictly Excluded)[m
+[32m+[m
+[32m+[m[32mThe following data types are **strictly out of scope** and must never be requested, ingested, or stored by any part of the application:[m
+[32m+[m[32m1. **Government Identifiers:** Aadhaar numbers, PAN cards, passport numbers, driver's license details.[m
+[32m+[m[32m2. **Payment & Financial Details:** Bank accounts, UPI IDs, credit/debit cards (the tool is 100% free; no billing components).[m
+[32m+[m[32m3. **Doctor / Healthcare Provider Data:** Provider directories, doctor credentials, doctor schedules, booking calendars.[m
+[32m+[m[32m4. **Third-Party Health Records:** EHR/EMR files, lab report PDFs, prescription documents.[m
+[32m+[m[32m5. **Persistent Raw Biometric / Image Files:** No image files are ever written to disk, object storage (S3/GCS), or database blobs.[m
+[32m+[m
+[32m+[m[32m---[m
+[32m+[m
+[32m+[m[32m## 3. DPDP Act 2023 Compliance Checklist (India)[m
+[32m+[m
+[32m+[m[32m### Why is this required?[m
+[32m+[m[32mThis compliance checklist is an **explicit deliverable required for Issue #23 (`S0-DIM-1`)** in `docs/SPRINT_PLAN.md`. Under Indian law, the **Digital Personal Data Protection Act, 2023 (DPDP Act 2023)** is the primary legal framework protecting individuals from the misuse of personal and health data.[m[41m [m
+[32m+[m
+[32m+[m[32m### Protection Against Data Misuse[m
+[32m+[m[32mThis checklist guarantees that user data cannot be exploited:[m
+[32m+[m[32m1. **No Unauthorized Commercialization or Misuse:** The platform is legally and architecturally prohibited from selling health data, sharing it with advertisers, or using personal conversations to train public AI models.[m
+[32m+[m[32m2. **Strict Accountability & Penalties:** Under Section 33 of the DPDP Act 2023, failure to implement reasonable security safeguards or misusing personal data carries statutory penalties of up to ₹250 crore imposed by the Data Protection Board of India.[m
+[32m+[m[32m3. **Data Principal Empowerment:** Users are legally recognized as Data Principals with absolute rights to access, withdraw consent, and demand total erasure of their health data.[m
+[32m+[m
+[32m+[m[32mAs a Data Fiduciary operating in India handling sensitive health data, our platform implements the following statutory obligations:[m
+[32m+[m
+[32m+[m[32m| Section / Principle | Requirement | Implementation in System | Verification & Enforcement | Status |[m
+[32m+[m[32m|---|---|---|---|---|[m
+[32m+[m[32m| **Section 5 (Notice)** | Clear, plain-language itemized notice before collecting personal data. | Landing page and Consent Step present the exact purpose, data categories, retention terms, and rights before the user enters symptoms. | `ConsentStep.tsx` displays notice before `POST /consents`. | Compliant |[m
+[32m+[m[32m| **Section 6 (Consent)** | Consent must be free, specific, informed, unconditional, and unambiguous with clear affirmative action. | Affirmative checkbox and explicit acceptance button. No pre-ticked checkboxes; no dark patterns; no bundled clauses. | `POST /consents` records `policy_version` and timestamp. | Compliant |[m
+[32m+[m[32m| **Section 6(4) (Withdrawal)** | Right to withdraw consent easily with comparable ease. | "Delete My Data" action in user settings / footer purges the assessment and revokes consent. | `DELETE /api/v1/privacy/data` cascades removal. | Compliant |[m
+[32m+[m[32m| **Section 7 (Purpose Limitation)** | Data used solely for specified triage purposes. | Symptom data is processed strictly to determine triage urgency and condition relevance. Never used for marketing, ad profiling, or model training. | Architectural boundary: LLM API calls are stateless and opt out of training retention. | Compliant |[m
+[32m+[m[32m| **Section 8(1) (Data Minimization)** | Collect only what is strictly necessary. | Guest mode requires zero identity data (no phone, no email). Only symptom text and duration are collected. | Guest flow functions completely without user registration. | Compliant |[m
+[32m+[m[32m| **Section 8(5) (Storage Limitation)** | Data must be erased once the purpose is served. | Unregistered guest assessments are automatically purged after 24 hours via a scheduled TTL cleanup job (`S2-DIM-4`). | Database TTL purge query deletes orphaned records `created_at < NOW() - INTERVAL '24 hours'`. | Compliant |[m
+[32m+[m[32m| *
