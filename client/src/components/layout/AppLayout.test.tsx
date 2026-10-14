@@ -11,7 +11,6 @@
 
 import { describe, it, expect, vi } from "vitest";
 import { render, screen, fireEvent } from "@testing-library/react";
-import React from "react";
 import { AppLayout, MANDATORY_DISCLAIMER_TEXT } from "./AppLayout";
 
 describe("AppLayout", () => {
@@ -19,7 +18,7 @@ describe("AppLayout", () => {
     render(
       <AppLayout>
         <div data-testid="test-content">Assessment in progress</div>
-      </AppLayout>
+      </AppLayout>,
     );
 
     // Verify main content is rendered
@@ -33,7 +32,7 @@ describe("AppLayout", () => {
 
     // Verify default title
     expect(
-      screen.getByRole("heading", { level: 1, name: /AI-Based Symptom Checker/i })
+      screen.getByRole("heading", { level: 1, name: /AI-Based Symptom Checker/i }),
     ).toBeInTheDocument();
 
     // Verify default emergency phone link
@@ -46,7 +45,7 @@ describe("AppLayout", () => {
     render(
       <AppLayout>
         <p>Symptom details</p>
-      </AppLayout>
+      </AppLayout>,
     );
 
     // The mandatory non-diagnostic disclaimer must be present on every screen
@@ -63,22 +62,20 @@ describe("AppLayout", () => {
         subtitle="Reviewing reported cardiovascular red flags"
       >
         <p>Content</p>
-      </AppLayout>
+      </AppLayout>,
     );
 
     expect(
-      screen.getByRole("heading", { level: 1, name: "Emergency Triage Review" })
+      screen.getByRole("heading", { level: 1, name: "Emergency Triage Review" }),
     ).toBeInTheDocument();
-    expect(
-      screen.getByText("Reviewing reported cardiovascular red flags")
-    ).toBeInTheDocument();
+    expect(screen.getByText("Reviewing reported cardiovascular red flags")).toBeInTheDocument();
   });
 
   it("supports custom emergency phone numbers (edge case)", () => {
     render(
       <AppLayout emergencyNumber="911">
         <p>Content</p>
-      </AppLayout>
+      </AppLayout>,
     );
 
     const emergencyButton = screen.getByRole("link", {
@@ -91,7 +88,7 @@ describe("AppLayout", () => {
     const { rerender } = render(
       <AppLayout isOffline={false}>
         <p>Content</p>
-      </AppLayout>
+      </AppLayout>,
     );
 
     expect(screen.queryByRole("status")).not.toBeInTheDocument();
@@ -99,7 +96,7 @@ describe("AppLayout", () => {
     rerender(
       <AppLayout isOffline={true}>
         <p>Content</p>
-      </AppLayout>
+      </AppLayout>,
     );
 
     const alert = screen.getByRole("status");
@@ -113,7 +110,7 @@ describe("AppLayout", () => {
     render(
       <AppLayout showStartOver={true} onStartOver={handleStartOver}>
         <p>Content</p>
-      </AppLayout>
+      </AppLayout>,
     );
 
     const startOverBtn = screen.getByRole("button", {
@@ -129,7 +126,7 @@ describe("AppLayout", () => {
     render(
       <AppLayout>
         <p>Content</p>
-      </AppLayout>
+      </AppLayout>,
     );
 
     const skipLink = screen.getByRole("link", { name: /Skip to main content/i });

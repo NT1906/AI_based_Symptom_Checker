@@ -112,7 +112,9 @@ export function AppLayout({
               <span className="block text-xs font-semibold tracking-wider text-teal-800 uppercase">
                 Informational Triage Aid
               </span>
-              <h1 className="text-lg font-bold tracking-tight text-slate-900 sm:text-xl">{title}</h1>
+              <h1 className="text-lg font-bold tracking-tight text-slate-900 sm:text-xl">
+                {title}
+              </h1>
               {subtitle && <p className="text-xs text-slate-500">{subtitle}</p>}
             </div>
           </div>
