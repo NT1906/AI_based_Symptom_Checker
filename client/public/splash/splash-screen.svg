@@ -1,0 +1,41 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1080 1920" width="1080" height="1920">
+  <defs>
+    <linearGradient id="splashBg" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" stop-color="#042f2e"/>
+      <stop offset="50%" stop-color="#0f766e"/>
+      <stop offset="100%" stop-color="#115e59"/>
+    </linearGradient>
+    <linearGradient id="iconBg" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" stop-color="#14b8a6"/>
+      <stop offset="100%" stop-color="#0f766e"/>
+    </linearGradient>
+  </defs>
+
+  <!-- Background -->
+  <rect width="1080" height="1920" fill="url(#splashBg)"/>
+
+  <!-- Centered App Icon -->
+  <g transform="translate(420, 700)">
+    <rect width="240" height="240" rx="56" fill="url(#iconBg)"/>
+    <g transform="translate(120, 120)">
+      <path d="M -22,-65 L 22,-65 C 26,-65 30,-61 30,-57 L 30,-22 L 65,-22 C 69,-22 73,-18 73,-14 L 73,30 C 73,34 69,38 65,38 L 30,38 L 30,65 C 30,69 26,73 22,73 L -22,73 C -26,73 -30,69 -30,65 L -30,38 L -65,38 C -69,38 -73,34 -73,30 L -73,-14 C -73,-18 -69,-22 -65,-22 L -30,-22 L -30,-57 C -30,-61 -26,-65 -22,-65 Z" fill="#ffffff"/>
+      <path d="M -50,8 L -18,8 L -7,-16 L 7,32 L 20,-4 L 31,8 L 50,8" fill="none" stroke="#0f766e" stroke-width="6" stroke-linecap="round" stroke-linejoin="round"/>
+    </g>
+  </g>
+
+  <!-- App Title & Tagline -->
+  <text x="540" y="1030" font-family="Inter, system-ui, sans-serif" font-size="44" font-weight="700" fill="#ffffff" text-anchor="middle" letter-spacing="1">
+    AI-Based Symptom Checker
+  </text>
+  <text x="540" y="1080" font-family="Inter, system-ui, sans-serif" font-size="24" font-weight="400" fill="#99f6e4" text-anchor="middle">
+    Informational Health Guidance &amp; Triage Aid
+  </text>
+
+  <!-- Emergency 112 notice -->
+  <g transform="translate(240, 1680)">
+    <rect width="600" height="70" rx="35" fill="rgba(0, 0, 0, 0.25)" stroke="#14b8a6" stroke-width="2"/>
+    <text x="300" y="44" font-family="Inter, system-ui, sans-serif" font-size="22" font-weight="500" fill="#ffffff" text-anchor="middle">
+      Emergency? Call 112 immediately
+    </text>
+  </g>
+</svg>
