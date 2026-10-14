@@ -1,0 +1,26 @@
+[tool.ruff]
+line-length = 88
+target-version = "py312"
+src = ["app", "tests"]
+extend-exclude = ["alembic"]
+
+[tool.ruff.lint]
+select = ["E", "F", "UP", "B"]
+
+[tool.ruff.lint.flake8-bugbear]
+extend-immutable-calls = ["fastapi.Depends", "Depends"]
+
+[tool.ruff.format]
+quote-style = "double"
+
+[tool.mypy]
+python_version = "3.12"
+strict = true
+plugins = ["pydantic.mypy"]
+mypy_path = "."
+
+[tool.pytest.ini_options]
+testpaths = ["tests"]
+addopts = "-ra"
+pythonpath = ["."]
+asyncio_mode = "auto"

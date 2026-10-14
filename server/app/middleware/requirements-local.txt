@@ -1,0 +1,9 @@
+# Temporary standalone test dependencies for S1-HAR-1; reconcile with Vivek.
+fastapi==0.143.0
+starlette==1.7.0
+slowapi==0.1.10
+pydantic==2.14.0
+httpx==0.28.1
+pytest==9.1.1
+ruff==0.17.0
+mypy==2.4.0
