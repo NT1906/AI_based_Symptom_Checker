@@ -10,7 +10,7 @@
  */
 
 import { useState } from "react";
-import { useNavigate } from "react-router-dom";
+import { Navigate, useNavigate } from "react-router-dom";
 import { ConsentStep } from "../components/consent/ConsentStep";
 import { useConsentStore } from "../stores/consentStore";
 import { FeatureCardHover } from "../components/feature/FeatureCardHover";
@@ -44,14 +44,13 @@ const BODY_AREAS = ["Head & Neck", "Chest", "Abdomen", "Limbs & Joints", "Skin"]
 export default function LandingPage() {
   const navigate = useNavigate();
   const consentId = useConsentStore((s) => s.consentId);
-
-  // If already consented this session, send straight to chat
-  if (consentId) {
-    navigate("/chat", { replace: true });
-    return null;
-  }
-
   const [step, setStep] = useState<LandingStep>("disclaimer");
+
+  // Why: hooks must run in the same order on every render, so the redirect for an
+  // already-consented session comes after them and uses <Navigate>, not navigate().
+  if (consentId) {
+    return <Navigate to="/chat" replace />;
+  }
 
   const handleStart = () => setStep("consent");
   const handleConsented = () => navigate("/chat", { replace: true });
@@ -70,9 +69,7 @@ export default function LandingPage() {
               <p className="text-sm font-bold tracking-tight text-slate-900 sm:text-base">
                 AI Symptom Checker
               </p>
-              <p className="text-[11px] font-medium text-teal-700">
-                Informational Triage Aid
-              </p>
+              <p className="text-[11px] font-medium text-teal-700">Informational Triage Aid</p>
             </div>
           </div>
           <div className="flex items-center gap-2">
@@ -109,8 +106,8 @@ export default function LandingPage() {
           </h1>
 
           <p className="mx-auto mt-4 max-w-2xl text-base text-slate-600 sm:text-lg">
-            Describe how you are feeling in plain words. Our clinical decision-support
-            engine suggests appropriate care levels: self-care, doctor consultation, or urgent care.
+            Describe how you are feeling in plain words. Our clinical decision-support engine
+            suggests appropriate care levels: self-care, doctor consultation, or urgent care.
           </p>
 
           {/* Primary Action Button */}
@@ -122,15 +119,14 @@ export default function LandingPage() {
                 className="group inline-flex items-center justify-center gap-2.5 rounded-full bg-teal-600 px-8 py-4 text-base font-bold text-white shadow-lg shadow-teal-700/20 transition-all hover:bg-teal-700 hover:shadow-xl focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-teal-600 active:scale-[0.99]"
               >
                 <span>Start Symptom Check</span>
-                <span className="transition-transform group-hover:translate-x-0.5">
-                  →
-                </span>
+                <span className="transition-transform group-hover:translate-x-0.5">→</span>
               </button>
             </div>
           )}
 
           <p className="mt-3 text-xs text-slate-500">
-            By starting the check, you agree to review our terms and privacy notice before assessment.
+            By starting the check, you agree to review our terms and privacy notice before
+            assessment.
           </p>
         </div>
 
@@ -149,14 +145,14 @@ export default function LandingPage() {
                 Important Medical Safety Disclaimer (DR-01)
               </p>
               <p className="text-sm leading-relaxed text-amber-950">
-                This tool provides <strong>general health information only</strong>.
-                It is <strong>not a medical diagnosis</strong>, prescription, or
-                substitute for professional medical advice. Always consult a qualified
-                healthcare professional for any medical concern.
+                This tool provides <strong>general health information only</strong>. It is{" "}
+                <strong>not a medical diagnosis</strong>, prescription, or substitute for
+                professional medical advice. Always consult a qualified healthcare professional for
+                any medical concern.
               </p>
               <p className="text-sm font-semibold text-amber-950">
-                In an emergency, call <strong>112</strong> (Unified Emergency) or
-                go to the nearest emergency department immediately.
+                In an emergency, call <strong>112</strong> (Unified Emergency) or go to the nearest
+                emergency department immediately.
               </p>
             </div>
           </div>
@@ -166,16 +162,12 @@ export default function LandingPage() {
         <div className="mx-auto mt-12 max-w-3xl rounded-2xl border border-slate-200/80 bg-white p-6 shadow-sm sm:p-8">
           <div className="flex items-center justify-between border-b border-slate-100 pb-4">
             <div>
-              <h2 className="text-base font-bold text-slate-900 sm:text-lg">
-                Common Symptoms
-              </h2>
+              <h2 className="text-base font-bold text-slate-900 sm:text-lg">Common Symptoms</h2>
               <p className="text-xs text-slate-500">
                 Click any symptom to start with a focused query
               </p>
             </div>
-            <span className="text-xs font-semibold text-teal-700">
-              Quick explore
-            </span>
+            <span className="text-xs font-semibold text-teal-700">Quick explore</span>
           </div>
 
           <div className="mt-4 flex flex-wrap gap-2.5">
@@ -221,40 +213,32 @@ export default function LandingPage() {
           </p>
 
           <div className="mt-6 grid grid-cols-1 gap-6 sm:grid-cols-2 lg:grid-cols-4">
-  <FeatureCardHover
-    title="AI‑Powered Symptom Analysis"
-    description="Describe your symptoms and receive AI‑assisted guidance."
-    icon="🧠"
-    href="/assessment"
-  />
-  <FeatureCardHover
-    title="Doctor Recommendations"
-    description="Find relevant medical specialists based on your needs."
-    icon="👩‍⚕️"
-    href="/doctors"
-  />
-  <FeatureCardHover
-    title="Risk Assessment"
-    description="Clear, understandable risk guidance and next steps."
-    icon="⚠️"
-    href="/risk"
-  />
-  <FeatureCardHover
-    title="Privacy & Consent"
-    description="Explain consent, privacy, and responsible use of health information."
-    icon="🔐"
-    href="/privacy"
-  />
-</div>
-
+            <FeatureCardHover
+              title="AI‑Powered Symptom Analysis"
+              description="Describe your symptoms and receive AI‑assisted guidance."
+              icon="🧠"
+            />
+            <FeatureCardHover
+              title="Find the Right Specialist"
+              description="See which kind of specialist fits your symptoms, then search for one nearby on a map."
+              icon="👩‍⚕️"
+            />
+            <FeatureCardHover
+              title="Risk Assessment"
+              description="Clear, understandable risk guidance and next steps."
+              icon="⚠️"
+            />
+            <FeatureCardHover
+              title="Privacy & Consent"
+              description="Explain consent, privacy, and responsible use of health information."
+              icon="🔐"
+            />
+          </div>
         </section>
 
         {/* Step: consent modal dialog */}
         {step === "consent" && (
-          <ConsentStep
-            onConsented={handleConsented}
-            onDeclined={handleDeclined}
-          />
+          <ConsentStep onConsented={handleConsented} onDeclined={handleDeclined} />
         )}
 
         {/* Step: user declined dialog */}
@@ -270,7 +254,8 @@ export default function LandingPage() {
               You need to agree to the terms to use this tool.
             </p>
             <p className="mt-1.5 text-xs text-slate-500">
-              No health data has been collected or stored. You can go back anytime to review the terms.
+              No health data has been collected or stored. You can go back anytime to review the
+              terms.
             </p>
             <button
               type="button"
@@ -290,8 +275,8 @@ export default function LandingPage() {
             This is not a medical diagnosis. Always consult a qualified healthcare professional.
           </p>
           <p className="text-[11px] text-slate-400">
-            Emergency contacts: 112 (Unified Emergency) · 108 (Ambulance).
-            Data processed ephemerally pursuant to DPDP Act 2023.
+            Emergency contacts: 112 (Unified Emergency) · 108 (Ambulance). Data processed
+            ephemerally pursuant to DPDP Act 2023.
           </p>
         </div>
       </footer>

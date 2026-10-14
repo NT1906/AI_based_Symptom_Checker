@@ -24,10 +24,7 @@ import { ConsentStep } from "./ConsentStep";
  * @param onDeclined - Mock callback for decline action.
  * @returns Rendered component utilities and mock spies.
  */
-function renderConsentStep(
-  onConsented = vi.fn(),
-  onDeclined = vi.fn()
-) {
+function renderConsentStep(onConsented = vi.fn(), onDeclined = vi.fn()) {
   const qc = new QueryClient({
     defaultOptions: { queries: { retry: false }, mutations: { retry: false } },
   });
@@ -37,7 +34,7 @@ function renderConsentStep(
     ...render(
       <QueryClientProvider client={qc}>
         <ConsentStep onConsented={onConsented} onDeclined={onDeclined} />
-      </QueryClientProvider>
+      </QueryClientProvider>,
     ),
   };
 }
@@ -64,9 +61,7 @@ describe("ConsentStep", () => {
 
   it("renders the consent dialog with title and consent text", () => {
     renderConsentStep();
-    expect(
-      screen.getByRole("dialog", { name: /your consent is required/i })
-    ).toBeInTheDocument();
+    expect(screen.getByRole("dialog", { name: /your consent is required/i })).toBeInTheDocument();
     expect(screen.getByText(/not a medical diagnosis/i)).toBeInTheDocument();
     expect(screen.getByText(/112/i)).toBeInTheDocument(); // emergency number present
   });
@@ -82,11 +77,7 @@ describe("ConsentStep", () => {
 
   it("happy path: records consent and calls onConsented", async () => {
     const FAKE_ID = "consent-uuid-abc";
-    server.use(
-      http.post("/api/v1/consents", () =>
-        HttpResponse.json({ consentId: FAKE_ID })
-      )
-    );
+    server.use(http.post("/api/v1/consents", () => HttpResponse.json({ consentId: FAKE_ID })));
 
     const user = userEvent.setup();
     const { onConsented } = renderConsentStep();
@@ -105,7 +96,7 @@ describe("ConsentStep", () => {
       http.post("/api/v1/consents", () => {
         apiHit = true;
         return HttpResponse.json({ consentId: "x" });
-      })
+      }),
     );
 
     const user = userEvent.setup();
@@ -118,11 +109,11 @@ describe("ConsentStep", () => {
     expect(apiHit).toBe(false);
   });
 
-  it("API error: shows error message and does NOT call onConsented", async () => {
+  it("missing endpoint (404): continues with a session-only consent", async () => {
     server.use(
       http.post("/api/v1/consents", () =>
-        HttpResponse.json({ detail: "Server error" }, { status: 500 })
-      )
+        HttpResponse.json({ detail: "Not Found" }, { status: 404 }),
+      ),
     );
 
     const user = userEvent.setup();
@@ -130,9 +121,23 @@ describe("ConsentStep", () => {
 
     await agreeToConsent(user);
 
-    await waitFor(() =>
-      expect(screen.getByRole("alert")).toBeInTheDocument()
+    await waitFor(() => expect(onConsented).toHaveBeenCalledOnce());
+    expect(useConsentStore.getState().consentId).toMatch(/^local-/);
+  });
+
+  it("API error: shows error message and does NOT call onConsented", async () => {
+    server.use(
+      http.post("/api/v1/consents", () =>
+        HttpResponse.json({ detail: "Server error" }, { status: 500 }),
+      ),
     );
+
+    const user = userEvent.setup();
+    const { onConsented } = renderConsentStep();
+
+    await agreeToConsent(user);
+
+    await waitFor(() => expect(screen.getByRole("alert")).toBeInTheDocument());
     expect(screen.getByRole("alert")).toHaveTextContent(/unable to record/i);
     expect(onConsented).not.toHaveBeenCalled();
     expect(useConsentStore.getState().consentId).toBeNull();

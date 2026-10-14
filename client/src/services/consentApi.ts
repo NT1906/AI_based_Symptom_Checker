@@ -18,6 +18,9 @@ export type ConsentResponse = {
   consentId: string;
 };
 
+/** Prefix of the temporary consent ID used while the server has no consent endpoint. */
+export const LOCAL_CONSENT_PREFIX = "local-" as const;
+
 /** Current privacy-policy version. Bump this when the policy text changes. */
 export const CURRENT_POLICY_VERSION = "1.0.0" as const;
 
@@ -28,19 +31,22 @@ export const CURRENT_POLICY_VERSION = "1.0.0" as const;
  * @returns The server-assigned consent UUID.
  * @throws Error with a user-friendly message on network or server failures.
  */
-export async function postConsent(
-  policyVersion: string
-): Promise<ConsentResponse> {
+export async function postConsent(policyVersion: string): Promise<ConsentResponse> {
   const res = await fetch("/api/v1/consents", {
     method: "POST",
     headers: { "Content-Type": "application/json" },
     body: JSON.stringify({ policyVersion } satisfies ConsentRequest),
   });
 
+  // TODO(#50): remove this fallback once POST /api/v1/consents exists on the server.
+  // Why: until then the route returns 404 and would block every user at the consent
+  // step. Nothing is stored server-side yet, so a session-only consent is safe.
+  if (res.status === 404) {
+    return { consentId: `${LOCAL_CONSENT_PREFIX}${crypto.randomUUID()}` };
+  }
+
   if (!res.ok) {
-    throw new Error(
-      `Unable to record your consent (HTTP ${res.status}). Please try again.`
-    );
+    throw new Error(`Unable to record your consent (HTTP ${res.status}). Please try again.`);
   }
 
   return res.json() as Promise<ConsentResponse>;

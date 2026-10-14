@@ -8,13 +8,15 @@
  * - Clicking Start shows the consent modal.
  * - Declining consent shows the "declined" state and a go-back button.
  * - Emergency number 112 is present in the disclaimer.
+ * - A session that already consented is redirected straight to chat.
  */
 
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { render, screen, within } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { MemoryRouter, Route, Routes } from "react-router-dom";
-import { describe, expect, it } from "vitest";
+import { afterEach, describe, expect, it } from "vitest";
+import { useConsentStore } from "../stores/consentStore";
 import LandingPage from "./LandingPage";
 
 /** Renders LandingPage inside MemoryRouter + QueryClientProvider. */
@@ -30,11 +32,21 @@ function renderLanding() {
           <Route path="/chat" element={<div>Chat page</div>} />
         </Routes>
       </MemoryRouter>
-    </QueryClientProvider>
+    </QueryClientProvider>,
   );
 }
 
 describe("LandingPage", () => {
+  afterEach(() => {
+    useConsentStore.setState({ consentId: null, consentedAt: null, policyVersion: null });
+  });
+
+  it("redirects an already-consented session straight to chat", () => {
+    useConsentStore.setState({ consentId: "consent-1", policyVersion: "1.0.0" });
+    renderLanding();
+    expect(screen.getByText("Chat page")).toBeInTheDocument();
+  });
+
   it("shows the medical disclaimer on first render (DR-01)", () => {
     renderLanding();
     expect(screen.getByRole("note", { name: /medical disclaimer/i })).toBeInTheDocument();
@@ -50,18 +62,14 @@ describe("LandingPage", () => {
 
   it("shows the Start button initially", () => {
     renderLanding();
-    expect(
-      screen.getByRole("button", { name: /start symptom check/i })
-    ).toBeInTheDocument();
+    expect(screen.getByRole("button", { name: /start symptom check/i })).toBeInTheDocument();
   });
 
   it("clicking Start opens the consent modal", async () => {
     const user = userEvent.setup();
     renderLanding();
     await user.click(screen.getByRole("button", { name: /start symptom check/i }));
-    expect(
-      screen.getByRole("dialog", { name: /your consent is required/i })
-    ).toBeInTheDocument();
+    expect(screen.getByRole("dialog", { name: /your consent is required/i })).toBeInTheDocument();
   });
 
   it("declining consent shows the declined state and go-back option", async () => {
@@ -82,8 +90,6 @@ describe("LandingPage", () => {
     await user.click(screen.getByRole("button", { name: /decline/i }));
     await user.click(screen.getByRole("button", { name: /go back/i }));
 
-    expect(
-      screen.getByRole("button", { name: /start symptom check/i })
-    ).toBeInTheDocument();
+    expect(screen.getByRole("button", { name: /start symptom check/i })).toBeInTheDocument();
   });
 });
