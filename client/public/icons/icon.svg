@@ -1,0 +1,23 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512" width="512" height="512">
+  <defs>
+    <linearGradient id="bgGrad" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" stop-color="#14b8a6"/>
+      <stop offset="100%" stop-color="#0f766e"/>
+    </linearGradient>
+    <filter id="dropShadow" x="-10%" y="-10%" width="120%" height="120%">
+      <feDropShadow dx="0" dy="8" stdDeviation="16" flood-color="#042f2e" flood-opacity="0.3"/>
+    </filter>
+  </defs>
+
+  <!-- Background rounded canvas -->
+  <rect width="512" height="512" rx="112" fill="url(#bgGrad)"/>
+
+  <!-- Healthcare Shield / Medical Cross container -->
+  <g filter="url(#dropShadow)" transform="translate(256, 256)">
+    <!-- Central Medical Cross -->
+    <path d="M -48,-140 L 48,-140 C 56,-140 64,-132 64,-124 L 64,-48 L 140,-48 C 148,-48 156,-40 156,-32 L 156,64 C 156,72 148,80 140,80 L 64,80 L 64,156 C 64,164 56,172 48,172 L -48,172 C -56,172 -64,164 -64,156 L -64,80 L -140,80 C -148,80 -156,72 -156,64 L -156,-32 C -156,-40 -148,-48 -140,-48 L -64,-48 L -64,-124 C -64,-132 -56,-140 -48,-140 Z" fill="#ffffff"/>
+
+    <!-- Dynamic Healthcare Pulse (ECG heartbeat rhythm) through center -->
+    <path d="M -110,16 L -40,16 L -16,-36 L 16,68 L 44,-8 L 68,16 L 110,16" fill="none" stroke="#0f766e" stroke-width="14" stroke-linecap="round" stroke-linejoin="round"/>
+  </g>
+</svg>
