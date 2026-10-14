@@ -29,10 +29,7 @@ class Condition(SchemaBase):
     name: str = Field(..., min_length=1, max_length=256, description="Condition name")
     confidence: ConfidenceLabel = Field(
         ...,
-        description=(
-            "Categorical confidence label "
-            "(never a raw percentage or probability)"
-        ),
+        description="Categorical confidence label (never a raw percentage)",
     )
     rank: int = Field(default=1, ge=1, description="Relative match rank")
     icd10_code: str | None = Field(

@@ -129,7 +129,6 @@ class TestSymptomSchema:
             SymptomUpdate(name="   ")
 
 
-
 class TestMessageSchema:
     """Test suite for Message schema validation and serialization."""
 
@@ -183,7 +182,6 @@ class TestMessageSchema:
         """Verify MessageCreate rejects blank or whitespace-only messages."""
         with pytest.raises(ValidationError):
             MessageCreate(content="   ")
-
 
 
 class TestConditionSchema:
@@ -274,7 +272,6 @@ class TestAssessmentResultSchema:
         )
         assert result.referral.required is True
         assert result.referral.emergency_number == "112"
-
 
     def test_result_failure_case_blank_disclaimer_raises(self) -> None:
         """Verify blank disclaimer violates medical-safety rule and raises error."""

@@ -63,10 +63,7 @@ class Symptom(SchemaBase):
         default=None,
         ge=0.0,
         le=1.0,
-        description=(
-            "AI extraction confidence "
-            "(technical metric, not medical certainty)"
-        ),
+        description="AI extraction confidence (technical metric, not diagnosis)",
     )
 
     @field_validator("name")
