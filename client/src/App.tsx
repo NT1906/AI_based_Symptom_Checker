@@ -3,6 +3,7 @@
  * Owner: Rutva · Task: S0-RUT-1 · Requirements: NFR-08, NFR-09
  */
 import { useAssessmentStore } from "./stores/assessmentStore";
+import BackgroundStars from "./components/background/BackgroundStars";
 
 /**
  * Renders the symptom-assessment interface and safety information.
@@ -14,6 +15,7 @@ function App() {
 
   return (
     <main className="mx-auto flex min-h-screen w-full max-w-4xl flex-col px-6 py-12">
+      <BackgroundStars />
       <header className="mb-10">
         <p className="text-sm font-semibold uppercase tracking-widest text-teal-700">
           AI-Based Symptom Checker
