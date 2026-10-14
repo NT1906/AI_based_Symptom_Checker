@@ -9,7 +9,7 @@ Owner: Darshil (orchestration) · Task: S0-DAR-1 · Requirements: N/A
 """
 
 from datetime import datetime, timezone
-from uuid import UUID, uuid4
+from uuid import UUID
 
 from pydantic import Field
 

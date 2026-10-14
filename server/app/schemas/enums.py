@@ -9,10 +9,10 @@ Responsibilities:
 Owner: Darshil (orchestration) · Task: S0-DAR-1 · Requirements: N/A
 """
 
-from enum import Enum
+from enum import StrEnum
 
 
-class AssessmentState(str, Enum):
+class AssessmentState(StrEnum):
     """Lifecycle states of an assessment session.
 
     Flow: START -> SYMPTOM_COLLECTION -> CLARIFYING -> CONFIRMING -> READY -> ANALYZING -> COMPLETED
@@ -28,7 +28,7 @@ class AssessmentState(str, Enum):
     ERROR = "ERROR"
 
 
-class RiskLevel(str, Enum):
+class RiskLevel(StrEnum):
     """Deterministic triage risk tiers.
 
     URGENT takes precedence on any red-flag symptom.
@@ -37,10 +37,9 @@ class RiskLevel(str, Enum):
     SELF_CARE = "SELF_CARE"
     CONSULT_DOCTOR = "CONSULT_DOCTOR"
     URGENT = "URGENT"
-    URGENT_EMERGENCY = "URGENT_EMERGENCY"
 
 
-class ConfidenceLabel(str, Enum):
+class ConfidenceLabel(StrEnum):
     """Categorical confidence labels presented to users.
 
     Raw statistical scores are never exposed directly to users (AI_RULES.md §2).
@@ -51,7 +50,7 @@ class ConfidenceLabel(str, Enum):
     LESS_LIKELY = "LESS_LIKELY"
 
 
-class Severity(str, Enum):
+class Severity(StrEnum):
     """Clinical severity levels reported or inferred for a symptom."""
 
     MILD = "MILD"
@@ -60,7 +59,7 @@ class Severity(str, Enum):
     UNKNOWN = "UNKNOWN"
 
 
-class DurationUnit(str, Enum):
+class DurationUnit(StrEnum):
     """Time units for symptom duration tracking."""
 
     HOUR = "HOUR"
@@ -70,7 +69,7 @@ class DurationUnit(str, Enum):
     YEAR = "YEAR"
 
 
-class SymptomSource(str, Enum):
+class SymptomSource(StrEnum):
     """Origin of the symptom record."""
 
     USER = "USER"
@@ -79,7 +78,7 @@ class SymptomSource(str, Enum):
     USER_CORRECTED = "USER_CORRECTED"
 
 
-class MessageRole(str, Enum):
+class MessageRole(StrEnum):
     """Sender roles in assessment conversational exchange."""
 
     USER = "user"
@@ -87,7 +86,7 @@ class MessageRole(str, Enum):
     SYSTEM = "system"
 
 
-class MessageType(str, Enum):
+class MessageType(StrEnum):
     """Categorization of message intent in the assessment flow."""
 
     TEXT = "TEXT"

@@ -96,10 +96,12 @@ class SymptomCreate(SchemaBase):
 class SymptomUpdate(SchemaBase):
     """Schema for editing or confirming an existing symptom."""
 
+    id: UUID | None = Field(default=None, description="Existing symptom identifier if updating")
     name: str | None = Field(default=None, min_length=1, max_length=128)
     severity: Severity | None = None
     duration: Duration | None = None
     body_location: str | None = Field(default=None, max_length=128)
+    source: SymptomSource | None = Field(default=None, description="Updated symptom source")
 
     @field_validator("name")
     @classmethod

@@ -11,7 +11,7 @@ Owner: Darshil (orchestration) · Task: S0-DAR-1 · Requirements: N/A
 from datetime import datetime, timezone
 from uuid import UUID
 
-from pydantic import Field, field_validator
+from pydantic import Field, field_validator, model_validator
 
 from app.schemas.base import SchemaBase
 from app.schemas.condition import Condition
@@ -107,14 +107,13 @@ class AssessmentResult(SchemaBase):
             raise ValueError("Medical disclaimer must not be empty (AI_RULES.md §2)")
         return cleaned
 
-    @field_validator("referral")
-    @classmethod
-    def enforce_urgent_referral(cls, referral: ReferralInfo, info) -> ReferralInfo:
+    @model_validator(mode="after")
+    def enforce_urgent_referral(self) -> "AssessmentResult":
         """Ensure URGENT risk tier requires immediate referral and provides emergency number."""
-        risk = info.data.get("risk_level")
-        if risk in (RiskLevel.URGENT, RiskLevel.URGENT_EMERGENCY):
-            if not referral.required:
-                referral.required = True
-            if not referral.emergency_number:
-                referral.emergency_number = DEFAULT_EMERGENCY_NUMBER
-        return referral
+        if self.risk_level == RiskLevel.URGENT:
+            if not self.referral.required:
+                self.referral.required = True
+            if not self.referral.emergency_number:
+                self.referral.emergency_number = DEFAULT_EMERGENCY_NUMBER
+        return self
+

@@ -93,6 +93,42 @@ class TestSymptomSchema:
         with pytest.raises(ValidationError):
             Symptom(name="cough", extraction_confidence=1.5)
 
+    def test_symptom_create_happy_path_and_normalization(self) -> None:
+        """Verify SymptomCreate trims and lowercases symptom name."""
+        create = SymptomCreate(
+            name="  CHEST PAIN  ",
+            severity=Severity.SEVERE,
+            body_location="chest",
+            source=SymptomSource.USER,
+        )
+        assert create.name == "chest pain"
+        assert create.severity == Severity.SEVERE
+
+    def test_symptom_create_blank_name_raises(self) -> None:
+        """Verify SymptomCreate rejects blank symptom names."""
+        with pytest.raises(ValidationError):
+            SymptomCreate(name="   ")
+
+    def test_symptom_update_partial_and_wire_format(self) -> None:
+        """Verify SymptomUpdate supports partial attributes and normalization."""
+        sym_id = uuid4()
+        update = SymptomUpdate(
+            id=sym_id,
+            name="  Fatigue ",
+            severity=Severity.MODERATE,
+            source=SymptomSource.USER_CONFIRMED,
+        )
+        assert update.id == sym_id
+        assert update.name == "fatigue"
+        assert update.severity == Severity.MODERATE
+        assert update.source == SymptomSource.USER_CONFIRMED
+
+    def test_symptom_update_blank_name_raises(self) -> None:
+        """Verify SymptomUpdate rejects whitespace-only name when provided."""
+        with pytest.raises(ValidationError):
+            SymptomUpdate(name="   ")
+
+
 
 class TestMessageSchema:
     """Test suite for Message schema validation and serialization."""
@@ -137,6 +173,17 @@ class TestMessageSchema:
         assessment_id = uuid4()
         with pytest.raises(ValidationError):
             Message(assessment_id=assessment_id, content="valid", position=-1)
+
+    def test_message_create_happy_path_and_stripping(self) -> None:
+        """Verify MessageCreate strips whitespace from message content."""
+        msg = MessageCreate(content="   Severe chest tightness   ")
+        assert msg.content == "Severe chest tightness"
+
+    def test_message_create_blank_content_raises(self) -> None:
+        """Verify MessageCreate rejects blank or whitespace-only messages."""
+        with pytest.raises(ValidationError):
+            MessageCreate(content="   ")
+
 
 
 class TestConditionSchema:
@@ -215,6 +262,17 @@ class TestAssessmentResultSchema:
         )
         assert result.referral.required is True
         assert result.referral.emergency_number == "112"
+
+    def test_result_urgent_escalation_with_default_referral(self) -> None:
+        """Verify URGENT risk tier automatically populates emergency referral even when omitted."""
+        assessment_id = uuid4()
+        result = AssessmentResult(
+            assessment_id=assessment_id,
+            risk_level=RiskLevel.URGENT,
+        )
+        assert result.referral.required is True
+        assert result.referral.emergency_number == "112"
+
 
     def test_result_failure_case_blank_disclaimer_raises(self) -> None:
         """Verify blank disclaimer violates medical-safety rule and raises error."""
