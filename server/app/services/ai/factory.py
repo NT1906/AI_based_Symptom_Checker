@@ -28,16 +28,19 @@ def get_ai_gateway(provider: str | None = None) -> AiGateway:
     Raises:
         AiError: If an unknown or unconfigured provider is requested.
     """
-    resolved_provider = (provider or os.getenv("AI_PROVIDER", "mock")).lower().strip()
+    raw_provider = provider or os.getenv("AI_PROVIDER") or "mock"
+    resolved_provider = raw_provider.lower().strip()
 
     if resolved_provider == "mock":
         return MockAiProvider()
 
     if resolved_provider in ("openai", "gemini"):
         # Real providers are scheduled for Sprint 1 (S1-NIT-3) and Sprint 3 (S3-NIT-1).
-        # In Sprint 0, falling back safely to MockAiProvider prevents breaking local runs.
+        # In Sprint 0, falling back safely to MockAiProvider prevents breaking
+        # local runs.
         return MockAiProvider()
 
     raise AiError(
-        f"Unsupported AI provider '{resolved_provider}'. Supported: 'mock', 'openai', 'gemini'."
+        f"Unsupported AI provider '{resolved_provider}'. "
+        "Supported: 'mock', 'openai', 'gemini'."
     )

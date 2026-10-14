@@ -182,25 +182,34 @@ class MockAiProvider:
         if not symptoms:
             return ClarificationResult(
                 should_ask=True,
-                question="Could you describe in a bit more detail what symptoms you are feeling?",
+                question=(
+                    "Could you describe in a bit more detail what symptoms you are"
+                    " feeling?"
+                ),
                 question_type="CONTEXT",
                 target_symptom=None,
             )
 
         # Check for missing duration on the primary symptom
         primary_symptom = symptoms[0]
-        symptom_name = (
+        raw_name = (
             primary_symptom.get("name")
             if isinstance(primary_symptom, dict)
-            else getattr(primary_symptom, "name", "this")
+            else getattr(primary_symptom, "name", None)
         )
-
+        symptom_name = str(raw_name) if raw_name else "this"
         display_name = symptom_name.replace("_", " ")
 
         # Candidate questions in priority order
         duration_q = f"How long have you been experiencing the {display_name}?"
-        severity_q = f"On a scale of mild, moderate, or severe, how would you describe the {display_name}?"
-        assoc_q = "Are you experiencing any other symptoms, such as fever, dizziness, or shortness of breath?"
+        severity_q = (
+            "On a scale of mild, moderate, or severe, how would you describe the "
+            f"{display_name}?"
+        )
+        assoc_q = (
+            "Are you experiencing any other symptoms, such as fever, dizziness, or"
+            " shortness of breath?"
+        )
 
         for candidate, q_type in [
             (duration_q, "DURATION"),

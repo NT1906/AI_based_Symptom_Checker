@@ -39,7 +39,7 @@ def test_factory_rejects_unsupported_provider() -> None:
 
 
 def test_versioned_extraction_prompt_exists_and_valid() -> None:
-    """Versioned extraction prompt file must exist, be non-empty, and contain placeholders."""
+    """Extraction prompt must exist, be non-empty, and contain placeholders."""
     prompts_dir = (
         Path(__file__).resolve().parents[3] / "app" / "services" / "ai" / "prompts"
     )

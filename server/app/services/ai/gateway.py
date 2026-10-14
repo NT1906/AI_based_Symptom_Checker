@@ -49,7 +49,8 @@ class AiGateway(Protocol):
             conversation_history: Previous conversational turns for context resolution.
 
         Returns:
-            Structured ExtractionResult with validated symptoms and clarification status.
+            Structured ExtractionResult with validated symptoms and
+            clarification status.
 
         Raises:
             AiTimeoutError: If the provider call times out.
@@ -70,7 +71,8 @@ class AiGateway(Protocol):
             already_asked: List of previously asked questions to prevent repetition.
 
         Returns:
-            ClarificationResult indicating whether to ask and containing the question text.
+            ClarificationResult indicating whether to ask and containing the
+            question text.
 
         Raises:
             AiTimeoutError: If the provider call times out.

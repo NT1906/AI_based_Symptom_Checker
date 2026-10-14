@@ -23,7 +23,7 @@ def provider() -> MockAiProvider:
 async def test_extracts_single_symptom_with_duration_and_severity(
     provider: MockAiProvider,
 ) -> None:
-    """Extracts a single symptom, its severity, and duration from clear natural language."""
+    """Extracts a single symptom, severity, and duration from natural language."""
     message = "I have a severe headache since yesterday"
     result = await provider.extract_symptoms(message)
 
@@ -101,7 +101,7 @@ async def test_unrecognized_text_returns_empty_symptoms(
 async def test_symptom_without_duration_flags_clarification_need(
     provider: MockAiProvider,
 ) -> None:
-    """When a symptom is identified without duration, requires_clarification is flagged."""
+    """Flags clarification when a symptom is identified without duration."""
     result = await provider.extract_symptoms("I have a stomach ache")
     assert len(result.symptoms) == 1
     assert result.symptoms[0].name == "abdominal_pain"

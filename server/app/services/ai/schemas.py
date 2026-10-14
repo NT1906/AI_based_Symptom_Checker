@@ -8,12 +8,12 @@ Responsibilities:
 Owner: Nishith · Task: S0-NIT-1 · Requirements: NFR-05
 """
 
-from enum import Enum
+from enum import StrEnum
 
 from pydantic import BaseModel, ConfigDict, Field
 
 
-class SeverityEnum(str, Enum):
+class SeverityEnum(StrEnum):
     """Normalized symptom severity level."""
 
     MILD = "MILD"
@@ -22,7 +22,7 @@ class SeverityEnum(str, Enum):
     UNKNOWN = "UNKNOWN"
 
 
-class DurationUnitEnum(str, Enum):
+class DurationUnitEnum(StrEnum):
     """Allowed time units for symptom duration."""
 
     HOUR = "HOUR"
@@ -86,7 +86,9 @@ class ExtractionResult(BaseModel):
     )
     requires_clarification: bool = Field(
         default=False,
-        description="Whether missing safety or triage information warrants clarification",
+        description=(
+            "Whether missing safety or triage information warrants clarification"
+        ),
     )
     clarification_reason: str | None = Field(
         default=None,
