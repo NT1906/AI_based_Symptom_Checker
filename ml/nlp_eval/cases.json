@@ -1,0 +1,241 @@
+{
+  "schema_version": "1.0",
+  "description": "NLP extraction evaluation cases for the AI-Based Symptom Checker. Each case contains a realistic user input and the expected canonical symptoms, severity, duration and onset that the extraction pipeline should produce. Severity uses MILD / MODERATE / SEVERE or is omitted when not mentioned. Duration and onset are optional free-text fields that the extractor should normalize.",
+  "severities": ["MILD", "MODERATE", "SEVERE"],
+  "cases": [
+    {
+      "id": "case_001",
+      "input": "I've had a really bad headache and feel like throwing up since yesterday",
+      "expected": {
+        "symptoms": [
+          { "id": "headache", "severity": "SEVERE" },
+          { "id": "nausea" }
+        ],
+        "duration": "1 day"
+      },
+      "notes": "Tests 'bad headache' → severity SEVERE, 'throwing up' → nausea, 'since yesterday' → 1 day"
+    },
+    {
+      "id": "case_002",
+      "input": "my throat hurts and I have a runny nose, been sneezing all day",
+      "expected": {
+        "symptoms": [
+          { "id": "sore_throat" },
+          { "id": "runny_nose" },
+          { "id": "sneezing" }
+        ],
+        "duration": "1 day"
+      },
+      "notes": "Tests multiple ENT symptoms from a common cold description"
+    },
+    {
+      "id": "case_003",
+      "input": "I have fever with chills and my whole body is aching for the past 3 days",
+      "expected": {
+        "symptoms": [
+          { "id": "fever" },
+          { "id": "chills" },
+          { "id": "body_aches" }
+        ],
+        "duration": "3 days"
+      },
+      "notes": "Tests typical flu/dengue presentation with duration"
+    },
+    {
+      "id": "case_004",
+      "input": "mujhe bahut tez bukhar hai aur pet me dard ho raha hai",
+      "expected": {
+        "symptoms": [
+          { "id": "fever", "severity": "SEVERE" },
+          { "id": "abdominal_pain" }
+        ]
+      },
+      "notes": "Tests Hinglish input: 'tez bukhar' → fever SEVERE, 'pet me dard' → abdominal_pain"
+    },
+    {
+      "id": "case_005",
+      "input": "chest pain that goes to my left arm and I'm sweating a lot",
+      "expected": {
+        "symptoms": [
+          { "id": "chest_pain" },
+          { "id": "pain_spreading_to_arm_jaw_or_back" },
+          { "id": "sweating" }
+        ]
+      },
+      "notes": "Tests cardiac emergency pattern — red flag combination"
+    },
+    {
+      "id": "case_006",
+      "input": "I have been coughing for about 2 weeks and noticed some blood in the mucus today",
+      "expected": {
+        "symptoms": [
+          { "id": "productive_cough" },
+          { "id": "coughing_blood" }
+        ],
+        "duration": "2 weeks"
+      },
+      "notes": "Tests TB-suspicious presentation; 'blood in the mucus' → coughing_blood"
+    },
+    {
+      "id": "case_007",
+      "input": "My skin has been really itchy with a circular red patch on my arm, it looks like a ring",
+      "expected": {
+        "symptoms": [
+          { "id": "itchy_skin" },
+          { "id": "ring_shaped_rash" }
+        ]
+      },
+      "notes": "Tests dermatological description of ringworm; 'ring' → ring_shaped_rash"
+    },
+    {
+      "id": "case_008",
+      "input": "feeling dizzy and tired all the time, also my skin looks pale lately",
+      "expected": {
+        "symptoms": [
+          { "id": "dizziness" },
+          { "id": "fatigue" },
+          { "id": "pale_skin" }
+        ]
+      },
+      "notes": "Tests anaemia presentation with lay terms 'dizzy', 'tired', 'pale'"
+    },
+    {
+      "id": "case_009",
+      "input": "burns when I pee and I need to go to the bathroom every hour, lower belly also hurts",
+      "expected": {
+        "symptoms": [
+          { "id": "burning_urination" },
+          { "id": "frequent_urination" },
+          { "id": "lower_abdominal_pain" }
+        ]
+      },
+      "notes": "Tests UTI presentation; 'burns when I pee' → burning_urination"
+    },
+    {
+      "id": "case_010",
+      "input": "I have acidity and a sour taste keeps coming up in my mouth especially after eating",
+      "expected": {
+        "symptoms": [
+          { "id": "heartburn" },
+          { "id": "acid_regurgitation" }
+        ]
+      },
+      "notes": "Tests GERD; 'acidity' → heartburn, 'sour taste coming up' → acid_regurgitation"
+    },
+    {
+      "id": "case_011",
+      "input": "severe stomach pain on the right side near my hip, I also feel nauseous",
+      "expected": {
+        "symptoms": [
+          { "id": "lower_right_abdominal_pain", "severity": "SEVERE" },
+          { "id": "nausea" }
+        ]
+      },
+      "notes": "Tests appendicitis presentation; 'right side near my hip' → lower_right_abdominal_pain"
+    },
+    {
+      "id": "case_012",
+      "input": "my eyes are red and sticky, there's yellowish gunk in the morning",
+      "expected": {
+        "symptoms": [
+          { "id": "red_eye" },
+          { "id": "eye_discharge" }
+        ]
+      },
+      "notes": "Tests conjunctivitis; 'sticky' + 'yellowish gunk' → eye_discharge"
+    },
+    {
+      "id": "case_013",
+      "input": "I can't breathe properly and there's a whistling sound when I exhale",
+      "expected": {
+        "symptoms": [
+          { "id": "shortness_of_breath" },
+          { "id": "wheezing" }
+        ]
+      },
+      "notes": "Tests asthma; 'can't breathe properly' → shortness_of_breath, 'whistling sound' → wheezing"
+    },
+    {
+      "id": "case_014",
+      "input": "I got lots of small itchy bumps between my fingers, they're worse at night",
+      "expected": {
+        "symptoms": [
+          { "id": "small_itchy_bumps" }
+        ]
+      },
+      "notes": "Tests scabies description; 'small itchy bumps' as primary symptom. Night worsening is a temporal detail, not a separate symptom."
+    },
+    {
+      "id": "case_015",
+      "input": "woke up with the worst headache of my life, it came on suddenly",
+      "expected": {
+        "symptoms": [
+          { "id": "sudden_severe_headache", "severity": "SEVERE" }
+        ]
+      },
+      "notes": "Tests thunderclap headache red flag; 'worst headache of my life' + 'suddenly' → sudden_severe_headache"
+    },
+    {
+      "id": "case_016",
+      "input": "loose motions for 2 days, can't keep water down, feeling very weak",
+      "expected": {
+        "symptoms": [
+          { "id": "diarrhea" },
+          { "id": "unable_to_keep_fluids_down" },
+          { "id": "fatigue" }
+        ],
+        "duration": "2 days"
+      },
+      "notes": "Tests gastroenteritis with dehydration risk; 'loose motions' → diarrhea, 'can't keep water down' → unable_to_keep_fluids_down"
+    },
+    {
+      "id": "case_017",
+      "input": "high fever since 4 days with pain behind my eyes and joints are hurting badly",
+      "expected": {
+        "symptoms": [
+          { "id": "fever", "severity": "SEVERE" },
+          { "id": "pain_behind_eyes" },
+          { "id": "joint_pain", "severity": "SEVERE" }
+        ],
+        "duration": "4 days"
+      },
+      "notes": "Tests dengue presentation; 'high fever' → SEVERE, 'hurting badly' → SEVERE"
+    },
+    {
+      "id": "case_018",
+      "input": "my nose is completely blocked, face feels like pressure around cheeks and forehead, thick green mucus",
+      "expected": {
+        "symptoms": [
+          { "id": "nasal_congestion" },
+          { "id": "facial_pain_or_pressure" },
+          { "id": "thick_nasal_discharge" }
+        ]
+      },
+      "notes": "Tests sinusitis; 'blocked' → nasal_congestion, 'pressure around cheeks and forehead' → facial_pain_or_pressure"
+    },
+    {
+      "id": "case_019",
+      "input": "I'm peeing a lot more than usual and always feel thirsty, also lost some weight recently",
+      "expected": {
+        "symptoms": [
+          { "id": "frequent_urination" },
+          { "id": "excessive_thirst" },
+          { "id": "weight_loss" }
+        ]
+      },
+      "notes": "Tests diabetes presentation; classic triad of polyuria, polydipsia, weight loss"
+    },
+    {
+      "id": "case_020",
+      "input": "kamar me bahut dard hai, 1 hafte se chal raha hai, jhukne me dikkat hoti hai",
+      "expected": {
+        "symptoms": [
+          { "id": "lower_back_pain", "severity": "SEVERE" },
+          { "id": "muscle_stiffness" }
+        ],
+        "duration": "1 week"
+      },
+      "notes": "Tests Hinglish input: 'kamar me bahut dard' → lower_back_pain SEVERE, 'jhukne me dikkat' → muscle_stiffness"
+    }
+  ]
+}
