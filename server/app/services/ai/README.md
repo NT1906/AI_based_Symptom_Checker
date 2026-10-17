@@ -11,7 +11,7 @@ The AI service manages natural-language symptom extraction and targeted clarific
 - **Mock Provider for Dev/CI:** The `MockAiProvider` operates whenever `AI_PROVIDER=mock`, returning deterministic fixture extractions without requiring an OpenAI API key.
 
 ## Public Interface
-
+ 
 ```python
 from app.services.ai import (
     AiGateway,
