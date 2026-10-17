@@ -1,6 +1,6 @@
 """Unit tests for the AiGateway protocol, provider factory, and prompt files.
 
-Owner: Nishith · Task: S0-NIT-1 · Requirements: NFR-05
+Owner: Nishith · Task: S1-NIT-1 · Requirements: FR-03, FR-17, NFR-05
 """
 
 from pathlib import Path
@@ -47,11 +47,21 @@ def test_versioned_extraction_prompt_exists_and_valid() -> None:
 
     assert prompt_file.exists(), f"Missing prompt file: {prompt_file}"
     content = prompt_file.read_text(encoding="utf-8")
-    assert len(content.strip()) > 100
+    assert len(content.strip()) > 200
     assert "{user_message}" in content
     assert "{conversation_history}" in content
-    # Medical safety: prompt must forbid diagnostic claims
+    # Medical safety: prompt must forbid diagnostic claims (AI_RULES.md §2)
     assert "DO NOT provide any medical diagnosis" in content
+    # Schema requirements: covers body site, onset, severity, and duration
+    assert "body_site" in content
+    assert "onset" in content
+    assert "severity" in content
+    assert "duration" in content
+    # Vocabulary coverage: checks presence of key body systems
+    assert "RESPIRATORY" in content
+    assert "CARDIOVASCULAR" in content
+    assert "GASTROINTESTINAL" in content
+    assert "NEUROLOGICAL" in content
 
 
 def test_versioned_clarification_prompt_exists_and_valid() -> None:
