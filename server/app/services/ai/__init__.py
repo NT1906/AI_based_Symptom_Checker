@@ -1,6 +1,6 @@
 """AI service package: symptom understanding engine and gateway interface.
 
-Owner: Nishith · Task: S0-NIT-1 · Requirements: NFR-05
+Owner: Nishith · Task: S1-NIT-1 · Requirements: FR-03, FR-17, NFR-05
 """
 
 from app.services.ai.factory import get_ai_gateway
