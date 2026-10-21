@@ -4,6 +4,6 @@ pydantic>=2.10.0
 pydantic-settings>=2.8.0
 structlog>=25.1.0
 SQLAlchemy>=2.0.0
-alembic>=1.14.0
+alembic>=1.20.0
 psycopg[binary]>=3.2.0
 slowapi==0.1.10
