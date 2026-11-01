@@ -4,20 +4,24 @@ Responsibilities:
     - Test format and uniqueness of generated request IDs.
     - Test validation and sanitization of inbound request ID headers.
     - Test ASGI RequestIdMiddleware behavior across HTTP and non-HTTP scopes.
-    - Test structlog contextvar binding and cleanup lifecycle.
+    - Test structlog contextvar binding, access logging, and cleanup lifecycle.
 
 Owner: Vivek (tests) · Task: S1-VIV-2 · Requirements: NFR-05, NFR-10
 """
 
+import logging
 import re
 from typing import Any
 
 import pytest
+import structlog
 import structlog.contextvars
 from fastapi import FastAPI, status
 from fastapi.testclient import TestClient
 
+from app.core.logging import configure_logging
 from app.core.request_id import (
+    HEALTH_CHECK_PATH,
     MAX_REQUEST_ID_LENGTH,
     REQUEST_ID_HEADER,
     REQUEST_ID_PREFIX,
@@ -25,6 +29,25 @@ from app.core.request_id import (
     generate_request_id,
     validate_or_generate_request_id,
 )
+
+
+def _extract_access_events(
+    records: list[logging.LogRecord],
+) -> list[dict[str, Any]]:
+    """Extract request_completed structured event dictionaries from logging records.
+
+    Args:
+        records: List of LogRecord objects captured by caplog.
+
+    Returns:
+        List of structured event dicts.
+    """
+    events: list[dict[str, Any]] = []
+    for r in records:
+        if r.name == "app.core.request_id" and isinstance(r.msg, dict):
+            if r.msg.get("event") == "request_completed":
+                events.append(r.msg)
+    return events
 
 
 def test_generate_request_id_format_and_uniqueness() -> None:
@@ -82,14 +105,26 @@ def test_validate_or_generate_request_id_replaces_invalid() -> None:
 @pytest.fixture
 def middleware_app() -> FastAPI:
     """Fixture providing a FastAPI application configured with RequestIdMiddleware."""
+    configure_logging(log_level="DEBUG", json_format=True)
     app = FastAPI()
     app.add_middleware(RequestIdMiddleware)
 
     @app.get("/test-endpoint")
     def sample_endpoint() -> dict[str, str]:
-        # Retrieve the request ID stored in contextvars during execution
         bound_id = structlog.contextvars.get_contextvars().get("request_id", "")
         return {"status": "ok", "bound_request_id": str(bound_id)}
+
+    @app.post("/test-post")
+    def post_endpoint(payload: dict[str, Any]) -> dict[str, str]:
+        return {"status": "received"}
+
+    @app.get(HEALTH_CHECK_PATH)
+    def health_endpoint() -> dict[str, str]:
+        return {"status": "healthy"}
+
+    @app.get("/trigger-crash")
+    def crash_endpoint() -> None:
+        raise RuntimeError("Simulated failure")
 
     return app
 
@@ -173,3 +208,98 @@ async def test_middleware_passes_non_http_scope() -> None:
         send=lambda _: None,  # type: ignore[arg-type]
     )
     assert called is True
+
+
+def test_access_log_emitted_with_expected_fields(
+    middleware_app: FastAPI,
+    caplog: pytest.LogCaptureFixture,
+) -> None:
+    """Verify exactly one structured request_completed event is logged with metadata."""
+    caplog.set_level(logging.DEBUG)
+    client = TestClient(middleware_app)
+    response = client.get("/test-endpoint")
+
+    assert response.status_code == status.HTTP_200_OK
+    header_id = response.headers[REQUEST_ID_HEADER]
+
+    access_events = _extract_access_events(caplog.records)
+    assert len(access_events) == 1
+    event = access_events[0]
+    assert event["method"] == "GET"
+    assert event["route"] == "/test-endpoint"
+    assert event["status_code"] == 200
+    assert isinstance(event["duration_ms"], float)
+    assert event["duration_ms"] >= 0.0
+    assert event["request_id"] == header_id
+    assert event["level"] == "info"
+
+
+def test_access_log_health_check_logged_at_debug(
+    middleware_app: FastAPI,
+    caplog: pytest.LogCaptureFixture,
+) -> None:
+    """Verify health check endpoint is logged at DEBUG to avoid probe flood."""
+    caplog.set_level(logging.DEBUG)
+    client = TestClient(middleware_app)
+    response = client.get(HEALTH_CHECK_PATH)
+
+    assert response.status_code == status.HTTP_200_OK
+    access_events = _extract_access_events(caplog.records)
+    assert len(access_events) == 1
+    assert access_events[0]["level"] == "debug"
+    assert access_events[0]["route"] == HEALTH_CHECK_PATH
+
+
+def test_access_log_privacy_never_logs_query_or_body(
+    middleware_app: FastAPI,
+    caplog: pytest.LogCaptureFixture,
+) -> None:
+    """Verify neither query string nor request body appears in any logged field."""
+    secret_query = "SECRET-SYMPTOM-PARAM-12345"
+    secret_body = "SECRET-SYMPTOM-BODY-TEXT-67890"
+
+    caplog.set_level(logging.DEBUG)
+    client = TestClient(middleware_app)
+    response = client.post(
+        f"/test-post?query={secret_query}",
+        json={"symptom": secret_body},
+    )
+
+    assert response.status_code == status.HTTP_200_OK
+    app_records = [r for r in caplog.records if r.name.startswith("app")]
+    assert len(app_records) >= 1
+    for record in app_records:
+        record_text = f"{record.msg} {record.args}"
+        assert secret_query not in record_text
+        assert secret_body not in record_text
+
+
+def test_access_log_unhandled_crash_logged_as_500(
+    middleware_app: FastAPI,
+    caplog: pytest.LogCaptureFixture,
+) -> None:
+    """Verify unhandled exception logs request_completed with status 500."""
+    caplog.set_level(logging.DEBUG)
+    client = TestClient(middleware_app, raise_server_exceptions=False)
+    response = client.get("/trigger-crash")
+
+    assert response.status_code == status.HTTP_500_INTERNAL_SERVER_ERROR
+    access_events = _extract_access_events(caplog.records)
+    assert len(access_events) == 1
+    assert access_events[0]["status_code"] == 500
+
+
+def test_access_log_unmatched_route_logs_unmatched(
+    middleware_app: FastAPI,
+    caplog: pytest.LogCaptureFixture,
+) -> None:
+    """Verify an unmatched route logs route='unmatched' with status 404."""
+    caplog.set_level(logging.DEBUG)
+    client = TestClient(middleware_app)
+    response = client.get("/non-existent-route")
+
+    assert response.status_code == status.HTTP_404_NOT_FOUND
+    access_events = _extract_access_events(caplog.records)
+    assert len(access_events) == 1
+    assert access_events[0]["route"] == "unmatched"
+    assert access_events[0]["status_code"] == 404
