@@ -108,4 +108,3 @@ class RequestIdMiddleware:
         finally:
             # Unbind to prevent contextvar leakage between pooled workers
             structlog.contextvars.unbind_contextvars("request_id")
-

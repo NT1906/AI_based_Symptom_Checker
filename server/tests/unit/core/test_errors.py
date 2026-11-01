@@ -4,10 +4,13 @@ Responsibilities:
     - Test domain exception hierarchy status codes and codes.
     - Test FastAPI error handlers for AppError, validation, and unhandled errors.
 
-Owner: Vivek (tests) · Task: S0-VIV-1 · Requirements: NFR-05, NFR-08
+Owner: Vivek (tests) · Task: S0-VIV-1, S1-VIV-2 · Requirements: NFR-05, NFR-08
 """
 
 import pytest
+from fastapi import FastAPI, status
+from fastapi.testclient import TestClient
+
 from app.core.errors import (
     AppError,
     ConflictError,
@@ -18,8 +21,7 @@ from app.core.errors import (
     ValidationError,
     register_error_handlers,
 )
-from fastapi import FastAPI, status
-from fastapi.testclient import TestClient
+from app.schemas.message import MessageCreate
 
 
 def test_domain_subclasses_status_codes() -> None:
@@ -64,6 +66,10 @@ def error_test_app() -> FastAPI:
     def trigger_unhandled_error() -> None:
         raise RuntimeError("Secret database connection failed!")
 
+    @test_app.post("/test-validation")
+    def validate_message(payload: MessageCreate) -> dict[str, str]:
+        return {"content": payload.content}
+
     return test_app
 
 
@@ -104,3 +110,28 @@ def test_http_exception_handler_returns_uniform_schema(
     data_405 = response_405.json()
     assert data_405["code"] == "METHOD_NOT_ALLOWED"
     assert "Allow" in response_405.headers
+
+
+def test_validation_error_whitespace_message_regression_problems_1_and_2(
+    error_test_app: FastAPI,
+) -> None:
+    """Regression test for Problem 1 (500 crash) and Problem 2 (input leak).
+
+    Problem 1: Whitespace message raises ValueError in MessageCreate validator,
+    producing non-serializable ctx.error that crashes validation_error_handler with 500.
+    Problem 2: exc.errors() includes 'input', leaking symptom text into error response.
+    """
+    client = TestClient(error_test_app, raise_server_exceptions=False)
+    response = client.post("/test-validation", json={"content": "   "})
+
+    assert response.status_code == status.HTTP_422_UNPROCESSABLE_ENTITY
+    data = response.json()
+    assert data["code"] == "VALIDATION_ERROR"
+    assert isinstance(data["details"], list)
+    for err in data["details"]:
+        assert "input" not in err, f"Found sensitive 'input' leaked in details: {err}"
+        assert "ctx" not in err, f"Found non-serializable 'ctx' in details: {err}"
+        assert "url" not in err, f"Found unnecessary 'url' in details: {err}"
+        assert "loc" in err
+        assert "msg" in err
+        assert "type" in err

@@ -5,9 +5,10 @@ Responsibilities:
     - Provide FastAPI exception handlers returning uniform JSON error bodies.
     - Prevent leaking internal stack traces or database errors to clients.
 
-Owner: Vivek (core) · Task: S0-VIV-1 · Requirements: NFR-05, NFR-08
+Owner: Vivek (core) · Task: S0-VIV-1, S1-VIV-2 · Requirements: NFR-05, NFR-08, NFR-10
 """
 
+from collections.abc import Sequence
 from typing import Any
 
 from fastapi import FastAPI, Request, status
@@ -185,6 +186,33 @@ async def app_error_handler(request: Request, exc: AppError) -> JSONResponse:
     )
 
 
+def _sanitize_validation_errors(
+    errors: Sequence[Any],
+) -> list[dict[str, Any]]:
+    """Sanitize Pydantic validation errors for public API responses.
+
+    Removes 'input' (privacy: prevents leaking symptom text or user data),
+    'ctx' (reliability: prevents serialization crashes on ValueError objects),
+    and 'url' (unnecessary documentation links).
+
+    Args:
+        errors: Raw validation error dictionaries from Pydantic.
+
+    Returns:
+        List containing sanitized error items with only loc, msg, and type.
+    """
+    sanitized: list[dict[str, Any]] = []
+    for err in errors:
+        sanitized.append(
+            {
+                "loc": err.get("loc", ()),
+                "msg": err.get("msg", ""),
+                "type": err.get("type", ""),
+            }
+        )
+    return sanitized
+
+
 async def validation_error_handler(
     request: Request, exc: RequestValidationError
 ) -> JSONResponse:
@@ -207,7 +235,7 @@ async def validation_error_handler(
         content=ErrorResponse(
             code="VALIDATION_ERROR",
             message="Request validation failed",
-            details=exc.errors(),
+            details=_sanitize_validation_errors(exc.errors()),
         ).model_dump(mode="json"),
     )
 
