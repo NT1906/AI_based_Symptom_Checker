@@ -3,8 +3,9 @@
 Responsibilities:
     - Test domain exception hierarchy status codes and codes.
     - Test FastAPI error handlers for AppError, validation, and unhandled errors.
+    - Verify uniform error response schema with requestId matching X-Request-ID header.
 
-Owner: Vivek (tests) · Task: S0-VIV-1, S1-VIV-2 · Requirements: NFR-05, NFR-08
+Owner: Vivek (tests) · Task: S0-VIV-1, S1-VIV-2 · Requirements: NFR-05, NFR-08, NFR-10
 """
 
 import pytest
@@ -21,6 +22,7 @@ from app.core.errors import (
     ValidationError,
     register_error_handlers,
 )
+from app.core.request_id import REQUEST_ID_HEADER, RequestIdMiddleware
 from app.schemas.message import MessageCreate
 
 
@@ -56,6 +58,7 @@ def test_domain_subclasses_status_codes() -> None:
 def error_test_app() -> FastAPI:
     """Fixture providing a miniature FastAPI app for testing error handlers."""
     test_app = FastAPI()
+    test_app.add_middleware(RequestIdMiddleware)
     register_error_handlers(test_app)
 
     @test_app.get("/trigger-app-error")
@@ -82,6 +85,9 @@ def test_app_error_handler_returns_formatted_json(error_test_app: FastAPI) -> No
     assert data["code"] == "NOT_FOUND"
     assert data["message"] == "Assessment was not found"
     assert data["details"] == {"id": "123"}
+    assert "requestId" in data
+    assert data["requestId"].startswith("req_")
+    assert response.headers[REQUEST_ID_HEADER] == data["requestId"]
 
 
 def test_unhandled_exception_masks_internal_details(error_test_app: FastAPI) -> None:
@@ -93,6 +99,10 @@ def test_unhandled_exception_masks_internal_details(error_test_app: FastAPI) -> 
     assert data["code"] == "INTERNAL_SERVER_ERROR"
     assert "Secret database connection failed" not in data["message"]
     assert data["details"] is None
+    assert "requestId" in data
+    assert data["requestId"].startswith("req_")
+    # Problem 3 regression: unhandled 500 must return X-Request-ID matching requestId
+    assert response.headers[REQUEST_ID_HEADER] == data["requestId"]
 
 
 def test_http_exception_handler_returns_uniform_schema(
@@ -104,12 +114,18 @@ def test_http_exception_handler_returns_uniform_schema(
     assert response_404.status_code == status.HTTP_404_NOT_FOUND
     data_404 = response_404.json()
     assert data_404["code"] == "NOT_FOUND"
+    assert "requestId" in data_404
+    assert data_404["requestId"].startswith("req_")
+    assert response_404.headers[REQUEST_ID_HEADER] == data_404["requestId"]
 
     response_405 = client.post("/trigger-app-error")
     assert response_405.status_code == status.HTTP_405_METHOD_NOT_ALLOWED
     data_405 = response_405.json()
     assert data_405["code"] == "METHOD_NOT_ALLOWED"
     assert "Allow" in response_405.headers
+    assert "requestId" in data_405
+    assert data_405["requestId"].startswith("req_")
+    assert response_405.headers[REQUEST_ID_HEADER] == data_405["requestId"]
 
 
 def test_validation_error_whitespace_message_regression_problems_1_and_2(
@@ -127,6 +143,9 @@ def test_validation_error_whitespace_message_regression_problems_1_and_2(
     assert response.status_code == status.HTTP_422_UNPROCESSABLE_ENTITY
     data = response.json()
     assert data["code"] == "VALIDATION_ERROR"
+    assert "requestId" in data
+    assert data["requestId"].startswith("req_")
+    assert response.headers[REQUEST_ID_HEADER] == data["requestId"]
     assert isinstance(data["details"], list)
     for err in data["details"]:
         assert "input" not in err, f"Found sensitive 'input' leaked in details: {err}"
@@ -135,3 +154,20 @@ def test_validation_error_whitespace_message_regression_problems_1_and_2(
         assert "loc" in err
         assert "msg" in err
         assert "type" in err
+
+
+def test_bare_app_fallback_generates_request_id() -> None:
+    """Verify handlers generate fallback requestId if app has no RequestIdMiddleware."""
+    bare_app = FastAPI()
+    register_error_handlers(bare_app)
+
+    @bare_app.get("/bare-error")
+    def bare_error() -> None:
+        raise NotFoundError("Not here")
+
+    client = TestClient(bare_app)
+    response = client.get("/bare-error")
+    assert response.status_code == status.HTTP_404_NOT_FOUND
+    data = response.json()
+    assert "requestId" in data
+    assert data["requestId"].startswith("req_")

@@ -2,7 +2,7 @@
 
 Responsibilities:
     - Define domain exceptions with error codes and HTTP status codes.
-    - Provide FastAPI exception handlers returning uniform JSON error bodies.
+    - Provide FastAPI error handlers returning uniform JSON with requestId.
     - Prevent leaking internal stack traces or database errors to clients.
 
 Owner: Vivek (core) · Task: S0-VIV-1, S1-VIV-2 · Requirements: NFR-05, NFR-08, NFR-10
@@ -14,10 +14,12 @@ from typing import Any
 from fastapi import FastAPI, Request, status
 from fastapi.exceptions import RequestValidationError
 from fastapi.responses import JSONResponse
-from pydantic import BaseModel
+from pydantic import BaseModel, ConfigDict
+from pydantic.alias_generators import to_camel
 from starlette.exceptions import HTTPException as StarletteHTTPException
 
 from app.core.logging import get_logger
+from app.core.request_id import REQUEST_ID_HEADER, generate_request_id
 
 logger = get_logger(__name__)
 
@@ -29,11 +31,15 @@ class ErrorResponse(BaseModel):
         code: Machine-readable uppercase snake_case error identifier.
         message: Safe, human-readable error description.
         details: Optional additional diagnostic details.
+        request_id: Correlated request identifier matching the X-Request-ID header.
     """
+
+    model_config = ConfigDict(alias_generator=to_camel, populate_by_name=True)
 
     code: str
     message: str
     details: Any | None = None
+    request_id: str
 
 
 class AppError(Exception):
@@ -158,32 +164,21 @@ class ExternalServiceError(AppError):
         )
 
 
-async def app_error_handler(request: Request, exc: AppError) -> JSONResponse:
-    """Handle domain AppError instances and return standard JSON error payload.
+def _resolve_request_id(request: Request) -> str:
+    """Extract request ID from ASGI scope or generate a fallback.
 
     Args:
         request: The incoming FastAPI request.
-        exc: The captured AppError instance.
 
     Returns:
-        JSONResponse: Formatted error payload with appropriate HTTP status.
+        Correlation request ID string.
     """
-    logger.warning(
-        "app_error_occurred",
-        path=request.url.path,
-        method=request.method,
-        code=exc.code,
-        status_code=exc.status_code,
-        message=exc.message,
-    )
-    return JSONResponse(
-        status_code=exc.status_code,
-        content=ErrorResponse(
-            code=exc.code,
-            message=exc.message,
-            details=exc.details,
-        ).model_dump(mode="json"),
-    )
+    scope_state = request.scope.get("state")
+    if isinstance(scope_state, dict):
+        req_id = scope_state.get("request_id")
+        if isinstance(req_id, str) and req_id:
+            return req_id
+    return generate_request_id()
 
 
 def _sanitize_validation_errors(
@@ -213,6 +208,38 @@ def _sanitize_validation_errors(
     return sanitized
 
 
+async def app_error_handler(request: Request, exc: AppError) -> JSONResponse:
+    """Handle domain AppError instances and return standard JSON error payload.
+
+    Args:
+        request: The incoming FastAPI request.
+        exc: The captured AppError instance.
+
+    Returns:
+        JSONResponse: Formatted error payload with appropriate HTTP status.
+    """
+    request_id = _resolve_request_id(request)
+    # Why: Omit exc.message from logs because service-generated messages can carry
+    # user-entered symptoms or personal health data (AI_RULES §2.12, §4.9).
+    logger.warning(
+        "app_error_occurred",
+        path=request.url.path,
+        method=request.method,
+        code=exc.code,
+        status_code=exc.status_code,
+        request_id=request_id,
+    )
+    return JSONResponse(
+        status_code=exc.status_code,
+        content=ErrorResponse(
+            code=exc.code,
+            message=exc.message,
+            details=exc.details,
+            request_id=request_id,
+        ).model_dump(mode="json", by_alias=True),
+    )
+
+
 async def validation_error_handler(
     request: Request, exc: RequestValidationError
 ) -> JSONResponse:
@@ -225,10 +252,12 @@ async def validation_error_handler(
     Returns:
         JSONResponse: Formatted validation error payload with status 422.
     """
+    request_id = _resolve_request_id(request)
     logger.info(
         "request_validation_failed",
         path=request.url.path,
         method=request.method,
+        request_id=request_id,
     )
     return JSONResponse(
         status_code=status.HTTP_422_UNPROCESSABLE_ENTITY,
@@ -236,7 +265,8 @@ async def validation_error_handler(
             code="VALIDATION_ERROR",
             message="Request validation failed",
             details=_sanitize_validation_errors(exc.errors()),
-        ).model_dump(mode="json"),
+            request_id=request_id,
+        ).model_dump(mode="json", by_alias=True),
     )
 
 
@@ -252,6 +282,7 @@ async def http_exception_handler(
     Returns:
         JSONResponse: Formatted error payload preserving original headers.
     """
+    request_id = _resolve_request_id(request)
     code = "HTTP_ERROR"
     if exc.status_code == status.HTTP_404_NOT_FOUND:
         code = "NOT_FOUND"
@@ -268,7 +299,8 @@ async def http_exception_handler(
             code=code,
             message=str(exc.detail) if exc.detail else "HTTP request error",
             details=None,
-        ).model_dump(mode="json"),
+            request_id=request_id,
+        ).model_dump(mode="json", by_alias=True),
         headers=exc.headers,
     )
 
@@ -283,18 +315,23 @@ async def unhandled_exception_handler(request: Request, exc: Exception) -> JSONR
     Returns:
         JSONResponse: Generic internal server error payload with status 500.
     """
+    request_id = _resolve_request_id(request)
     logger.error(
         "unhandled_exception",
         path=request.url.path,
         method=request.method,
+        request_id=request_id,
     )
+    headers = {REQUEST_ID_HEADER: request_id}
     return JSONResponse(
         status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
         content=ErrorResponse(
             code="INTERNAL_SERVER_ERROR",
             message="An unexpected error occurred. Please try again later.",
             details=None,
-        ).model_dump(mode="json"),
+            request_id=request_id,
+        ).model_dump(mode="json", by_alias=True),
+        headers=headers,
     )
 
 
