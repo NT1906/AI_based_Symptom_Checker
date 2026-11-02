@@ -95,3 +95,35 @@ retention and consent are separate tasks and are not changed here.
 
 From `server/`: `python -m pytest tests/unit/privacy -q`, then the shared
 `ruff check .`, `ruff format --check .`, `mypy app` and `pytest -q` gates.
+
+## Safety wording guard - Issue #49
+
+Owner: Harsh | Task: S1-HAR-3 | Requirement: DR-05
+
+Interface:
+    from app.services.privacy.safety_guard import assert_safe_wording
+    assert_safe_wording(response_text)
+
+Returns None for accepted text. Raises UnsafeWordingError (AppError,
+code UNSAFE_WORDING, status 500) for prohibited wording or non-text input.
+Rejected text is not included in exception messages or details.
+
+Behaviour:
+- Normalizes Unicode using NFKC and collapses whitespace.
+- Blocks configured diagnosis, prescribing, certainty, cure,
+  recovery-guarantee and urgency-downgrading phrases.
+- Allows the exact mandatory disclaimer while checking remaining text.
+- Performs no logging, network calls or modification of caller data.
+
+Integration:
+ResultComposer must validate every user-facing text field before return.
+Rejected output must not be returned or retried without validation.
+Actual wiring and integration tests remain pending coordination with Nisarg.
+
+Limitations:
+Configured patterns do not guarantee medical safety. Unlisted phrases,
+languages and obfuscations may bypass detection; harmless uses may be
+rejected. Disclaimer presence and risk decisions are not validated.
+
+Tests (from server/):
+    python -m pytest tests/unit/privacy/test_safety_guard.py -q
