@@ -18,7 +18,7 @@ def provider() -> MockAiProvider:
     return MockAiProvider()
 
 
-@pytest.mark.anyio
+@pytest.mark.asyncio
 async def test_enforces_hard_cap_at_three_questions(provider: MockAiProvider) -> None:
     """Clarification generator halts when 3 questions have been asked (FR-20)."""
     state = {
@@ -37,7 +37,7 @@ async def test_enforces_hard_cap_at_three_questions(provider: MockAiProvider) ->
     assert res.target_symptom is None
 
 
-@pytest.mark.anyio
+@pytest.mark.asyncio
 async def test_enforces_hard_cap_from_state_clarification_count(
     provider: MockAiProvider,
 ) -> None:
@@ -51,7 +51,7 @@ async def test_enforces_hard_cap_from_state_clarification_count(
     assert res.question is None
 
 
-@pytest.mark.anyio
+@pytest.mark.asyncio
 async def test_generates_onset_question_for_safety_critical_symptom(
     provider: MockAiProvider,
 ) -> None:
@@ -75,7 +75,7 @@ async def test_generates_onset_question_for_safety_critical_symptom(
     assert res.target_symptom == "chest_pain"
 
 
-@pytest.mark.anyio
+@pytest.mark.asyncio
 async def test_generates_duration_question_for_missing_duration(
     provider: MockAiProvider,
 ) -> None:
@@ -100,7 +100,7 @@ async def test_generates_duration_question_for_missing_duration(
     assert res.target_symptom == "headache"
 
 
-@pytest.mark.anyio
+@pytest.mark.asyncio
 async def test_generates_severity_question_for_unknown_severity(
     provider: MockAiProvider,
 ) -> None:
@@ -124,7 +124,7 @@ async def test_generates_severity_question_for_unknown_severity(
     assert res.missing_field == MissingFieldEnum.SEVERITY
 
 
-@pytest.mark.anyio
+@pytest.mark.asyncio
 async def test_generates_location_question_for_site_sensitive_symptom(
     provider: MockAiProvider,
 ) -> None:
@@ -150,7 +150,7 @@ async def test_generates_location_question_for_site_sensitive_symptom(
     assert res.missing_field == MissingFieldEnum.BODY_SITE
 
 
-@pytest.mark.anyio
+@pytest.mark.asyncio
 async def test_cycles_past_already_asked_questions(
     provider: MockAiProvider,
 ) -> None:
@@ -175,7 +175,7 @@ async def test_cycles_past_already_asked_questions(
     assert res.question_type == QuestionTypeEnum.DURATION
 
 
-@pytest.mark.anyio
+@pytest.mark.asyncio
 async def test_deduplicates_despite_punctuation_and_casing_variations(
     provider: MockAiProvider,
 ) -> None:
@@ -199,7 +199,7 @@ async def test_deduplicates_despite_punctuation_and_casing_variations(
     assert res.question_type == QuestionTypeEnum.DURATION
 
 
-@pytest.mark.anyio
+@pytest.mark.asyncio
 async def test_medical_safety_no_banned_wording(provider: MockAiProvider) -> None:
     """Verifies questions never contain diagnostic or prescribing terms."""
     banned_terms = [
@@ -221,7 +221,7 @@ async def test_medical_safety_no_banned_wording(provider: MockAiProvider) -> Non
         assert term not in q_lower, f"Banned medical term '{term}' detected in question"
 
 
-@pytest.mark.anyio
+@pytest.mark.asyncio
 async def test_empty_symptoms_returns_context_question(
     provider: MockAiProvider,
 ) -> None:
