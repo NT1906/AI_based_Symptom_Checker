@@ -2,11 +2,12 @@
 
 Covers:
     - The packaged copy loads and is byte-identical to ml/datasets/conditions/.
-    - Lookups by condition ID, and the red-flag rules (S1-NIS-2).
+    - Lookups by condition ID, the red-flag rules (S1-NIS-2) and the
+      specialties (S1-NIS-3).
     - Each kind of broken dataset raises ConditionDataError.
 
-Owner: Nisarg (prediction) · Task: S1-NIS-1, S1-NIS-2 · Requirements: FR-05,
-DR-02, DR-03
+Owner: Nisarg (prediction) · Task: S1-NIS-1, S1-NIS-2, S1-NIS-3 · Requirements:
+FR-05, FR-07, DR-02, DR-03, DR-04
 """
 
 import copy
@@ -83,6 +84,23 @@ def test_packaged_catalog_loads_every_red_flag(shipped_raw: Raw) -> None:
     assert all(r.triggers for r in red_flags)
 
 
+def test_packaged_catalog_resolves_every_condition_specialty() -> None:
+    catalog = get_catalog()
+
+    for condition in catalog.conditions:
+        assert catalog.get_specialty(condition.specialty) is not None
+    assert catalog.get_specialty("not_a_specialty") is None
+
+
+def test_get_red_flag_returns_rule_or_none() -> None:
+    catalog = get_catalog()
+
+    red_flag = catalog.get_red_flag("rf_self_harm")
+    assert red_flag is not None
+    assert red_flag.category == "mental_health"
+    assert catalog.get_red_flag("rf_not_a_rule") is None
+
+
 def _bad_weight(data: Raw) -> None:
     data["conditions"][0]["symptoms"][0]["weight"] = 4
 
@@ -119,6 +137,18 @@ def _unknown_min_severity(data: Raw) -> None:
     data["red_flags"][0]["triggers"][0]["all_of"][0]["min_severity"] = "UNKNOWN"
 
 
+def _no_specialties(data: Raw) -> None:
+    data["specialties"] = []
+
+
+def _unknown_condition_specialty(data: Raw) -> None:
+    data["conditions"][0]["specialty"] = "astrology"
+
+
+def _duplicate_specialty(data: Raw) -> None:
+    data["specialties"].append(copy.deepcopy(data["specialties"][0]))
+
+
 def _typo_in_trigger(data: Raw) -> None:
     data["red_flags"][0]["triggers"][0]["all_of"][0]["min_severty"] = "SEVERE"
 
@@ -136,6 +166,9 @@ def _typo_in_trigger(data: Raw) -> None:
         pytest.param(_duplicate_red_flag, "duplicate red flag", id="rf_duplicate"),
         pytest.param(_unknown_min_severity, "cannot be UNKNOWN", id="rf_unknown_min"),
         pytest.param(_typo_in_trigger, "invalid condition dataset", id="rf_typo"),
+        pytest.param(_no_specialties, "invalid condition dataset", id="no_specs"),
+        pytest.param(_unknown_condition_specialty, "astrology", id="unknown_spec"),
+        pytest.param(_duplicate_specialty, "duplicate specialty", id="dup_spec"),
     ],
 )
 def test_rejects_broken_dataset(
