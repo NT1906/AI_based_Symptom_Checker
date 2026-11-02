@@ -37,3 +37,4 @@ Run the Vitest component tests:
 cd client
 npm test src/components/result/ConditionList.test.tsx
 ```
+

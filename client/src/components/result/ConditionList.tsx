@@ -8,7 +8,7 @@
  */
 
 import React, { useState } from "react";
-import type { ConditionItem, ConditionListProps, ConfidenceTier } from "./types";
+import type { ConditionListProps, ConfidenceTier } from "./types";
 
 /**
  * Maps a technical ConfidenceTier to a human-readable display label.
@@ -208,3 +208,4 @@ export function ConditionList({
     </section>
   );
 }
+

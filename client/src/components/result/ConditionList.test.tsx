@@ -3,8 +3,7 @@
  *
  * Verifies:
  * - Happy path: Renders ranked conditions with names, confidence badges, and "why" lines.
- * - Confidence safety case: Strictly displays qualitative labels (Likely, Possible, Less likely)
- *   and never raw numerical probabilities or percentages (FR-23, AI_RULES §2.3).
+ * - Confidence safety case: Strictly displays qualitative labels (Likely, Possible, Less likely) and never raw numerical percentages (FR-23, AI_RULES §2.3).
  * - Empty state edge case: Handles empty conditions array with appropriate guidance.
  * - Detail accordion edge case: Toggles additional metadata (ICD-10 code, overview).
  * - Selection callback case: Dispatches onSelectCondition handler.
@@ -172,3 +171,4 @@ describe("ConditionList", () => {
     ).toBeInTheDocument();
   });
 });
+
