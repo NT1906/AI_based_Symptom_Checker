@@ -38,3 +38,4 @@ RESPONSE FORMAT (VALID JSON ONLY, NO MARKDOWN, NO CODEBLOCKS):
   "target_symptom": "canonical_symptom_name or null",
   "missing_field": "DURATION | SEVERITY | BODY_SITE | ONSET | ASSOCIATED or null"
 }
+

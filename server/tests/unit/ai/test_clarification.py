@@ -38,6 +38,20 @@ async def test_enforces_hard_cap_at_three_questions(provider: MockAiProvider) ->
 
 
 @pytest.mark.anyio
+async def test_enforces_hard_cap_from_state_clarification_count(
+    provider: MockAiProvider,
+) -> None:
+    """Halts clarification if state indicates 3 turns reached."""
+    state = {
+        "clarification_count": 3,
+        "symptoms": [{"name": "headache", "severity": "UNKNOWN", "duration": None}],
+    }
+    res = await provider.generate_clarification(state, already_asked=["Question 1?"])
+    assert res.should_ask is False
+    assert res.question is None
+
+
+@pytest.mark.anyio
 async def test_generates_onset_question_for_safety_critical_symptom(
     provider: MockAiProvider,
 ) -> None:
@@ -162,6 +176,30 @@ async def test_cycles_past_already_asked_questions(
 
 
 @pytest.mark.anyio
+async def test_deduplicates_despite_punctuation_and_casing_variations(
+    provider: MockAiProvider,
+) -> None:
+    """Recognizes already asked questions despite casing and punctuation differences."""
+    state = {
+        "symptoms": [
+            {
+                "name": "headache",
+                "severity": "UNKNOWN",
+                "duration": None,
+            }
+        ]
+    }
+    variation_q = (
+        "how severe would you describe the headache right now "
+        "for instance mild moderate or severe"
+    )
+    res = await provider.generate_clarification(state, already_asked=[variation_q])
+
+    assert res.should_ask is True
+    assert res.question_type == QuestionTypeEnum.DURATION
+
+
+@pytest.mark.anyio
 async def test_medical_safety_no_banned_wording(provider: MockAiProvider) -> None:
     """Verifies questions never contain diagnostic or prescribing terms."""
     banned_terms = [
@@ -181,3 +219,14 @@ async def test_medical_safety_no_banned_wording(provider: MockAiProvider) -> Non
     q_lower = res.question.lower()
     for term in banned_terms:
         assert term not in q_lower, f"Banned medical term '{term}' detected in question"
+
+
+@pytest.mark.anyio
+async def test_empty_symptoms_returns_context_question(
+    provider: MockAiProvider,
+) -> None:
+    """Prompts the patient to describe symptoms when no symptoms are present."""
+    res = await provider.generate_clarification({"symptoms": []}, already_asked=[])
+    assert res.should_ask is True
+    assert res.question_type == QuestionTypeEnum.CONTEXT
+    assert "detail" in res.question.lower()

@@ -12,6 +12,7 @@ from collections.abc import Sequence
 from typing import Any
 
 from app.services.ai.schemas import (
+    Duration,
     ExtractedSymptom,
     MissingFieldEnum,
     MissingInfoItem,
@@ -27,22 +28,27 @@ SITE_SENSITIVE_SYMPTOMS: frozenset[str] = frozenset(
         "hives",
         "fluid_filled_blisters",
         "pimples",
+        "small_itchy_bumps",
+        "ring_shaped_rash",
         "skin_swelling",
         "joint_pain",
         "joint_swelling",
         "abdominal_pain",
         "lower_right_abdominal_pain",
         "upper_right_abdominal_pain",
+        "lower_abdominal_pain",
         "abdominal_cramping",
         "lower_back_pain",
         "back_pain",
         "flank_pain",
         "ear_pain",
         "eye_pain",
+        "pain_behind_eyes",
         "swollen_neck_glands",
         "muscle_stiffness",
         "spreading_redness",
         "non_blanching_rash",
+        "saddle_numbness",
     }
 )
 
@@ -50,6 +56,9 @@ SITE_SENSITIVE_SYMPTOMS: frozenset[str] = frozenset(
 SAFETY_CRITICAL_SYMPTOMS: frozenset[str] = frozenset(
     {
         "chest_pain",
+        "chest_tightness",
+        "pressure_or_squeezing_in_chest",
+        "pain_spreading_to_arm_jaw_or_back",
         "sudden_severe_headache",
         "facial_droop",
         "one_sided_weakness",
@@ -57,17 +66,26 @@ SAFETY_CRITICAL_SYMPTOMS: frozenset[str] = frozenset(
         "sudden_vision_loss",
         "difficulty_breathing",
         "shortness_of_breath",
+        "bluish_lips_or_face",
+        "throat_or_tongue_swelling",
         "vomiting_blood",
+        "coughing_blood",
         "black_or_bloody_stool",
         "thoughts_of_self_harm",
         "seizure",
         "stiff_neck",
+        "non_blanching_rash",
+        "loss_of_bladder_or_bowel_control",
+        "saddle_numbness",
+        "confusion",
     }
 )
 
 
 def _to_extracted_symptom(raw: ExtractedSymptom | dict[str, Any]) -> ExtractedSymptom:
     """Normalize raw input dict or ExtractedSymptom into a typed ExtractedSymptom.
+
+    Defensively sanitizes names, severities, and non-conforming structures.
 
     Args:
         raw: Raw dict representation or existing ExtractedSymptom model.
@@ -77,7 +95,30 @@ def _to_extracted_symptom(raw: ExtractedSymptom | dict[str, Any]) -> ExtractedSy
     """
     if isinstance(raw, ExtractedSymptom):
         return raw
-    return ExtractedSymptom.model_validate(raw)
+
+    clean_dict = dict(raw)
+    raw_name = clean_dict.get("name")
+    if not raw_name or not str(raw_name).strip():
+        clean_dict["name"] = "unspecified_symptom"
+    else:
+        clean_dict["name"] = str(raw_name).strip().lower()
+
+    # Normalize severity if invalid or string
+    sev = clean_dict.get("severity")
+    if isinstance(sev, str):
+        try:
+            clean_dict["severity"] = SeverityEnum(sev.upper())
+        except ValueError:
+            clean_dict["severity"] = SeverityEnum.UNKNOWN
+    elif not isinstance(sev, SeverityEnum):
+        clean_dict["severity"] = SeverityEnum.UNKNOWN
+
+    # Normalize duration if invalid
+    dur = clean_dict.get("duration")
+    if dur is not None and not isinstance(dur, (Duration, dict)):
+        clean_dict["duration"] = None
+
+    return ExtractedSymptom.model_validate(clean_dict)
 
 
 def detect_missing_information(

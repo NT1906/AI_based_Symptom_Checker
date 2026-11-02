@@ -263,3 +263,67 @@ async def test_simulated_generic_error_raises_ai_error(
     """Testing hook __SIMULATE_ERROR__ raises base AiError."""
     with pytest.raises(AiError, match="upstream"):
         await provider.extract_symptoms("I have a cough __SIMULATE_ERROR__")
+
+
+# --- Edge Cases & Robustness ---
+
+
+@pytest.mark.anyio
+async def test_parses_independent_severities_across_symptoms_in_clauses(
+    provider: MockAiProvider,
+) -> None:
+    """Isolates severity per symptom clause to avoid severe overriding mild."""
+    res = await provider.extract_symptoms("I have severe chest pain and mild headache")
+    sym_map = {s.name: s.severity for s in res.symptoms}
+    assert sym_map.get("chest_pain") == SeverityEnum.SEVERE
+    assert sym_map.get("headache") == SeverityEnum.MILD
+
+
+@pytest.mark.anyio
+async def test_compound_negation_ignores_negated_symptoms(
+    provider: MockAiProvider,
+) -> None:
+    """Compound negation excludes negated symptoms while extracting affirmative ones."""
+    res = await provider.extract_symptoms(
+        "I don't have fever or cough, but I have chest pain"
+    )
+    names = {s.name for s in res.symptoms}
+    assert "chest_pain" in names
+    assert "fever" not in names
+    assert "cough" not in names
+
+
+@pytest.mark.anyio
+async def test_systemic_symptoms_do_not_absorb_locations(
+    provider: MockAiProvider,
+) -> None:
+    """Systemic symptoms like fever do not get assigned nearby anatomical sites."""
+    res = await provider.extract_symptoms("I have a high fever and upper chest pain")
+    fever_sym = next(s for s in res.symptoms if s.name == "fever")
+    chest_sym = next(s for s in res.symptoms if s.name == "chest_pain")
+
+    assert fever_sym.body_site is None
+    assert chest_sym.body_site == "upper chest"
+
+
+@pytest.mark.anyio
+async def test_today_alone_does_not_produce_duration(
+    provider: MockAiProvider,
+) -> None:
+    """Phrase 'today' sets onset='today' but leaves duration unset unless explicit."""
+    res = await provider.extract_symptoms("I have chest pain today")
+    sym = res.symptoms[0]
+    assert sym.name == "chest_pain"
+    assert sym.onset == "today"
+    assert sym.duration is None
+
+
+@pytest.mark.anyio
+async def test_longer_phrases_suppress_contained_substring_matches(
+    provider: MockAiProvider,
+) -> None:
+    """Sudden severe headache does not produce duplicate generic headache."""
+    res = await provider.extract_symptoms("I have sudden severe headache since 1 hour")
+    names = [s.name for s in res.symptoms]
+    assert "sudden_severe_headache" in names
+    assert "headache" not in names

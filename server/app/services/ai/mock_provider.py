@@ -293,11 +293,11 @@ class MockAiProvider:
                 if any(s <= start and end <= e for s, e in matched_spans):
                     continue
 
-                # Exclude explicitly negated mentions (e.g. 'no fever', 'no rash')
+                # Exclude explicitly negated mentions (e.g. 'no fever', 'no cough')
                 negation_pattern = (
                     r"\b(?:no|not|neither|nor|without|never|don't have|"
-                    r"do not have|don't feel|dont have)\s+"
-                    rf"(?:any\s+|experiencing\s+)?{re.escape(phrase)}\b"
+                    r"do not have|don't feel|dont have)\s+[^.?!,;]{0,40}\b"
+                    rf"{re.escape(phrase)}\b"
                 )
                 if re.search(negation_pattern, cleaned):
                     continue
@@ -353,7 +353,9 @@ class MockAiProvider:
             ClarificationResult with conversational question or should_ask=False.
         """
         # Enforce hard cap of 3 questions
-        if len(already_asked) >= MAX_CLARIFICATION_QUESTIONS:
+        turn_count = len(already_asked)
+        context_count = int(structured_state.get("clarification_count", 0))
+        if max(turn_count, context_count) >= MAX_CLARIFICATION_QUESTIONS:
             return ClarificationResult(
                 should_ask=False,
                 question=None,
@@ -385,6 +387,11 @@ class MockAiProvider:
                 target_symptom=None,
                 missing_field=None,
             )
+
+        def _normalize_q(q: str) -> str:
+            return re.sub(r"[^\w\s]", "", q).lower().strip()
+
+        normalized_asked = {_normalize_q(q) for q in already_asked if q}
 
         # Evaluate candidate questions for each detected gap
         for gap in gaps:
@@ -421,8 +428,8 @@ class MockAiProvider:
                 )
                 q_type = QuestionTypeEnum.CONTEXT
 
-            # Skip if already asked
-            if candidate_question not in already_asked:
+            # Skip if already asked (casing and punctuation insensitive)
+            if _normalize_q(candidate_question) not in normalized_asked:
                 return ClarificationResult(
                     should_ask=True,
                     question=candidate_question,
@@ -436,7 +443,7 @@ class MockAiProvider:
             "Are you noticing any other symptoms, such as fever, dizziness, or"
             " shortness of breath?"
         )
-        if assoc_question not in already_asked:
+        if _normalize_q(assoc_question) not in normalized_asked:
             return ClarificationResult(
                 should_ask=True,
                 question=assoc_question,
@@ -466,10 +473,12 @@ class MockAiProvider:
         """
         target_text = text
         if phrase and phrase in text:
-            idx = text.find(phrase)
-            start = max(0, idx - 40)
-            end = min(len(text), idx + len(phrase) + 40)
-            target_text = text[start:end]
+            # Isolate the clause containing the symptom phrase to avoid attribute bleed
+            clauses = re.split(r"[,;]|(?:\b(?:and|but|while|with|also)\b)", text)
+            for clause in clauses:
+                if phrase in clause:
+                    target_text = clause
+                    break
 
         severe_terms = [
             "severe",
@@ -518,7 +527,7 @@ class MockAiProvider:
             return Duration(value=2.0, unit=DurationUnitEnum.DAY)
         if "for a week" in text or "one week" in text:
             return Duration(value=1.0, unit=DurationUnitEnum.WEEK)
-        if "all day" in text or "today" in text:
+        if "all day" in text:
             return Duration(value=1.0, unit=DurationUnitEnum.DAY)
 
         match = re.search(
