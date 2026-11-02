@@ -1,10 +1,10 @@
-# Knowledge Service: Symptom Normalization & Vocabulary
+# Knowledge Service: Symptom Normalization, Vocabulary & Curated Glossary
 
-**Owner:** Kavya (knowledge) · **Task:** S1-KAV-1 · **Requirements:** FR-03
+**Owner:** Kavya (knowledge) · **Tasks:** S1-KAV-1, S1-KAV-3 · **Requirements:** FR-03, FR-18
 
-The knowledge service provides deterministic mapping between natural colloquial/lay language (including Indian transliterated Hinglish) and the 100 canonical clinical symptoms defined in `symptoms.json` (aligned with `conditions.json`).
-
-This service satisfies requirement **FR-03** by guaranteeing that whether a symptom originates from unstructured chat input, AI extraction, or a selectable list, it deterministically resolves to an identical canonical identifier before reaching condition prediction or the risk engine.
+The knowledge service provides two core clinical capabilities for the AI-Based Symptom Checker:
+1. **Deterministic Symptom Normalization (FR-03 / S1-KAV-1):** Maps colloquial lay language (including Indian transliterated Hinglish) to the 100 canonical clinical symptoms in `symptoms.json` (aligned with `conditions.json`).
+2. **Curated Symptom Glossary (FR-18 / S1-KAV-3):** Provides plain-language, non-diagnostic symptom definitions, red-flag care guidance, and keyword search for UI tooltips, user education, and intent handling.
 
 ---
 
@@ -14,6 +14,7 @@ Import from `app.services.knowledge`:
 
 ```python
 from app.services.knowledge import (
+    # Symptom Normalizer (FR-03)
     SymptomNormalizer,
     get_normalizer,
     normalize_symptom,
@@ -21,17 +22,92 @@ from app.services.knowledge import (
     CanonicalSymptom,
     NormalizedSymptom,
     TextMatchSpan,
+    # Curated Glossary (FR-18)
+    SymptomGlossary,
+    get_glossary,
+    lookup_glossary,
+    get_symptom_definition,
+    GlossaryEntry,
 )
 ```
 
-### 1.1 Direct Phrase Normalization
+---
+
+## 2. Curated Symptom Glossary (FR-18)
+
+The glossary provides empathetic, plain-language explanations of all 100 canonical symptoms at a 6th-to-8th grade reading level, reviewed for clinical safety and safe medical wording.
+
+### 2.1 Direct Definition & Entry Lookup
+
+```python
+# Functional lookup by canonical ID, display name, or lay term
+entry = lookup_glossary("chest_pain")
+assert entry is not None
+assert entry.id == "chest_pain"
+assert entry.body_system == "cardiovascular"
+
+# Retrieve definition string directly
+definition = get_symptom_definition("tummy ache")
+assert "stomach" in definition.lower()
+
+# Transliterated Hinglish lookup
+hinglish_entry = lookup_glossary("bukhar")
+assert hinglish_entry.id == "fever"
+```
+
+### 2.2 Keyword Search & Ranking
+
+Search across clinical names, lay terms, and plain-language definitions:
+
+```python
+glossary = get_glossary()
+
+# Returns ranked list of up to limit results
+results = glossary.search("cough", limit=5)
+assert results[0].id == "cough"
+
+# Prefix search
+prefix_results = glossary.search("palp", limit=3)
+assert any(r.id == "palpitations" for r in prefix_results)
+```
+
+### 2.3 Body System Filtering
+
+Browse or filter symptom entries by anatomical category:
+
+```python
+glossary = get_glossary()
+
+# Filter by system
+respiratory_entries = glossary.list_entries(body_system="respiratory")
+assert len(respiratory_entries) == 7
+
+# List all 100 canonical entries sorted alphabetically
+all_entries = glossary.list_entries()
+assert len(all_entries) == 100
+```
+
+### 2.4 Glossary Schema (`GlossaryEntry`)
+
+| Field | Type | Description |
+|---|---|---|
+| `id` | `str` | Canonical snake_case symptom ID aligned with `symptoms.json` |
+| `name` | `str` | Clinical display name |
+| `body_system` | `str` | Anatomical body system |
+| `plain_definition` | `str` | Plain-language, non-diagnostic description |
+| `when_to_seek_care` | `str` | Actionable guidance on when medical evaluation is advised |
+| `lay_terms` | `tuple[str, ...]` | Colloquial synonyms and search aliases |
+
+---
+
+## 3. Symptom Normalization (FR-03)
+
+### 3.1 Direct Phrase Normalization
 
 ```python
 # Returns full NormalizedSymptom schema
 result = normalize_symptom("tummy ache")
 assert result.canonical_id == "abdominal_pain"
-assert result.canonical_name == "Abdominal pain"
-assert result.body_system == "gastrointestinal"
 assert result.confidence == 1.0
 
 # Shortcut returning string ID only
@@ -39,51 +115,31 @@ canonical_id = normalize_symptom_id("badan dard")
 assert canonical_id == "body_aches"
 ```
 
-### 1.2 Free-Text Mention Extraction
+### 3.2 Free-Text Mention Extraction
 
 ```python
 normalizer = get_normalizer()
 text = "I have a severe headache and high temperature since yesterday"
 matches = normalizer.extract_symptoms_from_text(text)
 
-# Returns non-overlapping TextMatchSpan objects ordered by appearance:
-# - TextMatchSpan(canonical_id="headache", matched_term="headache", start_char=16, end_char=24)
-# - TextMatchSpan(canonical_id="fever", matched_term="high temperature", start_char=29, end_char=45)
-```
-
-### 1.3 Vocabulary Lookups
-
-```python
-normalizer = get_normalizer()
-
-# Lookup by ID
-symptom = normalizer.get_by_id("fever")
-assert symptom.name == "Fever"
-assert "bukhar" in symptom.lay_terms
-
-# Filter by anatomical body system
-respiratory_symptoms = normalizer.get_by_body_system("respiratory")
-
-# Verify canonical ID validity
-assert normalizer.is_canonical_id("chest_pain") is True
-assert normalizer.is_canonical_id("made_up_symptom") is False
+# Returns non-overlapping TextMatchSpan objects ordered by appearance
 ```
 
 ---
 
-## 2. Medical Safety and Design Principles
+## 4. Medical Safety & Clinical Design Principles
 
-1. **100% Deterministic:** No LLMs, randomness, or heuristics are involved. Same input always maps to the same output.
-2. **Longest-Match Priority:** In free-text extraction, compound terms match first (e.g., `"sudden severe headache"` takes precedence over `"headache"`).
-3. **Word-Boundary Isolation:** Matching requires word boundaries `\b` to prevent false positive substring collisions (e.g., `"cold"` will not match within `"scold"`, `"sweat"` will not match within `"sweater"`).
-4. **Hinglish Support:** Indian colloquial Romanized transliterations (`"pet me dard"`, `"bukhar"`, `"rang udd gaya"`) are directly supported.
-5. **No Diagnosis:** This service only normalizes clinical symptom terms; it never performs diagnostic inferences.
+1. **Strictly Non-Diagnostic (Rule §2):** Definitions describe *what a symptom feels like* and everyday contexts. They never state diagnostic conclusions ("You have...", "Diagnosis:").
+2. **Zero Medication Prescriptions:** Glossary entries never prescribe drugs, dosages, or pharmaceutical treatments.
+3. **Emergency Red-Flag Guidance:** Critical conditions (chest pain, stroke signs, breathing difficulty, severe bleeding, self-harm) explicitly highlight immediate emergency services (`112`).
+4. **100% Deterministic:** Lookup and normalization use fast, in-memory hash indices with zero LLM dependence in the critical path.
+5. **Vocabulary Parity:** Every entry in `glossary.json` strictly corresponds to an ID in `symptoms.json` and `conditions.json`.
 
 ---
 
-## 3. Running Tests
+## 5. Running Tests
 
-Run the dedicated knowledge unit tests:
+Run the full unit test suite for the knowledge service:
 
 ```bash
 # In the server directory:
