@@ -4,8 +4,9 @@ Responsibilities:
     - Configure standard library logging and structlog processors.
     - Format log records as structured JSON for searchability and auditability.
     - Prevent logging of sensitive health data, credentials, and message content.
+    - Silence default uvicorn access logger to guarantee uniform access logging.
 
-Owner: Vivek (core) · Task: S0-VIV-1 · Requirements: NFR-08, NFR-10
+Owner: Vivek (core) · Task: S0-VIV-1, S1-VIV-2 · Requirements: NFR-05, NFR-08, NFR-10
 """
 
 import logging
@@ -66,6 +67,13 @@ def configure_logging(log_level: str = "INFO", json_format: bool = True) -> None
     root_logger.handlers.clear()
     root_logger.addHandler(handler)
     root_logger.setLevel(level)
+
+    # Why: Silence uvicorn access logger so access logging is unified and
+    # handled solely by RequestIdMiddleware without query strings or IPs.
+    uvicorn_access = logging.getLogger("uvicorn.access")
+    uvicorn_access.handlers.clear()
+    uvicorn_access.propagate = False
+    uvicorn_access.disabled = True
 
 
 def get_logger(name: str | None = None) -> structlog.stdlib.BoundLogger:
