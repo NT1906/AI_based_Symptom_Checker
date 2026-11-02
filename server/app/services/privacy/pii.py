@@ -13,6 +13,7 @@ import unicodedata
 MAX_TEXT_LENGTH = 20_000
 MAX_KNOWN_NAMES = 32
 MAX_NAME_LENGTH = 100
+MAX_UNTRUSTED_NAME_WORDS = 2
 
 # Explicit contexts avoid treating "I am dizzy" as a person's name. This is
 # deliberately not a universal name recognizer; see README for residual risk.
@@ -22,7 +23,8 @@ _NAME_WORD = (
 )
 _NAME = re.compile(
     rf"\b(?P<label>my\s+name\s+is\s+|(?:patient\s+)?name\s*:\s*)"
-    rf"(?P<value>{_NAME_WORD}(?:[ \t]+{_NAME_WORD}){{0,3}})",
+    rf"(?:(?:dr|mr|mrs|ms|miss|prof)\.?[ \t]+)?"
+    rf"(?P<value>{_NAME_WORD}(?:[ \t]+{_NAME_WORD})*)",
     re.IGNORECASE,
 )
 _EMAIL = re.compile(r"(?<![\w.+-])[\w.!#$%&'*+/=?^`{|}~-]+@[\w-]+(?:\.[\w-]+)+")
@@ -64,6 +66,15 @@ def _validate_names(known_names: tuple[str, ...]) -> tuple[str, ...]:
     return tuple(sorted(set(normalized), key=len, reverse=True))
 
 
+def _redact_labelled_name(match: re.Match[str]) -> str:
+    """Reject a long unknown span rather than guess where symptoms begin."""
+    # A period alone cannot distinguish a multiword name from a name followed
+    # by symptoms. Do not silently delete the whole span or leak a suffix.
+    if len(match["value"].split()) > MAX_UNTRUSTED_NAME_WORDS:
+        raise ValueError("Labelled name boundary is ambiguous.")
+    return match["label"] + "[NAME]"
+
+
 def scrub_pii(text: str, *, known_names: tuple[str, ...] = ()) -> str:
     """Replace supported identifiers with stable category placeholders.
 
@@ -77,7 +88,8 @@ def scrub_pii(text: str, *, known_names: tuple[str, ...] = ()) -> str:
         Empty text stays empty. This function neither logs nor stores input.
 
     Raises:
-        ValueError: Input type, length or known-name configuration is invalid.
+        ValueError: Input type, length or known-name configuration is invalid,
+            or a labelled name span has an ambiguous boundary.
             Errors never include the submitted text or names.
 
     Example:
@@ -103,8 +115,9 @@ def scrub_pii(text: str, *, known_names: tuple[str, ...] = ()) -> str:
         result = pattern.sub(placeholder, result)
     result = _LABELED_ID.sub(lambda m: m["label"] + "[ID]", result)
     result = _PHONE.sub("[PHONE]", result)
-    result = _NAME.sub(lambda m: m["label"] + "[NAME]", result)
+    # Trusted complete names must precede heuristics, which could otherwise
+    # split a long name and leave an identifying suffix in outbound text.
     for name in names:
         pattern = re.compile(r"(?<!\w)" + re.escape(name) + r"(?!\w)", re.I)
         result = pattern.sub("[NAME]", result)
-    return result
+    return _NAME.sub(_redact_labelled_name, result)
