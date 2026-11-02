@@ -11,6 +11,7 @@ from app.schemas.assessment import (
     AssessmentCreate,
     AssessmentRead,
     AssessmentStateResponse,
+    ProcessResult,
 )
 from app.schemas.base import SchemaBase
 from app.schemas.condition import Condition
@@ -56,6 +57,7 @@ __all__ = [
     "MessageRead",
     "MessageRole",
     "MessageType",
+    "ProcessResult",
     "ReferralInfo",
     "RiskLevel",
     "SchemaBase",
