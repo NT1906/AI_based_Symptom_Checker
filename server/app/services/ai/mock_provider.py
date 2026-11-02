@@ -323,6 +323,39 @@ class MockAiProvider:
                     )
                 )
 
+        # Clarification reply resolution: if no new symptom phrase appears in the
+        # current message but conversation history references an ongoing symptom,
+        # attribute reply properties (severity, duration, onset) to that symptom.
+        if not extracted_symptoms and conversation_history:
+            for phrase in sorted_phrases:
+                canonical_name = FIXTURE_SYMPTOM_MAP[phrase]
+                if (
+                    phrase in conversation_history.lower()
+                    or canonical_name.replace("_", " ") in conversation_history.lower()
+                ):
+                    reply_sev = self._parse_severity(cleaned)
+                    reply_dur = self._parse_duration(cleaned)
+                    reply_onset = self._parse_onset(cleaned)
+                    reply_site = self._parse_location(cleaned, canonical_name)
+                    if (
+                        reply_sev != SeverityEnum.UNKNOWN
+                        or reply_dur is not None
+                        or reply_onset is not None
+                        or reply_site is not None
+                    ):
+                        extracted_symptoms.append(
+                            ExtractedSymptom(
+                                name=canonical_name,
+                                severity=reply_sev,
+                                duration=reply_dur,
+                                onset=reply_onset,
+                                body_site=reply_site,
+                                body_location=reply_site,
+                                confidence=0.95,
+                            )
+                        )
+                        break
+
         # Missing-information detection engine integration
         requires_clarification, clarification_reason = should_request_clarification(
             extracted_symptoms
@@ -487,6 +520,8 @@ class MockAiProvider:
             "worst",
             "unbearable",
             "extreme",
+            "intense",
+            "excruciating",
             "tez",
             "bahut tez",
             "bahut zyada",
@@ -495,7 +530,16 @@ class MockAiProvider:
         if any(w in target_text for w in severe_terms):
             return SeverityEnum.SEVERE
         if any(
-            w in target_text for w in ["moderate", "pretty bad", "noticeable", "kafi"]
+            w in target_text
+            for w in [
+                "moderate",
+                "pretty bad",
+                "noticeable",
+                "medium",
+                "kafi",
+                "average",
+                "tolerable",
+            ]
         ):
             return SeverityEnum.MODERATE
         if any(
@@ -507,6 +551,11 @@ class MockAiProvider:
                 "minor",
                 "thoda sa",
                 "halka",
+                "not bad",
+                "not severe",
+                "not too bad",
+                "bearable",
+                "low",
             ]
         ):
             return SeverityEnum.MILD

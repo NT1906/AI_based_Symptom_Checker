@@ -105,3 +105,25 @@ def test_handles_dictionary_inputs() -> None:
     assert MissingFieldEnum.SEVERITY in missing_fields
     assert MissingFieldEnum.DURATION in missing_fields
     assert MissingFieldEnum.BODY_SITE in missing_fields
+
+
+def test_red_flag_severity_triggers_priority_1_clarification() -> None:
+    """Symptoms with severe red-flag triggers require severity at Priority 1."""
+    symptoms = [
+        ExtractedSymptom(
+            name="abdominal_pain",
+            severity=SeverityEnum.UNKNOWN,
+            duration=Duration(value=1.0, unit=DurationUnitEnum.DAY),
+            body_site="abdomen",
+        )
+    ]
+    gaps = detect_missing_information(symptoms)
+    # Severity must be Priority 1 so risk engine won't assume worst-case URGENT
+    sev_gap = next(g for g in gaps if g.missing_field == MissingFieldEnum.SEVERITY)
+    assert sev_gap.priority == 1
+    assert "emergency severity" in sev_gap.reason
+
+    should_ask, reason = should_request_clarification(symptoms)
+    assert should_ask is True
+    assert reason is not None
+    assert "emergency severity" in reason

@@ -10,6 +10,7 @@ import pytest
 from app.services.ai.factory import get_ai_gateway
 from app.services.ai.gateway import AiError, AiGateway
 from app.services.ai.mock_provider import MockAiProvider
+from app.services.privacy.gateway import PrivacyAiGateway
 
 
 def test_mock_provider_implements_ai_gateway_protocol() -> None:
@@ -21,13 +22,13 @@ def test_mock_provider_implements_ai_gateway_protocol() -> None:
 def test_factory_returns_mock_provider_by_default(
     monkeypatch: pytest.MonkeyPatch,
 ) -> None:
-    """Factory returns MockAiProvider when AI_PROVIDER is unset or set to 'mock'."""
+    """Factory returns PrivacyAiGateway-wrapped provider when AI_PROVIDER is unset."""
     monkeypatch.delenv("AI_PROVIDER", raising=False)
     # Clear lru_cache to ensure fresh resolution
     get_ai_gateway.cache_clear()
 
     gateway = get_ai_gateway()
-    assert isinstance(gateway, MockAiProvider)
+    assert isinstance(gateway, PrivacyAiGateway)
     assert isinstance(gateway, AiGateway)
 
 

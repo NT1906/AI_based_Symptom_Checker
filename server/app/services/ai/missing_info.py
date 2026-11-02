@@ -81,6 +81,19 @@ SAFETY_CRITICAL_SYMPTOMS: frozenset[str] = frozenset(
     }
 )
 
+# Symptoms whose red-flag triggers require 'severe' presentation.
+# In the risk engine, unknown severity on these triggers assumes worst-case URGENT.
+# Clarification MUST ask about severity to prevent false-positive emergency triage.
+RED_FLAG_SEVERITY_SYMPTOMS: frozenset[str] = frozenset(
+    {
+        "abdominal_pain",
+        "lower_right_abdominal_pain",
+        "upper_right_abdominal_pain",
+        "lower_abdominal_pain",
+        "stomach_pain",
+    }
+)
+
 
 def _to_extracted_symptom(raw: ExtractedSymptom | dict[str, Any]) -> ExtractedSymptom:
     """Normalize raw input dict or ExtractedSymptom into a typed ExtractedSymptom.
@@ -154,6 +167,9 @@ def detect_missing_information(
         name = sym.name.lower()
         is_primary = idx == 0
         is_safety_critical = name in SAFETY_CRITICAL_SYMPTOMS
+        is_rf_severity = name in RED_FLAG_SEVERITY_SYMPTOMS or any(
+            part in name for part in ("abdominal", "stomach")
+        )
 
         # Check 1: Onset on safety-critical symptoms (e.g. sudden onset of chest pain)
         if is_safety_critical and not sym.onset:
@@ -171,15 +187,24 @@ def detect_missing_information(
 
         # Check 2: Severity check
         if sym.severity == SeverityEnum.UNKNOWN:
-            priority = 1 if is_safety_critical else (2 if is_primary else 4)
+            # Symptoms with severe red-flag triggers must clarify severity at
+            # Priority 1 to prevent the risk engine from assuming worst-case URGENT.
+            priority = (
+                1
+                if (is_safety_critical or is_rf_severity)
+                else (2 if is_primary else 4)
+            )
             items.append(
                 MissingInfoItem(
                     symptom_name=sym.name,
                     missing_field=MissingFieldEnum.SEVERITY,
                     priority=priority,
                     reason=(
-                        f"Clinical severity for '{sym.name}' is unknown; needed to"
-                        " differentiate self-care from physician consult."
+                        f"Clinical severity for '{sym.name}' is unknown; clarification"
+                        " is required to prevent assuming emergency severity."
+                        if (is_safety_critical or is_rf_severity)
+                        else f"Clinical severity for '{sym.name}' is unknown; needed"
+                        " to differentiate self-care from physician consult."
                     ),
                 )
             )
