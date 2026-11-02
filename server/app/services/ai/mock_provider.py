@@ -3,10 +3,12 @@
 Responsibilities:
     - Return realistic, fixture-backed extractions when AI_PROVIDER=mock.
     - Support comprehensive canonical symptom coverage aligned with symptoms.json.
+    - Detect missing clinical information and generate targeted clarification questions.
+    - Enforce a hard maximum of 3 clarification questions (FR-04, FR-19, FR-20).
     - Allow teammates and CI to run tests without OpenAI API keys.
     - Support deterministic failure simulation for error handling tests.
 
-Owner: Nishith · Task: S1-NIT-1 · Requirements: FR-03, FR-17, NFR-05
+Owner: Nishith · Task: S1-NIT-2 · Requirements: FR-04, FR-19, FR-20, NFR-05
 """
 
 import json
@@ -16,12 +18,19 @@ import re
 from typing import Any
 
 from app.services.ai.gateway import AiError, AiTimeoutError, AiValidationError
+from app.services.ai.missing_info import (
+    SITE_SENSITIVE_SYMPTOMS,
+    detect_missing_information,
+    should_request_clarification,
+)
 from app.services.ai.schemas import (
     ClarificationResult,
     Duration,
     DurationUnitEnum,
     ExtractedSymptom,
     ExtractionResult,
+    MissingFieldEnum,
+    QuestionTypeEnum,
     SeverityEnum,
 )
 
@@ -83,6 +92,7 @@ BASE_FIXTURE_MAP: dict[str, str] = {
     "back pain": "lower_back_pain",
     "kamar dard": "lower_back_pain",
     "muscle stiffness": "muscle_stiffness",
+    "saddle numbness": "saddle_numbness",
     # ENT
     "runny nose": "runny_nose",
     "nasal congestion": "nasal_congestion",
@@ -182,29 +192,34 @@ BASE_FIXTURE_MAP: dict[str, str] = {
 def _load_canonical_vocabulary() -> dict[str, str]:
     """Load canonical symptoms and lay terms from dataset if available.
 
+    Checks both the deployed server knowledge directory and the repository ml directory.
+
     Returns:
         Consolidated dictionary mapping phrases to canonical symptom IDs.
     """
     mapping = dict(BASE_FIXTURE_MAP)
-    dataset_path = (
+    candidates = [
+        Path(__file__).resolve().parents[1] / "knowledge" / "data" / "symptoms.json",
         Path(__file__).resolve().parents[4]
         / "ml"
         / "datasets"
         / "symptoms"
-        / "symptoms.json"
-    )
-    if dataset_path.exists():
-        try:
-            with dataset_path.open(encoding="utf-8") as f:
-                data = json.load(f)
-                for item in data.get("symptoms", []):
-                    symptom_id = item["id"]
-                    mapping[symptom_id.replace("_", " ")] = symptom_id
-                    mapping[item["name"].lower()] = symptom_id
-                    for lay in item.get("lay_terms", []):
-                        mapping[lay.lower()] = symptom_id
-        except Exception as exc:
-            logger.warning("Failed to load symptoms.json: %s", exc)
+        / "symptoms.json",
+    ]
+    for path in candidates:
+        if path.exists():
+            try:
+                with path.open(encoding="utf-8") as f:
+                    data = json.load(f)
+                    for item in data.get("symptoms", []):
+                        symptom_id = item["id"]
+                        mapping[symptom_id.replace("_", " ")] = symptom_id
+                        mapping[item["name"].lower()] = symptom_id
+                        for lay in item.get("lay_terms", []):
+                            mapping[lay.lower()] = symptom_id
+                break
+            except Exception as exc:
+                logger.warning("Failed to load symptoms file at %s: %s", path, exc)
     return mapping
 
 
@@ -261,30 +276,39 @@ class MockAiProvider:
 
         extracted_symptoms: list[ExtractedSymptom] = []
         detected_canonical_names: set[str] = set()
+        matched_spans: list[tuple[int, int]] = []
 
         # Sort keys by length descending to match longest phrases first
         # (e.g. 'sudden severe headache' before 'headache')
         sorted_phrases = sorted(FIXTURE_SYMPTOM_MAP.keys(), key=len, reverse=True)
 
-        # Extract symptoms from fixture dictionary
         for phrase in sorted_phrases:
             canonical_name = FIXTURE_SYMPTOM_MAP[phrase]
-            # Word boundary matching
             pattern = rf"(?:\b|^){re.escape(phrase)}(?:\b|$)"
-            if (
-                re.search(pattern, cleaned)
-                and canonical_name not in detected_canonical_names
-            ):
+            match = re.search(pattern, cleaned)
+            if match and canonical_name not in detected_canonical_names:
+                start, end = match.span()
+
+                # Check if this match is contained within an already accepted span
+                if any(s <= start and end <= e for s, e in matched_spans):
+                    continue
+
+                # Exclude explicitly negated mentions (e.g. 'no fever', 'no rash')
+                negation_pattern = (
+                    r"\b(?:no|not|neither|nor|without|never|don't have|"
+                    r"do not have|don't feel|dont have)\s+"
+                    rf"(?:any\s+|experiencing\s+)?{re.escape(phrase)}\b"
+                )
+                if re.search(negation_pattern, cleaned):
+                    continue
+
+                matched_spans.append((start, end))
                 detected_canonical_names.add(canonical_name)
 
-                # Extract duration heuristics
+                # Extract attribute heuristics
                 duration = self._parse_duration(cleaned)
                 onset = self._parse_onset(cleaned)
-
-                # Extract severity heuristics
-                severity = self._parse_severity(cleaned)
-
-                # Extract location/body site heuristics
+                severity = self._parse_severity(cleaned, phrase=phrase)
                 body_site = self._parse_location(cleaned, canonical_name)
 
                 extracted_symptoms.append(
@@ -299,14 +323,10 @@ class MockAiProvider:
                     )
                 )
 
-        # Determine clarification need (if symptoms found but duration is missing)
-        requires_clarification = False
-        clarification_reason = None
-        if extracted_symptoms:
-            has_duration = any(s.duration is not None for s in extracted_symptoms)
-            if not has_duration:
-                requires_clarification = True
-                clarification_reason = "Duration information is missing."
+        # Missing-information detection engine integration
+        requires_clarification, clarification_reason = should_request_clarification(
+            extracted_symptoms
+        )
 
         return ExtractionResult(
             symptoms=extracted_symptoms,
@@ -322,7 +342,8 @@ class MockAiProvider:
     ) -> ClarificationResult:
         """Generate targeted follow-up question adhering to safety limits.
 
-        Enforces the max 3 question limit (FR-04, FR-19).
+        Enforces the max 3 question limit (FR-04, FR-19, FR-20) and prioritizes
+        critical information gaps (safety-critical red flags, duration, severity, site).
 
         Args:
             structured_state: Dictionary of currently collected symptom state.
@@ -338,6 +359,7 @@ class MockAiProvider:
                 question=None,
                 question_type=None,
                 target_symptom=None,
+                missing_field=None,
             )
 
         symptoms = structured_state.get("symptoms", [])
@@ -348,60 +370,107 @@ class MockAiProvider:
                     "Could you describe in a bit more detail what symptoms you are"
                     " feeling?"
                 ),
-                question_type="CONTEXT",
+                question_type=QuestionTypeEnum.CONTEXT,
                 target_symptom=None,
+                missing_field=None,
             )
 
-        # Check for missing duration on the primary symptom
-        primary_symptom = symptoms[0]
-        raw_name = (
-            primary_symptom.get("name")
-            if isinstance(primary_symptom, dict)
-            else getattr(primary_symptom, "name", None)
-        )
-        symptom_name = str(raw_name) if raw_name else "this"
-        display_name = symptom_name.replace("_", " ")
+        # Detect and rank missing information gaps by clinical priority
+        gaps = detect_missing_information(symptoms)
+        if not gaps:
+            return ClarificationResult(
+                should_ask=False,
+                question=None,
+                question_type=None,
+                target_symptom=None,
+                missing_field=None,
+            )
 
-        # Candidate questions in priority order
-        duration_q = f"How long have you been experiencing the {display_name}?"
-        severity_q = (
-            "On a scale of mild, moderate, or severe, how would you describe the "
-            f"{display_name}?"
-        )
-        assoc_q = (
-            "Are you experiencing any other symptoms, such as fever, dizziness, or"
-            " shortness of breath?"
-        )
+        # Evaluate candidate questions for each detected gap
+        for gap in gaps:
+            display_name = gap.symptom_name.replace("_", " ")
+            candidate_question: str
+            q_type: QuestionTypeEnum
 
-        for candidate, q_type in [
-            (duration_q, "DURATION"),
-            (severity_q, "SEVERITY"),
-            (assoc_q, "ASSOCIATED"),
-        ]:
-            if candidate not in already_asked:
+            if gap.missing_field == MissingFieldEnum.ONSET:
+                candidate_question = (
+                    f"Did the {display_name} come on suddenly, "
+                    "or has it built up gradually?"
+                )
+                q_type = QuestionTypeEnum.ONSET
+            elif gap.missing_field == MissingFieldEnum.SEVERITY:
+                candidate_question = (
+                    f"How severe would you describe the {display_name} right now "
+                    "(for instance: mild, moderate, or severe)?"
+                )
+                q_type = QuestionTypeEnum.SEVERITY
+            elif gap.missing_field == MissingFieldEnum.DURATION:
+                candidate_question = (
+                    f"About how long have you been experiencing the {display_name}?"
+                )
+                q_type = QuestionTypeEnum.DURATION
+            elif gap.missing_field == MissingFieldEnum.BODY_SITE:
+                candidate_question = (
+                    f"Where specifically on your body are you experiencing "
+                    f"the {display_name}?"
+                )
+                q_type = QuestionTypeEnum.LOCATION
+            else:
+                candidate_question = (
+                    f"Could you share a few more details about the {display_name}?"
+                )
+                q_type = QuestionTypeEnum.CONTEXT
+
+            # Skip if already asked
+            if candidate_question not in already_asked:
                 return ClarificationResult(
                     should_ask=True,
-                    question=candidate,
+                    question=candidate_question,
                     question_type=q_type,
-                    target_symptom=symptom_name,
+                    target_symptom=gap.symptom_name,
+                    missing_field=gap.missing_field,
                 )
 
+        # Fallback candidate: general associated symptoms inquiry if not asked yet
+        assoc_question = (
+            "Are you noticing any other symptoms, such as fever, dizziness, or"
+            " shortness of breath?"
+        )
+        if assoc_question not in already_asked:
+            return ClarificationResult(
+                should_ask=True,
+                question=assoc_question,
+                question_type=QuestionTypeEnum.ASSOCIATED,
+                target_symptom=None,
+                missing_field=MissingFieldEnum.ASSOCIATED,
+            )
+
+        # All relevant questions have been asked; proceed to confirmation
         return ClarificationResult(
             should_ask=False,
             question=None,
             question_type=None,
             target_symptom=None,
+            missing_field=None,
         )
 
-    def _parse_severity(self, text: str) -> SeverityEnum:
+    def _parse_severity(self, text: str, phrase: str | None = None) -> SeverityEnum:
         """Heuristic severity parser from descriptive English and Hinglish text.
 
         Args:
             text: Lowercased user text.
+            phrase: Optional specific matched symptom phrase to check proximity.
 
         Returns:
             Corresponding SeverityEnum member.
         """
+        target_text = text
+        if phrase and phrase in text:
+            idx = text.find(phrase)
+            start = max(0, idx - 40)
+            end = min(len(text), idx + len(phrase) + 40)
+            target_text = text[start:end]
+
         severe_terms = [
             "severe",
             "terrible",
@@ -414,12 +483,14 @@ class MockAiProvider:
             "bahut zyada",
             "very bad",
         ]
-        if any(w in text for w in severe_terms):
+        if any(w in target_text for w in severe_terms):
             return SeverityEnum.SEVERE
-        if any(w in text for w in ["moderate", "pretty bad", "noticeable", "kafi"]):
+        if any(
+            w in target_text for w in ["moderate", "pretty bad", "noticeable", "kafi"]
+        ):
             return SeverityEnum.MODERATE
         if any(
-            w in text
+            w in target_text
             for w in [
                 "mild",
                 "slight",
@@ -441,7 +512,7 @@ class MockAiProvider:
         Returns:
             Parsed Duration instance or None.
         """
-        if "since yesterday" in text or "yesterday" in text:
+        if "since yesterday" in text or "from yesterday" in text:
             return Duration(value=1.0, unit=DurationUnitEnum.DAY)
         if "for a couple days" in text or "couple of days" in text:
             return Duration(value=2.0, unit=DurationUnitEnum.DAY)
@@ -450,7 +521,6 @@ class MockAiProvider:
         if "all day" in text or "today" in text:
             return Duration(value=1.0, unit=DurationUnitEnum.DAY)
 
-        # Match regex patterns like 'for 3 days', '2 weeks', '4 hours', 'past 3 days'
         match = re.search(
             r"(?:for|past|about)?\s*(\d+(?:\.\d+)?)\s*(hour|day|week|month|year)s?\b",
             text,
@@ -474,6 +544,10 @@ class MockAiProvider:
         Returns:
             Onset phrasing string or None.
         """
+        if "suddenly" in text or "sudden" in text:
+            return "sudden"
+        if "gradually" in text or "gradual" in text:
+            return "gradual"
         if "since yesterday" in text:
             return "since yesterday"
         if "this morning" in text:
@@ -498,8 +572,12 @@ class MockAiProvider:
         Returns:
             Body location string or None.
         """
-        # Specific contextual anatomical sites for key symptom types
-        if canonical_name in {"chest_pain", "chest_tightness"}:
+        chest_related = {
+            "chest_pain",
+            "chest_tightness",
+            "pressure_or_squeezing_in_chest",
+        }
+        if canonical_name in chest_related:
             if "upper chest" in text:
                 return "upper chest"
             if "chest" in text:
@@ -531,6 +609,7 @@ class MockAiProvider:
             "abdominal_pain",
             "lower_right_abdominal_pain",
             "upper_right_abdominal_pain",
+            "abdominal_cramping",
         }:
             if "lower right abdomen" in text:
                 return "lower right abdomen"
@@ -545,37 +624,38 @@ class MockAiProvider:
             if "stomach" in text:
                 return "stomach"
 
-        if canonical_name == "lower_back_pain":
+        if canonical_name in {"lower_back_pain", "back_pain"}:
             if "lower back" in text:
                 return "lower back"
             if "back" in text:
                 return "back"
 
-        # General fallbacks
-        locations = [
-            "lower right abdomen",
-            "upper right abdomen",
-            "lower abdomen",
-            "upper abdomen",
-            "abdomen",
-            "stomach",
-            "forehead",
-            "temple",
-            "back of head",
-            "left arm",
-            "right arm",
-            "left side",
-            "right side",
-            "upper chest",
-            "chest",
-            "throat",
-            "lower back",
-            "back",
-            "neck",
-            "eyes",
-            "skin",
-        ]
-        for loc in locations:
-            if loc in text:
-                return loc
+        if canonical_name in {"joint_pain", "joint_swelling"}:
+            joints = ["knee", "elbow", "wrist", "shoulder", "ankle", "hip", "finger"]
+            for j in joints:
+                if j in text:
+                    return j
+
+        if canonical_name in SITE_SENSITIVE_SYMPTOMS:
+            locations = [
+                "face",
+                "forehead",
+                "arm",
+                "left arm",
+                "right arm",
+                "leg",
+                "left leg",
+                "right leg",
+                "chest",
+                "back",
+                "neck",
+                "abdomen",
+                "stomach",
+                "hands",
+                "feet",
+            ]
+            for loc in locations:
+                if loc in text:
+                    return loc
+
         return None
