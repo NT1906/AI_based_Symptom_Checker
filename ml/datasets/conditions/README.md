@@ -104,4 +104,12 @@ The validator (`validate_conditions.py`, with the condition rules in `condition_
 
 - **Unknown severity (S1-NIS-2):** if a red-flag part needs `SEVERE` and the user's severity is unknown, the risk engine should treat it as matched or ask a clarifying question. Uncertainty must never lower risk.
 - **Symptom vocabulary (S0-KAV-1):** Kavya's canonical vocabulary should reuse these symptom IDs, so extraction and prediction speak the same language.
-- **Runtime copy (S1-NIS-1):** the server image does not include `ml/`. The predictor task decides how the server gets this file (a copy under `server/app/services/prediction/data/` checked by a parity test, or a build step).
+
+## Server copy
+
+The server image does not include `ml/`, so the server ships a copy at `server/app/services/prediction/data/conditions.json` (decided in S1-NIS-1).
+A server test fails if the copy differs from this file. After every edit here, copy it across in the same PR:
+
+```bash
+cp ml/datasets/conditions/conditions.json server/app/services/prediction/data/conditions.json
+```
