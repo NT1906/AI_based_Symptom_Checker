@@ -1,6 +1,6 @@
 """Unit tests for the AiGateway protocol, provider factory, and prompt files.
 
-Owner: Nishith · Task: S1-NIT-1 · Requirements: FR-03, FR-17, NFR-05
+Owner: Nishith · Task: S1-NIT-2 · Requirements: FR-04, FR-19, FR-20
 """
 
 from pathlib import Path
@@ -64,8 +64,8 @@ def test_versioned_extraction_prompt_exists_and_valid() -> None:
     assert "NEUROLOGICAL" in content
 
 
-def test_versioned_clarification_prompt_exists_and_valid() -> None:
-    """Versioned clarification prompt file must exist and enforce the 3-question cap."""
+def test_versioned_clarification_prompt_v1_exists_and_valid() -> None:
+    """Versioned prompt v1 must exist and enforce the 3-question cap."""
     prompts_dir = (
         Path(__file__).resolve().parents[3] / "app" / "services" / "ai" / "prompts"
     )
@@ -76,4 +76,21 @@ def test_versioned_clarification_prompt_exists_and_valid() -> None:
     assert len(content.strip()) > 100
     assert "{structured_state_json}" in content
     assert "{previously_asked_questions}" in content
+    assert "3" in content
+
+
+def test_versioned_clarification_prompt_v2_exists_and_valid() -> None:
+    """Versioned prompt v2 must exist, enforce 3 turns, and include missing info."""
+    prompts_dir = (
+        Path(__file__).resolve().parents[3] / "app" / "services" / "ai" / "prompts"
+    )
+    prompt_file = prompts_dir / "clarification.v2.txt"
+
+    assert prompt_file.exists(), f"Missing prompt file: {prompt_file}"
+    content = prompt_file.read_text(encoding="utf-8")
+    assert len(content.strip()) > 150
+    assert "{structured_state_json}" in content
+    assert "{detected_missing_info_json}" in content
+    assert "{previously_asked_questions}" in content
+    assert "NEVER provide a medical diagnosis" in content
     assert "3" in content
