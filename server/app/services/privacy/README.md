@@ -14,6 +14,18 @@ Names introduced by `My name is`, `Name:` or `Patient name:` are supported,
 as are exact names supplied through the optional trusted `known_names` tuple.
 It normalizes compatibility characters and strips zero-width format controls.
 
+Supported optional titles (`Dr`, `Mr`, `Mrs`, `Ms`, `Miss`, `Prof`, with or
+without a period) are removed together with a labelled name. Trusted complete
+`known_names` are matched first, longest first, to avoid partial-name leftovers.
+Without a trusted match, a labelled name span may contain at most two words
+(excluding the title). Longer spans raise `ValueError` instead of guessing
+whether trailing words are part of the name or symptoms. For example,
+`Name: Sample Person chest pain.` is rejected, not shortened to `Name: [NAME].`.
+The gateway converts this to its existing generic `AiValidationError` and does
+not call the provider. Even a legitimate three-word name is rejected unless
+it is supplied as a trusted complete name; do not gather names just to bypass
+this check. The caller must handle the failure safely, with no raw-text retry.
+
 Rejects non-string input, input over 20,000 characters (before or after
 normalization), and invalid known-name configuration. Never fall back to raw
 text when validation fails. This limit is local to this service; it does not
@@ -24,7 +36,10 @@ change an API schema or environment setting.
 This is a bounded rule-based baseline, not guaranteed anonymization. Arbitrary
 unlabelled names, other languages, addresses, obfuscated emails and identifiers
 outside the documented formats can remain. Name context can also over-redact;
-known names can collide with clinical words. No guarantee of precision or recall
+known names can collide with clinical words. Short ambiguous spans (for example,
+a single-word name followed by one symptom word) can still be over-redacted;
+the two-word limit is a conservative bound, not a general name/symptom detector.
+No guarantee of precision or recall
 is made. Do not enable external LLM transmission solely because this function
 returned a string. More representative evaluation and an agreed residual-risk
 policy are needed before real-provider release.

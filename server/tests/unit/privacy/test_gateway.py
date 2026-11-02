@@ -185,3 +185,50 @@ def test_invalid_names_are_rejected_without_leaking_values() -> None:
         AiValidationError, match="^AI privacy input validation failed.$"
     ):
         PrivacyAiGateway(RecordingProvider(), known_names=("x",))
+
+
+async def test_titled_names_are_scrubbed_in_message_and_history() -> None:
+    """The provider receives complete redaction and the original symptom words."""
+    provider = RecordingProvider()
+    await PrivacyAiGateway(provider).extract_symptoms(
+        "My name is Dr. Sample Person. Chest pain.",
+        "Name: Prof. Demo Example; trouble breathing.",
+    )
+    assert provider.calls == [
+        (
+            "My name is [NAME]. Chest pain.",
+            "Name: [NAME]; trouble breathing.",
+        )
+    ]
+
+
+@pytest.mark.parametrize("location", ["message", "history", "state", "question"])
+async def test_ambiguous_names_never_reach_provider(location: str) -> None:
+    """All gateway input paths reject ambiguity without a raw-text retry."""
+    provider = RecordingProvider()
+    gateway = PrivacyAiGateway(provider)
+    ambiguous = "Name: Sample Person chest pain."
+    state = {"note": ambiguous}
+    with pytest.raises(
+        AiValidationError, match="^AI privacy input validation failed.$"
+    ):
+        if location == "message":
+            await gateway.extract_symptoms(ambiguous)
+        elif location == "history":
+            await gateway.extract_symptoms("Fever", ambiguous)
+        elif location == "state":
+            await gateway.generate_clarification(state, [])
+        else:
+            await gateway.generate_clarification({}, [ambiguous])
+    assert provider.calls == []
+    assert state == {"note": ambiguous}
+
+
+async def test_trusted_full_name_keeps_adjacent_symptoms_for_provider() -> None:
+    """Trusted full names allow clinical suffixes to pass through unchanged."""
+    provider = RecordingProvider()
+    name = "Sample Alpha Beta Gamma Delta"
+    await PrivacyAiGateway(provider, known_names=(name,)).extract_symptoms(
+        f"Name: {name} chest pain."
+    )
+    assert provider.calls == [("Name: [NAME] chest pain.", "")]

@@ -108,3 +108,47 @@ def test_input_limit_and_normalization_expansion() -> None:
     assert scrub_pii("x" * MAX_TEXT_LENGTH) == "x" * MAX_TEXT_LENGTH
     with pytest.raises(ValueError, match="Normalized text"):
         scrub_pii("\ufb03" * MAX_TEXT_LENGTH)
+
+
+@pytest.mark.parametrize("title", ["Dr.", "Mr.", "Mrs.", "Ms.", "Miss", "Prof."])
+def test_redacts_title_and_entire_labelled_name(title: str) -> None:
+    """A title's punctuation must not leave the following name visible."""
+    raw = f"My name is {title} Sample Person. Chest pain for 2 hours."
+    expected = "My name is [NAME]. Chest pain for 2 hours."
+    assert scrub_pii(raw) == expected
+    assert scrub_pii(expected) == expected
+
+
+@pytest.mark.parametrize(
+    "raw",
+    [
+        "Name: Sample Person chest pain.",
+        "Name: Sample Person trouble breathing.",
+        "Name: Sample Person severe headache.",
+        "Name: Sample Person bleeding.",
+        "Name: Sample Person Chest Pain.",
+        "Name: Sample Middle Person.",
+        "My name is Sample Alpha Beta Gamma Delta.",
+        "Name: Dr. Sample Person chest pain.",
+    ],
+)
+def test_rejects_ambiguous_name_spans_without_returning_partial_text(raw: str) -> None:
+    """Reject unclear name boundaries instead of hiding symptoms or leaking suffixes."""
+    with pytest.raises(ValueError, match="^Labelled name boundary is ambiguous.$"):
+        scrub_pii(raw)
+
+
+def test_trusted_full_name_precedes_labelled_name_matching() -> None:
+    """A trusted long name is redacted as a whole before any heuristic matching."""
+    name = "Sample Alpha Beta Gamma Delta"
+    assert scrub_pii(f"Name: {name} chest pain.", known_names=(name,)) == (
+        "Name: [NAME] chest pain."
+    )
+
+
+@pytest.mark.parametrize("boundary", [",", ";", "\n", " and", " with"])
+def test_explicit_name_boundaries_preserve_following_symptoms(boundary: str) -> None:
+    """Existing punctuation and conjunction boundaries retain clinical text."""
+    assert scrub_pii(f"Name: Sample Person{boundary} chest pain.") == (
+        f"Name: [NAME]{boundary} chest pain."
+    )
