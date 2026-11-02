@@ -1,0 +1,3 @@
+# Light dependencies for the ML tests in CI (.github/workflows/ci.yml installs this before pytest).
+# No torch, timm or onnxruntime here: training is never run in CI (AI_RULES.md §6).
+PyYAML>=6.0,<7
