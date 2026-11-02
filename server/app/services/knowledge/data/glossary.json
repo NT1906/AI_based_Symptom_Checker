@@ -1,0 +1,1509 @@
+{
+  "schema_version": "1.0",
+  "description": "Curated plain-language symptom glossary v0 for user education and tooltips. Reviewed for safe medical wording (no diagnosis, no prescription recommendations).",
+  "disclaimer": "This information is for informational and educational guidance only. It is not a medical diagnosis. Always consult a qualified healthcare professional.",
+  "entries": [
+    {
+      "id": "fever",
+      "name": "Fever",
+      "body_system": "general",
+      "plain_definition": "A temporary increase in body temperature above normal (typically above 38°C or 100.4°F), often part of the body's natural defense against infection.",
+      "when_to_seek_care": "Seek urgent medical attention if temperature exceeds 39.4°C (103°F), lasts more than 3 days, or is accompanied by a stiff neck, confusion, or difficulty breathing.",
+      "lay_terms": [
+        "high temperature",
+        "running a temperature",
+        "feeling hot",
+        "bukhar",
+        "bukhaar",
+        "tez bukhar",
+        "badan garam"
+      ]
+    },
+    {
+      "id": "chills",
+      "name": "Chills or shivering",
+      "body_system": "general",
+      "plain_definition": "Involuntary muscle shivering and feeling intensely cold, which commonly occurs as body temperature begins to rise during a fever.",
+      "when_to_seek_care": "Consult a doctor if chills are accompanied by uncontrollable shaking rigors, high fever, chest pain, or confusion.",
+      "lay_terms": [
+        "shivering",
+        "feeling cold",
+        "rigors",
+        "cold shivers",
+        "thandi lag rahi",
+        "kaamp raha hoon",
+        "kaamping"
+      ]
+    },
+    {
+      "id": "fatigue",
+      "name": "Tiredness or weakness",
+      "body_system": "general",
+      "plain_definition": "An overwhelming feeling of tiredness, lack of energy, or physical weakness that does not improve with ordinary rest or sleep.",
+      "when_to_seek_care": "Seek medical advice if tiredness lasts more than two weeks, begins suddenly, or is accompanied by unintended weight loss or shortness of breath.",
+      "lay_terms": [
+        "tired",
+        "exhausted",
+        "no energy",
+        "weakness",
+        "weak",
+        "feeling drained",
+        "worn out",
+        "kamzori",
+        "thakan",
+        "thak gaya"
+      ]
+    },
+    {
+      "id": "body_aches",
+      "name": "Body or muscle aches",
+      "body_system": "general",
+      "plain_definition": "Generalized, dull muscle soreness felt across multiple areas of the body, commonly experienced during viral infections or intense exertion.",
+      "when_to_seek_care": "Contact a doctor if muscle aches are severe, sudden, or accompanied by high fever, dark urine, or extreme muscle weakness.",
+      "lay_terms": [
+        "muscle pain",
+        "body pain",
+        "aching all over",
+        "sore muscles",
+        "muscles hurting",
+        "badan dard",
+        "poora badan dukh raha"
+      ]
+    },
+    {
+      "id": "sweating",
+      "name": "Sweating",
+      "body_system": "general",
+      "plain_definition": "Producing more perspiration than usual, often as the body works to cool itself down during fever, physical activity, stress, or warm weather.",
+      "when_to_seek_care": "Seek immediate emergency medical attention if heavy sweating occurs suddenly with chest discomfort, dizziness, or shortness of breath.",
+      "lay_terms": [
+        "perspiring",
+        "sweaty",
+        "drenched in sweat",
+        "pasina",
+        "bahut pasina"
+      ]
+    },
+    {
+      "id": "night_sweats",
+      "name": "Night sweats",
+      "body_system": "general",
+      "plain_definition": "Repeated episodes of extreme perspiration during sleep that soak nightclothes and sheets, even in a cool room.",
+      "when_to_seek_care": "Consult a healthcare professional if night sweats occur regularly or are accompanied by fever, chills, or unexplained weight loss.",
+      "lay_terms": [
+        "sweating at night",
+        "waking up soaked",
+        "drenched in sweat at night",
+        "raat ko pasina"
+      ]
+    },
+    {
+      "id": "weight_loss",
+      "name": "Unintended weight loss",
+      "body_system": "general",
+      "plain_definition": "A noticeable decrease in body weight that occurs without changes in diet, appetite, or physical exercise routines.",
+      "when_to_seek_care": "Seek medical evaluation if you lose more than 5% of your body weight over 6 to 12 months without trying, or if accompanied by persistent fatigue.",
+      "lay_terms": [
+        "losing weight",
+        "getting thin",
+        "lost weight without trying",
+        "unexplained weight loss",
+        "vajan kam ho raha",
+        "patla ho raha"
+      ]
+    },
+    {
+      "id": "loss_of_appetite",
+      "name": "Loss of appetite",
+      "body_system": "general",
+      "plain_definition": "A noticeable reduction in the desire to eat or feeling full very quickly after starting a meal.",
+      "when_to_seek_care": "Consult a doctor if poor appetite persists for more than a few days, or is accompanied by nausea, vomiting, or progressive weight loss.",
+      "lay_terms": [
+        "not hungry",
+        "don't feel like eating",
+        "no appetite",
+        "can't eat",
+        "lost my appetite",
+        "bhook nahi lagti",
+        "khana nahi kha pa raha"
+      ]
+    },
+    {
+      "id": "dizziness",
+      "name": "Dizziness or light-headedness",
+      "body_system": "general",
+      "plain_definition": "Feeling lightheaded, unsteady, faint, or as if the room is spinning around you (vertigo).",
+      "when_to_seek_care": "Seek immediate medical attention if dizziness is accompanied by fainting, chest pain, slurred speech, or sudden numbness.",
+      "lay_terms": [
+        "dizzy",
+        "lightheaded",
+        "room is spinning",
+        "feel faint",
+        "head spinning",
+        "unsteady",
+        "chakkar",
+        "chakkar aa raha",
+        "sir ghoom raha"
+      ]
+    },
+    {
+      "id": "fainting",
+      "name": "Fainting",
+      "body_system": "general",
+      "plain_definition": "A brief, temporary loss of consciousness and muscle posture, usually caused by a momentary drop in blood flow to the brain.",
+      "when_to_seek_care": "Seek immediate emergency medical attention (112) after any sudden fainting episode, especially if accompanied by chest pain, irregular heartbeat, or head injury.",
+      "lay_terms": [
+        "passed out",
+        "blacked out",
+        "lost consciousness",
+        "fainted",
+        "collapsed",
+        "behosh",
+        "behosh ho gaya"
+      ]
+    },
+    {
+      "id": "swollen_neck_glands",
+      "name": "Swollen glands in the neck",
+      "body_system": "general",
+      "plain_definition": "Enlarged or tender lymph nodes felt under the jaw or along the sides and back of the neck, commonly reacting to an infection.",
+      "when_to_seek_care": "See a doctor if neck glands are hard, fixed in place, continuously growing, or swollen for more than two weeks without signs of infection.",
+      "lay_terms": [
+        "swollen glands",
+        "lumps in neck",
+        "swollen lymph nodes",
+        "neck glands swollen",
+        "gale me gaanth",
+        "gale me sujan"
+      ]
+    },
+    {
+      "id": "excessive_thirst",
+      "name": "Excessive thirst",
+      "body_system": "general",
+      "plain_definition": "An unusually persistent, strong urge to drink liquids that is not satisfied by normal fluid intake.",
+      "when_to_seek_care": "Seek medical consultation if accompanied by frequent urination, unexplained weight loss, or persistent fatigue.",
+      "lay_terms": [
+        "very thirsty",
+        "always thirsty",
+        "drinking lots of water",
+        "can't stop drinking water",
+        "bahut pyaas lagti hai",
+        "zyada pyaas"
+      ]
+    },
+    {
+      "id": "pale_skin",
+      "name": "Pale skin",
+      "body_system": "general",
+      "plain_definition": "Skin that appears visibly lighter, duller, or washed out compared to normal complexion, often noticeable on the face, palms, or inside the lower eyelids.",
+      "when_to_seek_care": "Contact a doctor if paleness comes on suddenly, or is accompanied by dizziness, shortness of breath, rapid heart rate, or cold hands and feet.",
+      "lay_terms": [
+        "looking pale",
+        "whitish skin",
+        "no colour in face",
+        "looking washed out",
+        "rang udd gaya",
+        "rang safed ho gaya"
+      ]
+    },
+    {
+      "id": "little_or_no_urine",
+      "name": "Passing little or no urine",
+      "body_system": "general",
+      "plain_definition": "A substantial decrease in urination volume or frequency, passing little to no urine over several hours or throughout a full day.",
+      "when_to_seek_care": "Seek urgent medical care immediately if you have not passed urine in 8 to 12 hours, as this can indicate severe dehydration or kidney dysfunction.",
+      "lay_terms": [
+        "not peeing",
+        "very little urine",
+        "no urine output",
+        "stopped passing urine",
+        "peshab nahi ho raha",
+        "peshab bahut kam"
+      ]
+    },
+    {
+      "id": "unable_to_keep_fluids_down",
+      "name": "Unable to keep fluids down",
+      "body_system": "general",
+      "plain_definition": "Repeatedly vomiting any fluids or liquids within minutes of drinking them, creating a risk of dehydration.",
+      "when_to_seek_care": "Seek prompt medical attention if you cannot keep liquids down for more than 12 to 24 hours, or if you notice dry mouth, dizziness, or dark urine.",
+      "lay_terms": [
+        "can't keep water down",
+        "vomiting everything",
+        "throwing up water",
+        "can't hold anything down",
+        "paani bhi nahi ruk raha"
+      ]
+    },
+    {
+      "id": "slow_healing_wounds",
+      "name": "Wounds that heal slowly",
+      "body_system": "general",
+      "plain_definition": "Minor cuts, scrapes, sores, or skin injuries that take an unusually long time to close, scab over, or heal completely.",
+      "when_to_seek_care": "Consult a healthcare provider if a wound shows signs of infection like worsening redness, swelling, warmth, pus discharge, or red streaks.",
+      "lay_terms": [
+        "wounds not healing",
+        "cuts take long to heal",
+        "slow healing",
+        "ghav jaldi theek nahi ho rahe"
+      ]
+    },
+    {
+      "id": "headache",
+      "name": "Headache",
+      "body_system": "neurological",
+      "plain_definition": "Pain, ache, or throbbing felt anywhere in the head, scalp, forehead, or temples.",
+      "when_to_seek_care": "Seek immediate emergency care (112) if the headache is sudden and explosively severe, or comes with a stiff neck, confusion, high fever, or vision changes.",
+      "lay_terms": [
+        "head pain",
+        "head hurting",
+        "head is pounding",
+        "sar dard",
+        "sir dard",
+        "sir me dard"
+      ]
+    },
+    {
+      "id": "sudden_severe_headache",
+      "name": "Sudden, very severe headache",
+      "body_system": "neurological",
+      "plain_definition": "An excruciating headache that reaches peak intensity within seconds or minutes, often described as the worst headache of one's life.",
+      "when_to_seek_care": "Call emergency services (112) immediately. This requires urgent emergency department evaluation to rule out acute intracranial conditions.",
+      "lay_terms": [
+        "worst headache ever",
+        "thunderclap headache",
+        "sudden extreme head pain",
+        "head exploding",
+        "achanak tez sar dard"
+      ]
+    },
+    {
+      "id": "light_sensitivity",
+      "name": "Sensitivity to light",
+      "body_system": "neurological",
+      "plain_definition": "Discomfort, squinting, or pain in the eyes when exposed to normal or bright ambient light (photophobia).",
+      "when_to_seek_care": "Seek urgent medical care if light sensitivity appears suddenly with severe headache, stiff neck, high fever, or eye pain.",
+      "lay_terms": [
+        "eyes hurt in light",
+        "can't stand bright light",
+        "light hurts my eyes",
+        "photophobia",
+        "roshni se taklif",
+        "roshni se dard"
+      ]
+    },
+    {
+      "id": "sound_sensitivity",
+      "name": "Sensitivity to sound",
+      "body_system": "neurological",
+      "plain_definition": "Discomfort, irritation, or pain triggered by normal every-day sounds or noises (phonophobia).",
+      "when_to_seek_care": "Consult a doctor if sound sensitivity is accompanied by severe headache, dizziness, or sudden hearing changes.",
+      "lay_terms": [
+        "noise bothers me",
+        "can't stand loud noise",
+        "sounds are painful",
+        "everything is too loud",
+        "awaaz se taklif"
+      ]
+    },
+    {
+      "id": "visual_aura",
+      "name": "Flashing lights or zig-zag lines in vision",
+      "body_system": "neurological",
+      "plain_definition": "Temporary visual disturbances like shimmering zig-zag lines, blind spots, geometric patterns, or flashing lights, often preceding a migraine.",
+      "when_to_seek_care": "Seek medical advice if you experience visual aura for the first time, or if visual changes persist beyond one hour or occur with muscle weakness.",
+      "lay_terms": [
+        "seeing flashing lights",
+        "zig-zag lines in vision",
+        "seeing spots",
+        "sparkles in vision",
+        "flashing before eyes"
+      ]
+    },
+    {
+      "id": "stiff_neck",
+      "name": "Stiff neck",
+      "body_system": "neurological",
+      "plain_definition": "Soreness and severe tightness in the neck that makes it painful or impossible to touch the chin to the chest.",
+      "when_to_seek_care": "Seek immediate emergency medical care (112) if neck stiffness occurs alongside high fever, severe headache, confusion, or light sensitivity.",
+      "lay_terms": [
+        "neck stiffness",
+        "can't move neck",
+        "neck won't bend",
+        "neck feels locked",
+        "gardan akad gayi"
+      ]
+    },
+    {
+      "id": "neck_or_shoulder_tension",
+      "name": "Tight neck or shoulder muscles",
+      "body_system": "musculoskeletal",
+      "plain_definition": "Tightness, aching, or stiffness felt across the nape of the neck and the tops of the shoulders, commonly related to posture or stress.",
+      "when_to_seek_care": "Consult a healthcare provider if neck tension radiates down the arm, causes hand tingling or numbness, or follows an injury.",
+      "lay_terms": [
+        "tight neck",
+        "shoulder tightness",
+        "neck tension",
+        "tight shoulders",
+        "neck and shoulders tight",
+        "gardan me khichav",
+        "kandhe me khichav"
+      ]
+    },
+    {
+      "id": "confusion",
+      "name": "Confusion or unusual drowsiness",
+      "body_system": "neurological",
+      "plain_definition": "Difficulty thinking clearly, paying attention, remembering where you are, or unusual extreme drowsiness and disorientation.",
+      "when_to_seek_care": "Call emergency services (112) immediately. Sudden confusion or lethargy is a red-flag neurological emergency.",
+      "lay_terms": [
+        "confused",
+        "disoriented",
+        "not making sense",
+        "very drowsy",
+        "can't think clearly",
+        "acting strange",
+        "samajh nahi aa raha"
+      ]
+    },
+    {
+      "id": "seizure",
+      "name": "Seizure (fit)",
+      "body_system": "neurological",
+      "plain_definition": "An uncontrolled surge of electrical activity in the brain causing involuntary muscle jerking, body stiffening, blank staring, or loss of consciousness.",
+      "when_to_seek_care": "Call emergency services (112) immediately if a seizure lasts longer than 5 minutes, if multiple seizures occur, or if it is a person's first seizure.",
+      "lay_terms": [
+        "fit",
+        "convulsion",
+        "having a fit",
+        "shaking uncontrollably",
+        "epileptic fit",
+        "daura",
+        "mirgi ka daura"
+      ]
+    },
+    {
+      "id": "facial_droop",
+      "name": "Face drooping on one side",
+      "body_system": "neurological",
+      "plain_definition": "Weakness or sagging on one side of the face, often causing an uneven smile or inability to fully close one eye.",
+      "when_to_seek_care": "Call emergency services (112) immediately. Facial droop is a cardinal sign of stroke (FAST) requiring urgent emergency treatment.",
+      "lay_terms": [
+        "face drooping",
+        "one side of face drooping",
+        "face falling on one side",
+        "lopsided face",
+        "mouth drooping",
+        "chehra ek taraf latakna"
+      ]
+    },
+    {
+      "id": "one_sided_weakness",
+      "name": "Weakness or numbness on one side of the body",
+      "body_system": "neurological",
+      "plain_definition": "Sudden loss of strength, clumsiness, or numbness affecting one side of the face, arm, or leg.",
+      "when_to_seek_care": "Call emergency services (112) immediately. One-sided weakness is a cardinal stroke red flag requiring immediate emergency evaluation.",
+      "lay_terms": [
+        "weak on one side",
+        "can't move one arm",
+        "one side numb",
+        "half body weak",
+        "arm or leg not working",
+        "ek taraf kamzori"
+      ]
+    },
+    {
+      "id": "slurred_speech",
+      "name": "Slurred or difficult speech",
+      "body_system": "neurological",
+      "plain_definition": "Difficulty articulating words clearly, resulting in muffled, garbled, slow, or incomprehensible speech.",
+      "when_to_seek_care": "Call emergency services (112) immediately. Slurred speech is a major emergency sign of stroke or acute neurological compromise.",
+      "lay_terms": [
+        "can't speak properly",
+        "speech is slurred",
+        "words not coming out right",
+        "trouble talking",
+        "tongue feels heavy",
+        "bolne me dikkat"
+      ]
+    },
+    {
+      "id": "sudden_vision_loss",
+      "name": "Sudden loss of vision",
+      "body_system": "neurological",
+      "plain_definition": "A rapid, unexpected loss of sight in one or both eyes, ranging from partial blurring or darkened patches to total blindness.",
+      "when_to_seek_care": "Call emergency services (112) immediately. Sudden vision loss requires immediate ophthalmological and neurological emergency evaluation.",
+      "lay_terms": [
+        "suddenly can't see",
+        "lost vision",
+        "went blind suddenly",
+        "vision gone",
+        "achanak dikhna band"
+      ]
+    },
+    {
+      "id": "saddle_numbness",
+      "name": "Numbness around the groin or buttocks",
+      "body_system": "neurological",
+      "plain_definition": "Loss of sensation or numbness in the areas of the body that would touch a saddle, including the groin, buttocks, and inner thighs.",
+      "when_to_seek_care": "Seek emergency hospital care (112) immediately. Saddle numbness combined with back pain can indicate cauda equina syndrome, requiring urgent surgical evaluation.",
+      "lay_terms": [
+        "numb groin",
+        "numbness between legs",
+        "numb buttocks",
+        "can't feel down there",
+        "neeche sunn ho gaya"
+      ]
+    },
+    {
+      "id": "loss_of_bladder_or_bowel_control",
+      "name": "Loss of bladder or bowel control",
+      "body_system": "neurological",
+      "plain_definition": "Inability to control urination or bowel movements, leading to unexpected incontinence or inability to empty the bladder.",
+      "when_to_seek_care": "Seek emergency medical attention (112) immediately, especially if accompanied by back pain, leg weakness, or saddle numbness.",
+      "lay_terms": [
+        "can't hold urine",
+        "can't control bladder",
+        "can't control bowels",
+        "wetting myself",
+        "incontinence",
+        "peshab rok nahi pa raha"
+      ]
+    },
+    {
+      "id": "runny_nose",
+      "name": "Runny nose",
+      "body_system": "ent",
+      "plain_definition": "Excess mucus draining from the nostrils, either watery and clear or thicker in consistency.",
+      "when_to_seek_care": "Consult a doctor if nasal discharge lasts more than 10 to 14 days, is accompanied by high fever, or drains from only one nostril with foul odor.",
+      "lay_terms": [
+        "nose running",
+        "watery nose",
+        "nose dripping",
+        "nasal drip",
+        "naak bah rahi hai",
+        "naak se paani"
+      ]
+    },
+    {
+      "id": "nasal_congestion",
+      "name": "Blocked or stuffy nose",
+      "body_system": "ent",
+      "plain_definition": "Swelling of the nasal passages and sinus linings causing a blocked, stuffy feeling that makes breathing through the nose difficult.",
+      "when_to_seek_care": "Seek medical advice if congestion lasts more than 10 days without improvement, or is accompanied by severe facial pain, forehead swelling, or high fever.",
+      "lay_terms": [
+        "blocked nose",
+        "stuffy nose",
+        "can't breathe through nose",
+        "nose is clogged",
+        "bunged up nose",
+        "naak band hai"
+      ]
+    },
+    {
+      "id": "sneezing",
+      "name": "Sneezing",
+      "body_system": "ent",
+      "plain_definition": "Involuntary, sudden expulsions of air from the nose and mouth triggered by irritation or inflammation of the nasal lining.",
+      "when_to_seek_care": "Consult a doctor if sneezing is severe, persistent, and accompanied by wheezing, facial pressure, or sinus pain.",
+      "lay_terms": [
+        "sneezing a lot",
+        "constant sneezing",
+        "can't stop sneezing",
+        "cheenk aa rahi hai",
+        "cheenk"
+      ]
+    },
+    {
+      "id": "sore_throat",
+      "name": "Sore throat",
+      "body_system": "ent",
+      "plain_definition": "A raw, painful, scratchy, or burning sensation in the throat that often worsens when talking or swallowing.",
+      "when_to_seek_care": "Seek medical evaluation if sore throat lasts more than a week, or urgent care if accompanied by difficulty swallowing saliva, breathing trouble, or high fever.",
+      "lay_terms": [
+        "throat pain",
+        "throat hurting",
+        "scratchy throat",
+        "raw throat",
+        "gala dard",
+        "gale me dard",
+        "gala kharab"
+      ]
+    },
+    {
+      "id": "painful_swallowing",
+      "name": "Pain when swallowing",
+      "body_system": "ent",
+      "plain_definition": "Discomfort, sharp pain, or burning in the mouth or throat when swallowing food, liquids, or saliva.",
+      "when_to_seek_care": "Seek prompt medical evaluation if swallowing pain is severe, makes it impossible to swallow fluids, or is accompanied by drooling or neck swelling.",
+      "lay_terms": [
+        "hurts to swallow",
+        "pain swallowing",
+        "can't swallow",
+        "swallowing is painful",
+        "niglne me dard",
+        "khaana niglne me taklif"
+      ]
+    },
+    {
+      "id": "facial_pain_or_pressure",
+      "name": "Pain or pressure around the cheeks, eyes or forehead",
+      "body_system": "ent",
+      "plain_definition": "A feeling of fullness, aching, or heaviness centered around the cheeks, bridge of the nose, eyes, or forehead, often worsening when bending forward.",
+      "when_to_seek_care": "Contact a healthcare provider if facial pain is severe, accompanied by high fever, or associated with swelling or redness around the eyes.",
+      "lay_terms": [
+        "face pain",
+        "pressure in face",
+        "cheek pain",
+        "forehead pressure",
+        "sinus pressure",
+        "sinus pain",
+        "gaal me dard"
+      ]
+    },
+    {
+      "id": "thick_nasal_discharge",
+      "name": "Thick yellow or green nasal discharge",
+      "body_system": "ent",
+      "plain_definition": "Sticky, thick mucus draining from the nose that is dark yellow or green in appearance.",
+      "when_to_seek_care": "See a doctor if thick nasal discharge persists for over 10 days, worsens after initially improving, or occurs with severe facial pain or fever.",
+      "lay_terms": [
+        "green mucus from nose",
+        "yellow mucus",
+        "thick snot",
+        "coloured mucus",
+        "naak se peela paani"
+      ]
+    },
+    {
+      "id": "loss_of_smell_or_taste",
+      "name": "Loss of smell or taste",
+      "body_system": "ent",
+      "plain_definition": "A partial or complete inability to perceive scents (anosmia) or tastes (ageusia), often following viral respiratory infections.",
+      "when_to_seek_care": "Consult a doctor if sense of smell or taste does not begin to return after 2 to 4 weeks, or if it occurs alongside neurological symptoms like weakness or confusion.",
+      "lay_terms": [
+        "can't smell",
+        "can't taste",
+        "lost sense of smell",
+        "lost taste",
+        "food has no taste",
+        "soonghne ki shakti gayi",
+        "swaad nahi aa raha"
+      ]
+    },
+    {
+      "id": "throat_or_tongue_swelling",
+      "name": "Swelling of the throat, lips or tongue",
+      "body_system": "ent",
+      "plain_definition": "Visible or felt enlargement of the tongue, lips, or back of the throat that can restrict the airway.",
+      "when_to_seek_care": "Call emergency services (112) immediately. Rapid swelling of the throat or tongue is a medical emergency that can indicate severe allergic reaction (anaphylaxis).",
+      "lay_terms": [
+        "throat swelling",
+        "tongue swelling",
+        "lips swelling",
+        "swollen throat",
+        "swollen tongue",
+        "gala sujh gaya",
+        "hoth sujh gaye",
+        "jeebh sujh gayi"
+      ]
+    },
+    {
+      "id": "bleeding_gums_or_nose",
+      "name": "Bleeding gums or nosebleeds",
+      "body_system": "ent",
+      "plain_definition": "Unexplained bleeding from the gums when brushing, or frequent spontaneous nosebleeds (epistaxis).",
+      "when_to_seek_care": "Seek prompt medical care if a nosebleed does not stop after 20 minutes of firm pressure, is heavy, or occurs alongside unusual bruising or fever.",
+      "lay_terms": [
+        "gums bleeding",
+        "nosebleed",
+        "blood from nose",
+        "blood from gums",
+        "naak se khoon",
+        "masoodon se khoon"
+      ]
+    },
+    {
+      "id": "cough",
+      "name": "Cough",
+      "body_system": "respiratory",
+      "plain_definition": "A sudden, forceful reflex that clears the throat and breathing passages of irritants, mucus, or foreign particles.",
+      "when_to_seek_care": "See a doctor if a cough lasts longer than 3 weeks, produces blood, causes shortness of breath, or is accompanied by unexplained weight loss.",
+      "lay_terms": [
+        "coughing",
+        "dry cough",
+        "tickly cough",
+        "khansi",
+        "sookhi khansi"
+      ]
+    },
+    {
+      "id": "productive_cough",
+      "name": "Cough with mucus",
+      "body_system": "respiratory",
+      "plain_definition": "A 'wet' or 'chesty' cough that brings up phlegm or mucus from the lungs or bronchial airways.",
+      "when_to_seek_care": "Seek medical assessment if mucus is rust-colored, foul-smelling, or blood-streaked, or if accompanied by fever, chest pain, or breathing difficulty.",
+      "lay_terms": [
+        "cough with phlegm",
+        "coughing up mucus",
+        "wet cough",
+        "chesty cough",
+        "bringing up phlegm",
+        "balgam wali khansi",
+        "balgam aa raha"
+      ]
+    },
+    {
+      "id": "coughing_blood",
+      "name": "Coughing up blood",
+      "body_system": "respiratory",
+      "plain_definition": "Coughing up blood or blood-streaked sputum from the respiratory tract (hemoptysis).",
+      "when_to_seek_care": "Seek urgent medical care (112) immediately. Coughing up more than small specks of blood requires urgent hospital evaluation.",
+      "lay_terms": [
+        "blood in cough",
+        "spitting blood",
+        "coughed up blood",
+        "blood in phlegm",
+        "khoon ki khansi",
+        "khansi me khoon"
+      ]
+    },
+    {
+      "id": "shortness_of_breath",
+      "name": "Shortness of breath",
+      "body_system": "respiratory",
+      "plain_definition": "Feeling breathless, winded, or like you cannot draw enough air into your lungs (dyspnea).",
+      "when_to_seek_care": "Call emergency services (112) immediately if breathlessness is sudden, severe, occurs while resting, or is accompanied by chest pain or blue lips.",
+      "lay_terms": [
+        "can't breathe",
+        "breathless",
+        "difficulty breathing",
+        "out of breath",
+        "gasping for air",
+        "struggling to breathe",
+        "saans nahi aa rahi",
+        "saans phoolna",
+        "saans me taklif"
+      ]
+    },
+    {
+      "id": "wheezing",
+      "name": "Wheezing",
+      "body_system": "respiratory",
+      "plain_definition": "A high-pitched whistling or squeaking sound heard when breathing, especially during exhalation, caused by narrowed airways.",
+      "when_to_seek_care": "Seek immediate emergency care (112) if wheezing is severe, sudden, or accompanied by struggling to breathe, chest tightness, or blue-tinted lips.",
+      "lay_terms": [
+        "whistling sound when breathing",
+        "wheezy",
+        "chest whistling",
+        "saans me seeti"
+      ]
+    },
+    {
+      "id": "chest_tightness",
+      "name": "Tight chest",
+      "body_system": "respiratory",
+      "plain_definition": "A feeling of constriction, heaviness, squeezing, or band-like pressure across the chest area.",
+      "when_to_seek_care": "Call emergency services (112) immediately. Chest tightness can signal a serious heart or lung emergency requiring immediate evaluation.",
+      "lay_terms": [
+        "chest feels tight",
+        "pressure on chest",
+        "heavy chest",
+        "chest constriction",
+        "seene me jakdan",
+        "chhati me bhaari"
+      ]
+    },
+    {
+      "id": "bluish_lips_or_face",
+      "name": "Bluish lips or face",
+      "body_system": "respiratory",
+      "plain_definition": "A bluish or purplish discoloration of the lips, tongue, nail beds, or face (cyanosis), indicating low oxygen levels in the blood.",
+      "when_to_seek_care": "Call emergency services (112) immediately. Cyanosis is a critical medical emergency signaling acute oxygen deprivation.",
+      "lay_terms": [
+        "lips turning blue",
+        "face turning blue",
+        "blue lips",
+        "cyanosis",
+        "hoth neele",
+        "chehra neela"
+      ]
+    },
+    {
+      "id": "red_eye",
+      "name": "Red eye",
+      "body_system": "eye",
+      "plain_definition": "Bloodshot appearance of the white part of the eye (sclera) caused by dilated, irritated, or inflamed surface blood vessels.",
+      "when_to_seek_care": "Seek prompt medical attention if red eye is accompanied by eye pain, changes in vision, extreme light sensitivity, or clear pupil clouding.",
+      "lay_terms": [
+        "eye is red",
+        "bloodshot eye",
+        "pink eye",
+        "red eyes",
+        "aankh laal",
+        "aankh laal ho gayi"
+      ]
+    },
+    {
+      "id": "itchy_eyes",
+      "name": "Itchy eyes",
+      "body_system": "eye",
+      "plain_definition": "An irritating, scratchy sensation on the surface or margins of the eyes that triggers an urge to rub them.",
+      "when_to_seek_care": "Consult an eye care professional if itching is severe, accompanied by thick discharge, swelling, or blurred vision.",
+      "lay_terms": [
+        "eyes itching",
+        "scratchy eyes",
+        "rubbing eyes",
+        "aankh me khujli",
+        "aankhen khujla rahi hain"
+      ]
+    },
+    {
+      "id": "watery_eyes",
+      "name": "Watery eyes",
+      "body_system": "eye",
+      "plain_definition": "Excessive tearing or watering of the eyes caused by overproduction of tears or poor drainage through the tear ducts.",
+      "when_to_seek_care": "See an eye care professional if tearing lasts more than a few days, causes skin irritation, or occurs with eye pain or vision changes.",
+      "lay_terms": [
+        "eyes watering",
+        "teary eyes",
+        "tearing up",
+        "eyes running",
+        "aankh se paani",
+        "aankhen beh rahi"
+      ]
+    },
+    {
+      "id": "eye_discharge",
+      "name": "Sticky discharge from the eye",
+      "body_system": "eye",
+      "plain_definition": "Sticky, crusty, yellowish, or greenish fluid that gathers in the corners of the eye or along eyelashes, often gluing eyelids shut in the morning.",
+      "when_to_seek_care": "Consult a doctor or ophthalmologist if discharge is heavy, greenish-yellow, or accompanied by eye redness, pain, or reduced vision.",
+      "lay_terms": [
+        "eye gunk",
+        "sticky eyes",
+        "gooey eyes",
+        "eyes stuck together",
+        "eye pus",
+        "aankh se mavaad",
+        "aankh chipak rahi"
+      ]
+    },
+    {
+      "id": "pain_behind_eyes",
+      "name": "Pain behind the eyes",
+      "body_system": "eye",
+      "plain_definition": "An ache, pressure, or throbbing sensation felt deep behind the eyeballs or in the eye sockets, often worsening with eye movements.",
+      "when_to_seek_care": "Seek prompt medical evaluation if retro-orbital pain is severe, sudden, or accompanied by high fever, severe headache, or visual disturbances.",
+      "lay_terms": [
+        "pain behind eye",
+        "eyes aching",
+        "eye pressure",
+        "deep eye pain",
+        "aankh ke peeche dard"
+      ]
+    },
+    {
+      "id": "blurred_vision",
+      "name": "Blurred vision",
+      "body_system": "eye",
+      "plain_definition": "A lack of sharpness or clarity in eyesight, making objects look hazy, fuzzy, or out of focus.",
+      "when_to_seek_care": "Seek immediate emergency care (112) if vision loss or blurring occurs suddenly, affects only one eye, or is accompanied by eye pain, headache, or weakness.",
+      "lay_terms": [
+        "can't see clearly",
+        "blurry vision",
+        "vision is blurry",
+        "everything is hazy",
+        "dhundla dikhna",
+        "saaf nahi dikh raha"
+      ]
+    },
+    {
+      "id": "chest_pain",
+      "name": "Chest pain",
+      "body_system": "cardiovascular",
+      "plain_definition": "Discomfort, pressure, squeezing, heaviness, burning, or sharp pain felt in the center or left side of the chest.",
+      "when_to_seek_care": "Call emergency services (112) immediately. Any unexplained chest pain must be treated as a potential cardiac emergency until medically assessed.",
+      "lay_terms": [
+        "chest hurting",
+        "pain in chest",
+        "chest ache",
+        "my chest hurts",
+        "seene me dard",
+        "chhati me dard",
+        "seena dard"
+      ]
+    },
+    {
+      "id": "pain_spreading_to_arm_jaw_or_back",
+      "name": "Pain spreading to the arm, jaw or back",
+      "body_system": "cardiovascular",
+      "plain_definition": "Discomfort originating in the chest that radiates outward to the left arm, both arms, shoulder, neck, jaw, or upper back.",
+      "when_to_seek_care": "Call emergency services (112) immediately. Radiating pain is a classic red-flag sign of acute myocardial infarction (heart attack).",
+      "lay_terms": [
+        "pain going to arm",
+        "jaw pain",
+        "pain going down arm",
+        "pain radiating to back",
+        "chest pain spreading",
+        "dard baazu me ja raha"
+      ]
+    },
+    {
+      "id": "palpitations",
+      "name": "Fast or pounding heartbeat",
+      "body_system": "cardiovascular",
+      "plain_definition": "Sensations of a racing, pounding, fluttering, or skipping heartbeat that you feel in your chest, throat, or neck.",
+      "when_to_seek_care": "Seek emergency medical care (112) if palpitations occur with chest pain, shortness of breath, dizziness, or fainting.",
+      "lay_terms": [
+        "heart racing",
+        "heart pounding",
+        "fast heartbeat",
+        "heart fluttering",
+        "heart skipping beats",
+        "dil ki dhadkan tez",
+        "dhadkan tez",
+        "dil zor se dhadak raha"
+      ]
+    },
+    {
+      "id": "nausea",
+      "name": "Nausea",
+      "body_system": "gastrointestinal",
+      "plain_definition": "An uncomfortable, queasy feeling in the stomach with an urge or sensation that you might vomit.",
+      "when_to_seek_care": "Seek medical attention if nausea lasts more than 48 hours, prevents keeping fluids down, or is accompanied by severe abdominal pain.",
+      "lay_terms": [
+        "feeling sick",
+        "feel like vomiting",
+        "queasy",
+        "feeling nauseous",
+        "stomach turning",
+        "ji machlana",
+        "ji matlana",
+        "ulti jaisa lag raha"
+      ]
+    },
+    {
+      "id": "vomiting",
+      "name": "Vomiting",
+      "body_system": "gastrointestinal",
+      "plain_definition": "The forceful expulsion of stomach contents upward through the mouth.",
+      "when_to_seek_care": "Seek immediate care if vomit contains blood or coffee-ground material, or if you cannot retain fluids for more than 24 hours.",
+      "lay_terms": [
+        "throwing up",
+        "puking",
+        "being sick",
+        "vomited",
+        "ulti",
+        "ulti ho rahi",
+        "ulti aa rahi"
+      ]
+    },
+    {
+      "id": "diarrhea",
+      "name": "Diarrhoea",
+      "body_system": "gastrointestinal",
+      "plain_definition": "Passing loose, watery, or liquid stools three or more times in a single day.",
+      "when_to_seek_care": "Consult a healthcare professional if diarrhea lasts more than 48 hours, causes dehydration, or contains blood or black stools.",
+      "lay_terms": [
+        "loose motions",
+        "watery stool",
+        "runny stool",
+        "the runs",
+        "loose stools",
+        "dast",
+        "dast lag gaye",
+        "potty zyada aa rahi"
+      ]
+    },
+    {
+      "id": "constipation",
+      "name": "Constipation",
+      "body_system": "gastrointestinal",
+      "plain_definition": "Infrequent bowel movements (fewer than three per week), difficulty passing stool, or hard, dry, painful stools.",
+      "when_to_seek_care": "Seek medical evaluation if constipation lasts over two weeks, comes on suddenly with severe abdominal pain, or is accompanied by vomiting.",
+      "lay_terms": [
+        "can't poo",
+        "hard stool",
+        "not passing stool",
+        "difficulty passing stool",
+        "blocked up",
+        "kabz",
+        "qabz",
+        "pet saaf nahi ho raha"
+      ]
+    },
+    {
+      "id": "abdominal_pain",
+      "name": "Abdominal (stomach) pain",
+      "body_system": "gastrointestinal",
+      "plain_definition": "Aches, cramps, sharp twinges, or dull soreness felt anywhere between the bottom of the ribs and the groin.",
+      "when_to_seek_care": "Seek immediate emergency care (112) if stomach pain is sudden and severe, or accompanied by rigid belly, vomiting blood, or high fever.",
+      "lay_terms": [
+        "stomach ache",
+        "tummy ache",
+        "belly pain",
+        "stomach cramps",
+        "stomach hurting",
+        "tummy pain",
+        "belly ache",
+        "pet dard",
+        "pet me dard"
+      ]
+    },
+    {
+      "id": "lower_right_abdominal_pain",
+      "name": "Pain in the lower right side of the abdomen",
+      "body_system": "gastrointestinal",
+      "plain_definition": "Sharp, persistent, or worsening pain localized in the lower right quadrant of the belly, often intensifying with movement or coughing.",
+      "when_to_seek_care": "Seek emergency hospital care (112) immediately. Localized lower right abdominal pain is a classic indicator of appendicitis.",
+      "lay_terms": [
+        "pain lower right stomach",
+        "right side pain low down",
+        "right side near hip hurts",
+        "neeche dahine taraf dard"
+      ]
+    },
+    {
+      "id": "upper_right_abdominal_pain",
+      "name": "Pain in the upper right side of the abdomen",
+      "body_system": "gastrointestinal",
+      "plain_definition": "Aching or sharp pain located in the upper right quadrant of the abdomen beneath the ribs, often radiating toward the back or right shoulder.",
+      "when_to_seek_care": "Seek prompt medical attention if upper right abdominal pain is severe, lasts several hours, or is accompanied by fever, chills, nausea, or jaundice.",
+      "lay_terms": [
+        "pain upper right stomach",
+        "pain under right ribs",
+        "right side pain near ribs",
+        "upar dahine taraf dard"
+      ]
+    },
+    {
+      "id": "heartburn",
+      "name": "Heartburn (burning behind the breastbone)",
+      "body_system": "gastrointestinal",
+      "plain_definition": "A burning discomfort or pain felt behind the breastbone, often rising upward toward the neck or throat after eating or while lying down.",
+      "when_to_seek_care": "Consult a doctor if heartburn occurs more than twice a week, or seek emergency care (112) if chest burning feels like pressure or radiates to the arm or jaw.",
+      "lay_terms": [
+        "burning in chest",
+        "acid reflux",
+        "acidity",
+        "heartburn",
+        "burning sensation in chest",
+        "seene me jalan",
+        "jalan ho rahi",
+        "aciditee"
+      ]
+    },
+    {
+      "id": "acid_regurgitation",
+      "name": "Sour taste or acid coming up into the mouth",
+      "body_system": "gastrointestinal",
+      "plain_definition": "A sour, bitter-tasting fluid or undigested food backing up involuntarily from the stomach into the throat or mouth.",
+      "when_to_seek_care": "See a doctor if regurgitation occurs regularly, causes choking at night, or is accompanied by difficulty or pain when swallowing.",
+      "lay_terms": [
+        "acid coming up",
+        "sour taste in mouth",
+        "acid in mouth",
+        "food coming back up",
+        "khatta paani aana",
+        "khatta dakar"
+      ]
+    },
+    {
+      "id": "bloating",
+      "name": "Bloating",
+      "body_system": "gastrointestinal",
+      "plain_definition": "A sensation of tightness, fullness, or visible swelling in the abdominal area, often associated with trapped gas.",
+      "when_to_seek_care": "Consult a doctor if abdominal bloating is persistent, worsens progressively, or occurs alongside unintentional weight loss or severe pain.",
+      "lay_terms": [
+        "feeling bloated",
+        "stomach full of gas",
+        "gassy",
+        "belly feels swollen",
+        "gas",
+        "pet phulna",
+        "pet me gas"
+      ]
+    },
+    {
+      "id": "vomiting_blood",
+      "name": "Vomiting blood",
+      "body_system": "gastrointestinal",
+      "plain_definition": "Throwing up bright red blood, dark clots, or material resembling dark coffee grounds (hematemesis).",
+      "when_to_seek_care": "Call emergency services (112) immediately. Vomiting blood indicates active upper gastrointestinal bleeding requiring emergency treatment.",
+      "lay_terms": [
+        "blood in vomit",
+        "throwing up blood",
+        "vomited blood",
+        "red vomit",
+        "khoon ki ulti"
+      ]
+    },
+    {
+      "id": "black_or_bloody_stool",
+      "name": "Black or bloody stool",
+      "body_system": "gastrointestinal",
+      "plain_definition": "Passing bowel movements that appear pitch black and tarry (melena) or contain visible dark or bright red blood.",
+      "when_to_seek_care": "Seek emergency medical care (112) immediately. Black tarry or bloody stools indicate internal gastrointestinal bleeding.",
+      "lay_terms": [
+        "blood in stool",
+        "black poo",
+        "dark stool",
+        "tarry stool",
+        "bloody stool",
+        "potty me khoon",
+        "kaali potty"
+      ]
+    },
+    {
+      "id": "yellow_skin_or_eyes",
+      "name": "Yellow skin or eyes",
+      "body_system": "gastrointestinal",
+      "plain_definition": "A yellowish tint affecting the whites of the eyes and the skin (jaundice), caused by elevated bilirubin levels.",
+      "when_to_seek_care": "Seek prompt medical evaluation. Jaundice signals potential liver, gallbladder, or blood disorders requiring timely clinical diagnosis.",
+      "lay_terms": [
+        "jaundice",
+        "yellow eyes",
+        "skin turning yellow",
+        "yellowish skin",
+        "peela padna",
+        "piliya",
+        "aankhen peeli"
+      ]
+    },
+    {
+      "id": "dark_urine",
+      "name": "Dark urine",
+      "body_system": "gastrointestinal",
+      "plain_definition": "Urine that appears unusually brown, dark amber, tea-colored, or cola-colored despite drinking normal amounts of water.",
+      "when_to_seek_care": "Consult a healthcare professional promptly, especially if dark urine is accompanied by yellowing eyes, pale stools, or abdominal pain.",
+      "lay_terms": [
+        "dark pee",
+        "brown urine",
+        "tea coloured urine",
+        "cola coloured urine",
+        "peshab ka rang gehra"
+      ]
+    },
+    {
+      "id": "pale_stool",
+      "name": "Pale stool",
+      "body_system": "gastrointestinal",
+      "plain_definition": "Bowel movements that appear clay-colored, light gray, or chalky white, reflecting a lack of bile pigment.",
+      "when_to_seek_care": "Seek medical evaluation promptly. Pale stools indicate potential obstruction of the bile ducts or liver dysfunction.",
+      "lay_terms": [
+        "light coloured stool",
+        "clay coloured stool",
+        "white stool",
+        "pale poo",
+        "potty ka rang halka"
+      ]
+    },
+    {
+      "id": "burning_urination",
+      "name": "Burning or pain when passing urine",
+      "body_system": "urinary",
+      "plain_definition": "A stinging, burning, or painful sensation felt during or immediately after passing urine (dysuria).",
+      "when_to_seek_care": "Consult a doctor promptly for urine testing, especially if accompanied by fever, back pain, or cloudy urine.",
+      "lay_terms": [
+        "burning when peeing",
+        "painful urination",
+        "hurts to pee",
+        "stinging when urinating",
+        "peshab me jalan"
+      ]
+    },
+    {
+      "id": "frequent_urination",
+      "name": "Needing to pass urine often",
+      "body_system": "urinary",
+      "plain_definition": "Needing to pass urine much more often than usual throughout the day or night, often with only small amounts passed.",
+      "when_to_seek_care": "See a doctor if increased frequency is new, persistent, or accompanied by burning, pelvic pain, or excessive thirst.",
+      "lay_terms": [
+        "peeing a lot",
+        "going to bathroom often",
+        "frequent urination",
+        "always need to pee",
+        "baar baar peshab",
+        "baar baar bathroom jaana"
+      ]
+    },
+    {
+      "id": "lower_abdominal_pain",
+      "name": "Pain low in the abdomen",
+      "body_system": "urinary",
+      "plain_definition": "Aching, pressure, or cramping located low in the pelvic or suprapubic area, just above the pubic bone.",
+      "when_to_seek_care": "Consult a doctor if pelvic pain is severe, worsens steadily, or is accompanied by painful urination, vaginal or penile discharge, or fever.",
+      "lay_terms": [
+        "pain in lower belly",
+        "low stomach pain",
+        "pain below belly button",
+        "lower tummy pain",
+        "neeche pet me dard"
+      ]
+    },
+    {
+      "id": "cloudy_or_smelly_urine",
+      "name": "Cloudy or strong-smelling urine",
+      "body_system": "urinary",
+      "plain_definition": "Urine that looks milky, turbid, or hazy, or has an unusually strong, foul, or pungent odor.",
+      "when_to_seek_care": "Consult a healthcare professional if cloudy or smelly urine lasts more than 24 hours or occurs with burning urination or pelvic discomfort.",
+      "lay_terms": [
+        "smelly urine",
+        "cloudy pee",
+        "urine smells bad",
+        "pee looks cloudy",
+        "peshab me badbu"
+      ]
+    },
+    {
+      "id": "blood_in_urine",
+      "name": "Blood in urine",
+      "body_system": "urinary",
+      "plain_definition": "Urine that appears pink, red, or brownish due to the presence of red blood cells (hematuria).",
+      "when_to_seek_care": "Seek prompt medical evaluation. Any visible blood in the urine requires clinical investigation by a healthcare professional.",
+      "lay_terms": [
+        "blood in pee",
+        "red urine",
+        "pink urine",
+        "bloody urine",
+        "peshab me khoon"
+      ]
+    },
+    {
+      "id": "flank_pain",
+      "name": "Pain in the side or back, below the ribs",
+      "body_system": "urinary",
+      "plain_definition": "Sharp, aching, or throbbing pain felt in the side of the torso or mid-to-upper back, below the ribs and above the hips.",
+      "when_to_seek_care": "Seek prompt medical attention if flank pain is severe, radiates toward the groin, or is accompanied by fever, chills, nausea, or blood in the urine.",
+      "lay_terms": [
+        "side pain",
+        "pain in side below ribs",
+        "kidney area pain",
+        "back pain below ribs",
+        "kidney pain",
+        "side me dard"
+      ]
+    },
+    {
+      "id": "joint_pain",
+      "name": "Joint pain",
+      "body_system": "musculoskeletal",
+      "plain_definition": "Aching, soreness, stiffness, or throbbing felt in one or more joints, such as the knees, hips, fingers, wrists, or ankles.",
+      "when_to_seek_care": "See a doctor if joint pain is accompanied by swelling, warmth, redness, or inability to bear weight on the joint.",
+      "lay_terms": [
+        "joint aching",
+        "joints hurting",
+        "painful joints",
+        "sore joints",
+        "jodo me dard",
+        "jodo me taklif"
+      ]
+    },
+    {
+      "id": "joint_swelling",
+      "name": "Joint swelling",
+      "body_system": "musculoskeletal",
+      "plain_definition": "Visible puffiness, enlargement, or fluid accumulation around a joint, often making movement stiff and uncomfortable.",
+      "when_to_seek_care": "Seek medical attention if a joint swells suddenly, is hot and red to the touch, or is accompanied by fever.",
+      "lay_terms": [
+        "joints swollen",
+        "swollen joints",
+        "puffy joints",
+        "joints puffed up",
+        "jodo me sujan"
+      ]
+    },
+    {
+      "id": "lower_back_pain",
+      "name": "Lower back pain",
+      "body_system": "musculoskeletal",
+      "plain_definition": "Aching, stiffness, or sharp pain felt in the lumbar region of the back, between the bottom of the ribcage and the buttocks.",
+      "when_to_seek_care": "Seek urgent medical care (112) if back pain comes with numbness in the groin/buttocks, loss of bowel/bladder control, or leg weakness.",
+      "lay_terms": [
+        "back pain",
+        "low back ache",
+        "backache",
+        "lower back hurting",
+        "my back hurts",
+        "kamar dard",
+        "kamar me dard",
+        "peeth dard"
+      ]
+    },
+    {
+      "id": "muscle_stiffness",
+      "name": "Muscle stiffness",
+      "body_system": "musculoskeletal",
+      "plain_definition": "A sensation of tightness and reduced flexibility in muscles that makes movement difficult, especially after rest or upon waking.",
+      "when_to_seek_care": "Consult a doctor if stiffness is severe, does not loosen up after movement, or is accompanied by joint swelling or muscle tenderness.",
+      "lay_terms": [
+        "stiff muscles",
+        "muscles feel tight",
+        "body stiff",
+        "can't move properly",
+        "akdan",
+        "muscles jammed"
+      ]
+    },
+    {
+      "id": "skin_rash",
+      "name": "Skin rash",
+      "body_system": "skin",
+      "plain_definition": "A noticeable change in the texture, color, or appearance of the skin, resulting in red, bumpy, blotchy, or irritated patches.",
+      "when_to_seek_care": "Seek urgent medical care if a rash spreads rapidly, develops blisters, covers a large area of the body, or occurs with fever.",
+      "lay_terms": [
+        "rash",
+        "rash on skin",
+        "skin eruption",
+        "skin breakout",
+        "red patches",
+        "daane",
+        "chakte",
+        "skin pe daane"
+      ]
+    },
+    {
+      "id": "itchy_skin",
+      "name": "Itchy skin",
+      "body_system": "skin",
+      "plain_definition": "An uncomfortable, irritating sensation on the skin that triggers a strong desire to scratch (pruritus).",
+      "when_to_seek_care": "See a doctor if itching is severe, disrupts sleep, lasts more than two weeks, or occurs all over without an obvious rash.",
+      "lay_terms": [
+        "skin itching",
+        "scratching a lot",
+        "itching all over",
+        "can't stop itching",
+        "khujli",
+        "skin me khujli"
+      ]
+    },
+    {
+      "id": "dry_skin",
+      "name": "Dry skin",
+      "body_system": "skin",
+      "plain_definition": "Skin that feels rough, tight, flaky, or dehydrated, often prone to fine scaling or superficial cracks.",
+      "when_to_seek_care": "Consult a healthcare provider if dry skin develops deep cracks that bleed, becomes red and painful, or does not improve with moisturizers.",
+      "lay_terms": [
+        "skin is dry",
+        "flaky skin",
+        "rough skin",
+        "skin cracking",
+        "rookhi skin",
+        "skin sukh gayi"
+      ]
+    },
+    {
+      "id": "scaly_skin",
+      "name": "Scaly or flaky skin",
+      "body_system": "skin",
+      "plain_definition": "Patches of skin covered with dry, peeling, silvery, or flaky layers of dead surface skin cells.",
+      "when_to_seek_care": "Consult a doctor or dermatologist if scaly patches are persistent, itchy, painful, or spread to multiple body areas.",
+      "lay_terms": [
+        "peeling skin",
+        "scaly patches",
+        "skin flaking off",
+        "skin peeling",
+        "papdi ud rahi",
+        "skin nikal rahi"
+      ]
+    },
+    {
+      "id": "ring_shaped_rash",
+      "name": "Ring-shaped rash",
+      "body_system": "skin",
+      "plain_definition": "A circular, raised red rash with a clear or less inflamed center and scaly outer borders, characteristic of fungal skin infections.",
+      "when_to_seek_care": "Consult a doctor or pharmacist for evaluation if the ring expands, becomes warm and tender, or does not respond to over-the-counter antifungal creams.",
+      "lay_terms": [
+        "ring rash",
+        "circular rash",
+        "ringworm rash",
+        "round rash",
+        "daad",
+        "gol daane"
+      ]
+    },
+    {
+      "id": "hives",
+      "name": "Raised, itchy welts (hives)",
+      "body_system": "skin",
+      "plain_definition": "Raised, intensely itchy, red or skin-colored welts or plaques (urticaria) that appear suddenly on the skin and may shift location.",
+      "when_to_seek_care": "Call emergency services (112) immediately if hives appear with throat swelling, lip or tongue swelling, dizziness, or difficulty breathing.",
+      "lay_terms": [
+        "welts on skin",
+        "urticaria",
+        "raised itchy bumps all over",
+        "red welts",
+        "pitti",
+        "pitti uchal gayi"
+      ]
+    },
+    {
+      "id": "skin_swelling",
+      "name": "Swollen skin",
+      "body_system": "skin",
+      "plain_definition": "Localized fluid buildup causing puffiness, enlargement, or tightness of the skin and underlying tissues (edema).",
+      "when_to_seek_care": "Seek emergency medical care if swelling is sudden, affects the face, lips, or throat, or is accompanied by breathing difficulty.",
+      "lay_terms": [
+        "skin puffed up",
+        "swollen area",
+        "puffy skin",
+        "swelling on skin",
+        "sujan"
+      ]
+    },
+    {
+      "id": "small_itchy_bumps",
+      "name": "Small itchy bumps",
+      "body_system": "skin",
+      "plain_definition": "Tiny, raised pimple-like bumps on the skin that cause intense itching, especially at night or in skin folds.",
+      "when_to_seek_care": "Consult a healthcare provider if itchy bumps spread across the body, affect household members, or develop honey-colored crusts.",
+      "lay_terms": [
+        "tiny itchy bumps",
+        "small bumps itching",
+        "little red bumps",
+        "chhote daane khujli wale"
+      ]
+    },
+    {
+      "id": "skin_burrows",
+      "name": "Thin lines or tracks on the skin",
+      "body_system": "skin",
+      "plain_definition": "Thin, raised, wavy, grayish-white or skin-colored lines on the skin surface, often seen between fingers or on wrists (scabies tracks).",
+      "when_to_seek_care": "See a doctor for confirmation and appropriate treatment for yourself and close household contacts.",
+      "lay_terms": [
+        "tiny lines on skin",
+        "tracks under skin",
+        "silver lines on skin",
+        "skin me lakeerein"
+      ]
+    },
+    {
+      "id": "pimples",
+      "name": "Pimples",
+      "body_system": "skin",
+      "plain_definition": "Small, inflamed, red, pus-filled bumps (papules or pustules) that form when hair follicles become clogged with oil and dead skin cells.",
+      "when_to_seek_care": "Consult a doctor or dermatologist if acne lesions are deep, painful, leave scars, or do not respond to over-the-counter care.",
+      "lay_terms": [
+        "acne",
+        "spots on face",
+        "zits",
+        "breakout",
+        "spots",
+        "muhase",
+        "keel muhase"
+      ]
+    },
+    {
+      "id": "blackheads_or_whiteheads",
+      "name": "Blackheads or whiteheads",
+      "body_system": "skin",
+      "plain_definition": "Small clogged pores that appear as dark, open plugs (blackheads) or tiny, closed flesh-colored bumps (whiteheads).",
+      "when_to_seek_care": "Consult a healthcare provider or dermatologist if comedones become extensively inflamed or turn into painful cysts.",
+      "lay_terms": [
+        "clogged pores",
+        "bumps on nose",
+        "blackheads on face",
+        "whiteheads",
+        "black dots on nose"
+      ]
+    },
+    {
+      "id": "oily_skin",
+      "name": "Oily skin",
+      "body_system": "skin",
+      "plain_definition": "Skin that appears shiny, greasy, and has visibly enlarged pores, caused by overactive sebaceous (oil) glands.",
+      "when_to_seek_care": "Consult a dermatologist if excess oil is accompanied by persistent cystic acne, redness, or flaking skin.",
+      "lay_terms": [
+        "greasy skin",
+        "shiny face",
+        "oily face",
+        "face always oily",
+        "teli skin"
+      ]
+    },
+    {
+      "id": "fluid_filled_blisters",
+      "name": "Fluid-filled blisters",
+      "body_system": "skin",
+      "plain_definition": "Small bubbles or vesicles on the skin filled with clear watery fluid, blood, or pus, resulting from friction, burns, or infection.",
+      "when_to_seek_care": "Seek prompt medical attention if blisters cover large areas, appear on the face, eyes, or genitals, or show signs of spreading infection.",
+      "lay_terms": [
+        "blisters",
+        "water-filled bumps",
+        "skin bubbles",
+        "watery blisters",
+        "chale",
+        "paani wale chale"
+      ]
+    },
+    {
+      "id": "spreading_redness",
+      "name": "Red skin that is spreading",
+      "body_system": "skin",
+      "plain_definition": "An area of red skin discoloration that visibly expands and spreads outward over hours or days, often warm and tender.",
+      "when_to_seek_care": "Seek urgent medical care promptly. Spreading redness can indicate an expanding bacterial skin infection (such as cellulitis) needing antibiotic evaluation.",
+      "lay_terms": [
+        "redness spreading",
+        "red patch getting bigger",
+        "skin getting red and growing",
+        "lali phail rahi"
+      ]
+    },
+    {
+      "id": "warm_tender_skin",
+      "name": "Warm, painful skin",
+      "body_system": "skin",
+      "plain_definition": "An area of skin that feels hot to the touch and causes soreness or pain when lightly pressed.",
+      "when_to_seek_care": "Seek medical evaluation promptly, especially if accompanied by spreading redness, swelling, pus drainage, or fever.",
+      "lay_terms": [
+        "skin hot to touch",
+        "painful skin",
+        "tender red skin",
+        "skin is warm and sore",
+        "chhune me dard"
+      ]
+    },
+    {
+      "id": "non_blanching_rash",
+      "name": "Rash that does not fade when a glass is pressed on it",
+      "body_system": "skin",
+      "plain_definition": "A rash of small red or purple spots (petechiae or purpura) that does not fade or turn pale when a clear drinking glass is pressed firmly against it.",
+      "when_to_seek_care": "Call emergency services (112) immediately. A non-blanching rash can be a critical red flag for meningococcal disease or serious systemic bleeding.",
+      "lay_terms": [
+        "rash doesn't fade when pressed",
+        "glass test rash",
+        "spots that don't disappear with pressure"
+      ]
+    },
+    {
+      "id": "hot_dry_skin",
+      "name": "Hot, dry skin",
+      "body_system": "skin",
+      "plain_definition": "Skin that feels hot to the touch and lacks normal perspiration, often occurring when the body's cooling mechanism fails during heat exposure.",
+      "when_to_seek_care": "Call emergency services (112) immediately. Hot, dry skin combined with high body temperature and confusion is a hallmark of heatstroke, a life-threatening emergency.",
+      "lay_terms": [
+        "skin hot and dry",
+        "burning hot skin",
+        "not sweating in heat",
+        "skin garam aur sookhi"
+      ]
+    },
+    {
+      "id": "thoughts_of_self_harm",
+      "name": "Thoughts of self-harm or suicide",
+      "body_system": "mental_health",
+      "plain_definition": "Recurring thoughts, urges, or impulses to inflict physical harm on oneself, or thoughts related to suicide.",
+      "when_to_seek_care": "Call emergency services (112) or the national mental health/suicide crisis helpline immediately. Immediate professional crisis support is essential.",
+      "lay_terms": [
+        "want to hurt myself",
+        "thinking about suicide",
+        "suicidal thoughts",
+        "don't want to live",
+        "life seems pointless",
+        "feeling suicidal"
+      ]
+    }
+  ]
+}

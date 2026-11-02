@@ -1,8 +1,9 @@
-# AI Gateway & Mock Provider Tests
+# AI Gateway, Extraction Schemas & Mock Provider Tests
 
-**Owner:** Nishith · **Task:** S0-NIT-1 · **Issue:** #18
+**Owner:** Nishith · **Task:** S1-NIT-1 · **Issue:** #30 · **Requirements:** FR-03, FR-17, NFR-05
 
-This suite validates the `AiGateway` protocol, `MockAiProvider`, schemas, and versioned prompt files. All tests run completely offline without an external API key.
+This suite validates the `AiGateway` protocol, `MockAiProvider`, extraction Pydantic schemas (symptom, severity, duration, onset, body site), and versioned prompt files. All tests run completely offline without an external API key.
+
 
 ## Running Tests
 

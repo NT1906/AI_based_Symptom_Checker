@@ -3,9 +3,10 @@
 Responsibilities:
     - Define immutable data models for canonical symptoms and lay-term mappings.
     - Define normalization result structures for deterministic resolution.
+    - Define curated symptom glossary entries for user-friendly definitions.
     - Validate symptom structures at service boundaries.
 
-Owner: Kavya (knowledge) · Task: S1-KAV-1 · Requirements: FR-03
+Owner: Kavya (knowledge) · Task: S1-KAV-1, S1-KAV-3 · Requirements: FR-03, FR-18
 """
 
 from pydantic import BaseModel, ConfigDict, Field
@@ -89,3 +90,51 @@ class TextMatchSpan(BaseModel):
     matched_term: str = Field(description="Term matched in the text")
     start_char: int = Field(ge=0, description="Start character offset")
     end_char: int = Field(ge=0, description="End character offset")
+
+
+class GlossaryEntry(BaseModel):
+    """Immutable curated plain-language glossary entry for a canonical symptom.
+
+    Provides user-friendly, non-diagnostic symptom descriptions and safety
+    guidance for tooltips, user clarification, and off-topic explanation.
+
+    Attributes:
+        id: Canonical snake_case symptom ID aligned with symptoms.json.
+        name: Human-readable clinical display name.
+        body_system: Anatomical body system classification.
+        plain_definition: Empathetic, lay-language description of the symptom.
+        when_to_seek_care: Safe guidance on when doctor evaluation is advised.
+        lay_terms: Colloquial synonyms and search aliases (English & Hinglish).
+    """
+
+    model_config = ConfigDict(frozen=True)
+
+    id: str = Field(
+        min_length=1,
+        max_length=64,
+        description="Canonical snake_case symptom ID",
+    )
+    name: str = Field(
+        min_length=1,
+        max_length=128,
+        description="Canonical display name",
+    )
+    body_system: str = Field(
+        min_length=1,
+        max_length=64,
+        description="Anatomical body system",
+    )
+    plain_definition: str = Field(
+        min_length=10,
+        max_length=1024,
+        description="Empathetic, lay-language description",
+    )
+    when_to_seek_care: str = Field(
+        min_length=10,
+        max_length=1024,
+        description="Guidance on when medical care is recommended",
+    )
+    lay_terms: tuple[str, ...] = Field(
+        default_factory=tuple,
+        description="Colloquial synonyms and lay terms for search lookup",
+    )

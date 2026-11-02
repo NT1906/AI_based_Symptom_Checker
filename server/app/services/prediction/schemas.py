@@ -58,6 +58,22 @@ class ConditionProfile(BaseModel):
         return sum(symptom.weight for symptom in self.symptoms)
 
 
+class Specialty(BaseModel):
+    """A kind of doctor a referral can point to (no doctor data, idea §9).
+
+    Attributes:
+        id: Specialty ID, e.g. ``dermatology``.
+        name: Plain-language display name, e.g. ``Dermatologist``.
+        map_query: Search term for the external map search (S2-MAN-2).
+    """
+
+    model_config = ConfigDict(frozen=True, extra="ignore")
+
+    id: str = Field(min_length=1, max_length=64)
+    name: str = Field(min_length=1, max_length=128)
+    map_query: str = Field(min_length=1, max_length=128)
+
+
 class ConditionPrediction(BaseModel):
     """A ranked possible condition for a set of confirmed symptoms.
 

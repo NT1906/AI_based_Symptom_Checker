@@ -1,13 +1,12 @@
 # Prediction Service
 
-**Owner:** Nisarg (prediction) · **Tasks:** S1-NIS-1, S1-NIS-2 · **Requirements:** FR-05, FR-06, FR-15, FR-22, FR-23, DR-02
+**Owner:** Nisarg (prediction) · **Tasks:** S1-NIS-1, S1-NIS-2, S1-NIS-3 · **Requirements:** FR-05, FR-06, FR-07, FR-15, FR-22, FR-23, DR-02, DR-04
 
-Two parts, both deterministic:
+Three parts, all deterministic:
 
 - **Condition predictor:** ranks the possible conditions for a set of confirmed symptoms. Each condition gets a confidence **label** (`LIKELY`, `POSSIBLE`, `LESS_LIKELY`), never a number.
 - **Risk engine:** turns the symptoms and predictions into `SELF_CARE`, `CONSULT_DOCTOR` or `URGENT`. Red flags always win.
-
-The result composer (S1-NIS-3) joins this package later.
+- **Specialty mapper + result composer:** pick the kind of doctor to refer to, then build the published `AssessmentResult`.
 
 ## Public interface
 
@@ -79,6 +78,39 @@ The hit is marked `assumed_severity=True`. The orchestrator should ask about sev
 `RiskDecision` also carries `driving_condition_ids` (for the "why" panel) and `engine_version` (for the audit log).
 Bump `RISK_ENGINE_VERSION` whenever a rule changes. Uncertainty escalation on low confidence is added in S2-NIS-1.
 
+## Specialty mapper and result composer
+
+```python
+from app.services.prediction import ResultComposer
+
+composer = ResultComposer(wording_guard=assert_safe_wording)  # S1-HAR-3
+result = composer.compose(assessment_id, decision, predictions)
+```
+
+**Referral specialty** (`SpecialtyMapper`):
+
+| Level | Specialty |
+|---|---|
+| `URGENT` | Emergency department, always |
+| `CONSULT_DOCTOR` | Specialty of the best-ranked condition that drove the decision; general physician if none did, or if the specialty is unknown |
+| `SELF_CARE` | None (no referral) |
+
+**What the composer fills in:**
+
+| Field | Content |
+|---|---|
+| `risk_level` | Copied from the decision, **never changed** |
+| `conditions` | The predictions in the published `Condition` schema, with the specialty display name |
+| `guidance` | Next steps for the tier (`result_text.NEXT_STEPS`). Red flags in the `mental_health` category add Tele-MANAS 14416. An assumed severity is explained. Extra self-care guidance (S2-KAV-1) is added for `SELF_CARE` only. |
+| `referral` | `required` unless `SELF_CARE`; specialty name; reason (red-flag label, "may be related to …", or no-match); 112 for `URGENT` |
+| `limitations` | Always the self-report and coverage limits, plus a red-flag or no-match note |
+| `model_version` | The risk engine version |
+| `disclaimer` | The fixed default from `app.schemas.result` |
+
+**Wording:** every sentence lives in `result_text.py`, so wording can be reviewed in one place (DR-05).
+The composer passes each generated sentence to the **required** `wording_guard` before returning, and a guard error stops the result.
+The fixed disclaimer is not passed to the guard: it contains the word "diagnosis" by design.
+
 ## Data
 
 `data/conditions.json` is a **copy** of `ml/datasets/conditions/conditions.json`, because the server image has no `ml/`.
@@ -88,7 +120,7 @@ Bump `RISK_ENGINE_VERSION` whenever a rule changes. Uncertainty escalation on lo
 cp ml/datasets/conditions/conditions.json server/app/services/prediction/data/conditions.json
 ```
 
-Both the predictor and the risk engine read this file: the conditions, and the red-flag rules.
+The predictor reads the conditions, the risk engine the red-flag rules, and the composer the specialties.
 
 ## Tests
 
