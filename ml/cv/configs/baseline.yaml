@@ -1,0 +1,73 @@
+# Baseline training config for the skin-image model.
+# Every value here is explained in docs/cv-plan.md; change both together.
+# Loaded and validated by ml/cv/train_config.py.
+# Owner: Nisarg (cv) · Task: S0-NIS-2 · Requirements: NFR-07
+
+version: 1
+seed: 42
+
+# Order = model output index. `unclear` must be last (docs/cv-plan.md §2).
+classes:
+  - name: eczema
+    condition_id: atopic_dermatitis
+  - name: fungal_infection
+    condition_id: fungal_skin_infection
+  - name: urticaria
+    condition_id: urticaria
+  - name: scabies
+    condition_id: scabies
+  - name: acne
+    condition_id: acne
+  - name: chickenpox
+    condition_id: chickenpox
+  - name: cellulitis
+    condition_id: cellulitis
+  - name: unclear
+    condition_id: null
+
+data:
+  sources: [scin, fitzpatrick17k]
+  resize_size: 256
+  image_size: 224
+  mean: [0.485, 0.456, 0.406]
+  std: [0.229, 0.224, 0.225]
+  split:
+    train: 0.70
+    val: 0.15
+    test: 0.15
+  # Fitzpatrick skin types per reporting group; images with no type go to "unknown".
+  skin_tone_groups:
+    light: [1, 2]
+    medium: [3, 4]
+    dark: [5, 6]
+  min_train_images_per_class: 150
+  min_test_images_per_class: 30
+
+model:
+  backbone: efficientnet_b0
+  pretrained: true
+  dropout: 0.2
+
+training:
+  epochs: 20
+  freeze_backbone_epochs: 2
+  batch_size: 64
+  learning_rate: 0.0003
+  weight_decay: 0.0001
+  label_smoothing: 0.1
+  class_weighting: inverse_sqrt_frequency
+  mixed_precision: true
+
+inference:
+  # Starting value; tuned on the validation set in S2-NIS-6.
+  abstain_threshold: 0.55
+
+export:
+  opset: 17
+  quantization: int8_static
+  calibration_images: 200
+  max_model_mb: 25
+  max_latency_ms: 1000
+
+tracking:
+  wandb_project: symptom-checker-cv
