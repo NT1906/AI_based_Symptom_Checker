@@ -2,10 +2,11 @@
 
 Covers:
     - The packaged copy loads and is byte-identical to ml/datasets/conditions/.
-    - Lookups by condition ID.
+    - Lookups by condition ID, and the red-flag rules (S1-NIS-2).
     - Each kind of broken dataset raises ConditionDataError.
 
-Owner: Nisarg (prediction) · Task: S1-NIS-1 · Requirements: FR-05, DR-03
+Owner: Nisarg (prediction) · Task: S1-NIS-1, S1-NIS-2 · Requirements: FR-05,
+DR-02, DR-03
 """
 
 import copy
@@ -75,6 +76,13 @@ def test_total_weight_sums_symptom_weights() -> None:
     assert cold.total_weight == sum(s.weight for s in cold.symptoms)
 
 
+def test_packaged_catalog_loads_every_red_flag(shipped_raw: Raw) -> None:
+    red_flags = get_catalog().red_flags
+
+    assert [r.id for r in red_flags] == [r["id"] for r in shipped_raw["red_flags"]]
+    assert all(r.triggers for r in red_flags)
+
+
 def _bad_weight(data: Raw) -> None:
     data["conditions"][0]["symptoms"][0]["weight"] = 4
 
@@ -95,6 +103,26 @@ def _no_conditions(data: Raw) -> None:
     data["conditions"] = []
 
 
+def _no_red_flags(data: Raw) -> None:
+    data["red_flags"] = []
+
+
+def _red_flag_unknown_symptom(data: Raw) -> None:
+    data["red_flags"][0]["triggers"][0]["all_of"][0]["symptom"] = "made_up_symptom"
+
+
+def _duplicate_red_flag(data: Raw) -> None:
+    data["red_flags"].append(copy.deepcopy(data["red_flags"][0]))
+
+
+def _unknown_min_severity(data: Raw) -> None:
+    data["red_flags"][0]["triggers"][0]["all_of"][0]["min_severity"] = "UNKNOWN"
+
+
+def _typo_in_trigger(data: Raw) -> None:
+    data["red_flags"][0]["triggers"][0]["all_of"][0]["min_severty"] = "SEVERE"
+
+
 @pytest.mark.parametrize(
     ("mutate", "message"),
     [
@@ -103,6 +131,11 @@ def _no_conditions(data: Raw) -> None:
         pytest.param(_duplicate_condition, "duplicate condition", id="duplicate"),
         pytest.param(_bad_base_risk, "invalid condition dataset", id="bad_risk"),
         pytest.param(_no_conditions, "invalid condition dataset", id="empty"),
+        pytest.param(_no_red_flags, "invalid condition dataset", id="no_red_flags"),
+        pytest.param(_red_flag_unknown_symptom, "made_up_symptom", id="rf_unknown"),
+        pytest.param(_duplicate_red_flag, "duplicate red flag", id="rf_duplicate"),
+        pytest.param(_unknown_min_severity, "cannot be UNKNOWN", id="rf_unknown_min"),
+        pytest.param(_typo_in_trigger, "invalid condition dataset", id="rf_typo"),
     ],
 )
 def test_rejects_broken_dataset(

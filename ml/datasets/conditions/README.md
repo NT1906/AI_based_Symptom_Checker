@@ -102,7 +102,7 @@ The validator (`validate_conditions.py`, with the condition rules in `condition_
 
 ## Open questions for later tasks
 
-- **Unknown severity (S1-NIS-2):** if a red-flag part needs `SEVERE` and the user's severity is unknown, the risk engine should treat it as matched or ask a clarifying question. Uncertainty must never lower risk.
+- **Unknown severity (decided in S1-NIS-2):** if a red-flag part needs `SEVERE` and the user's severity is unknown, the risk engine treats it as matched (URGENT) and marks the hit `assumed_severity`, so the orchestrator can ask instead. Uncertainty never lowers risk.
 - **Symptom vocabulary (S0-KAV-1):** Kavya's canonical vocabulary should reuse these symptom IDs, so extraction and prediction speak the same language.
 
 ## Server copy
