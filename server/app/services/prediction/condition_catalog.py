@@ -3,13 +3,13 @@
 Responsibilities:
     - Read ``data/conditions.json`` (a copy of ``ml/datasets/conditions/``,
       kept identical by a parity test, because the server image has no ``ml/``).
-    - Validate every condition and red-flag record, and check that every
-      symptom they name exists in the dataset's symptom list, so prediction
-      and the risk engine never meet an unknown ID at runtime.
+    - Validate every condition, red-flag and specialty record, and check that
+      every symptom and specialty they name exists, so prediction, the risk
+      engine and the result composer never meet an unknown ID at runtime.
     - Cache the parsed catalog for the life of the process.
 
-Owner: Nisarg (prediction) · Task: S1-NIS-1, S1-NIS-2 · Requirements: FR-05,
-DR-02, DR-03
+Owner: Nisarg (prediction) · Task: S1-NIS-1, S1-NIS-2, S1-NIS-3 · Requirements:
+FR-05, FR-07, DR-02, DR-03, DR-04
 """
 
 import json
@@ -20,7 +20,7 @@ from pydantic import BaseModel, ConfigDict, Field
 from pydantic import ValidationError as PydanticValidationError
 
 from app.services.prediction.risk_schemas import RedFlag
-from app.services.prediction.schemas import ConditionProfile
+from app.services.prediction.schemas import ConditionProfile, Specialty
 
 DATA_FILE = Path(__file__).parent / "data" / "conditions.json"
 
@@ -51,6 +51,7 @@ class _DatasetFile(BaseModel):
     conditions: tuple[ConditionProfile, ...] = Field(min_length=1)
     # Why: a dataset without red flags would silently disable URGENT (DR-02).
     red_flags: tuple[RedFlag, ...] = Field(min_length=1)
+    specialties: tuple[Specialty, ...] = Field(min_length=1)
 
 
 class ConditionCatalog:
@@ -62,6 +63,7 @@ class ConditionCatalog:
         symptom_ids: frozenset[str],
         dataset_version: str,
         red_flags: tuple[RedFlag, ...] = (),
+        specialties: tuple[Specialty, ...] = (),
     ) -> None:
         """Build a catalog from already-validated records.
 
@@ -70,15 +72,21 @@ class ConditionCatalog:
             symptom_ids: Every canonical symptom ID in the dataset.
             dataset_version: Dataset version label, e.g. ``v0``.
             red_flags: Every red-flag rule, in dataset order.
+            specialties: Every specialty. When given, every condition's
+                specialty must be one of them.
 
         Raises:
-            ConditionDataError: If a condition or red-flag ID repeats, or a
-                record names a symptom that is not in ``symptom_ids``.
+            ConditionDataError: If a condition, red-flag or specialty ID
+                repeats, or a record names an unknown symptom or specialty.
         """
         _check_references(conditions, symptom_ids)
         _check_red_flags(red_flags, symptom_ids)
+        _check_specialties(conditions, specialties)
         self.conditions = conditions
         self.red_flags = red_flags
+        self.specialties = specialties
+        self._specialties = {specialty.id: specialty for specialty in specialties}
+        self._red_flags = {red_flag.id: red_flag for red_flag in red_flags}
         self.symptom_ids = symptom_ids
         self.dataset_version = dataset_version
         self._by_id = {condition.id: condition for condition in conditions}
@@ -86,6 +94,14 @@ class ConditionCatalog:
     def get(self, condition_id: str) -> ConditionProfile | None:
         """Return one condition by ID, or ``None`` if it does not exist."""
         return self._by_id.get(condition_id)
+
+    def get_specialty(self, specialty_id: str) -> Specialty | None:
+        """Return one specialty by ID, or ``None`` if it does not exist."""
+        return self._specialties.get(specialty_id)
+
+    def get_red_flag(self, red_flag_id: str) -> RedFlag | None:
+        """Return one red-flag rule by ID, or ``None`` if it does not exist."""
+        return self._red_flags.get(red_flag_id)
 
 
 def load_catalog(path: Path = DATA_FILE) -> ConditionCatalog:
@@ -111,6 +127,7 @@ def load_catalog(path: Path = DATA_FILE) -> ConditionCatalog:
         symptom_ids=frozenset(symptom.id for symptom in parsed.symptoms),
         dataset_version=parsed.dataset_version,
         red_flags=parsed.red_flags,
+        specialties=parsed.specialties,
     )
 
 
@@ -157,4 +174,21 @@ def _check_red_flags(
         if unknown:
             raise ConditionDataError(
                 f"red flag {red_flag.id!r} uses unknown symptom(s) {sorted(unknown)}"
+            )
+
+
+def _check_specialties(
+    conditions: tuple[ConditionProfile, ...], specialties: tuple[Specialty, ...]
+) -> None:
+    """Reject repeated specialty IDs and conditions naming an unknown specialty."""
+    ids = [specialty.id for specialty in specialties]
+    if len(set(ids)) != len(ids):
+        raise ConditionDataError("duplicate specialty id")
+    if not specialties:
+        return
+    for condition in conditions:
+        if condition.specialty not in ids:
+            raise ConditionDataError(
+                f"condition {condition.id!r} uses unknown specialty "
+                f"{condition.specialty!r}"
             )
