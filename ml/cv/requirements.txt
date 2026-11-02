@@ -1,0 +1,13 @@
+# Training dependencies for the skin-image model (ml/cv/). Never installed in the server image.
+# Kaggle/Colab GPU images already ship torch and torchvision; pip keeps them if they satisfy these ranges.
+# Owner: Nisarg (cv) · Task: S0-NIS-2 · Requirements: NFR-07
+torch>=2.5,<3
+torchvision>=0.20,<1
+timm>=1.0,<2
+numpy>=2.0,<3
+pillow>=11.0,<13
+scikit-learn>=1.6,<2
+PyYAML>=6.0,<7
+onnx>=1.17,<2
+onnxruntime>=1.20,<2
+wandb>=0.19,<1
