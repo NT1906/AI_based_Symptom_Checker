@@ -1,0 +1,180 @@
+{
+  "dataset_version": "v1",
+  "stage": "metadata (before download and cleaning)",
+  "seed": 42,
+  "fractions": {
+    "train": 0.7,
+    "val": 0.15,
+    "test": 0.15
+  },
+  "metadata": {
+    "scin_cases.csv": {
+      "url": "https://storage.googleapis.com/dx-scin-public-data/dataset/scin_cases.csv",
+      "sha256": "7923ee9ba9775af413ca115c4587dc1bd32259d7936aa97fa80d88dd616ca3c3"
+    },
+    "scin_labels.csv": {
+      "url": "https://storage.googleapis.com/dx-scin-public-data/dataset/scin_labels.csv",
+      "sha256": "616ad03c24c304f5f7ef01b4116e4d3274f1c71c9b19a0e3d5620698b081a9fe"
+    },
+    "fitzpatrick17k.csv": {
+      "url": "https://raw.githubusercontent.com/mattgroh/fitzpatrick17k/9865ce95b4b2035a1b311644ca00e028d1c4e74c/fitzpatrick17k.csv",
+      "sha256": "851dfaabf1791c2a8b1c2957619f3e0673cf0002f4ce924a5c02d185c7d4a1cd"
+    }
+  },
+  "images": 10598,
+  "groups": 5754,
+  "by_split": {
+    "train": {
+      "acne": 425,
+      "cellulitis": 12,
+      "chickenpox": 1,
+      "eczema": 719,
+      "fungal_infection": 98,
+      "scabies": 247,
+      "unclear": 5561,
+      "urticaria": 358
+    },
+    "val": {
+      "acne": 90,
+      "cellulitis": 4,
+      "eczema": 157,
+      "fungal_infection": 21,
+      "scabies": 53,
+      "unclear": 1191,
+      "urticaria": 77
+    },
+    "test": {
+      "acne": 90,
+      "cellulitis": 3,
+      "eczema": 154,
+      "fungal_infection": 17,
+      "scabies": 52,
+      "unclear": 1193,
+      "urticaria": 75
+    }
+  },
+  "by_label_skin_tone": {
+    "acne": {
+      "dark": 47,
+      "light": 368,
+      "medium": 188,
+      "unknown": 2
+    },
+    "cellulitis": {
+      "light": 12,
+      "medium": 7
+    },
+    "chickenpox": {
+      "light": 1
+    },
+    "eczema": {
+      "dark": 96,
+      "light": 494,
+      "medium": 410,
+      "unknown": 30
+    },
+    "fungal_infection": {
+      "dark": 12,
+      "light": 60,
+      "medium": 59,
+      "unknown": 5
+    },
+    "scabies": {
+      "dark": 76,
+      "light": 107,
+      "medium": 141,
+      "unknown": 28
+    },
+    "unclear": {
+      "dark": 617,
+      "light": 2688,
+      "medium": 3411,
+      "unknown": 1229
+    },
+    "urticaria": {
+      "dark": 23,
+      "light": 209,
+      "medium": 255,
+      "unknown": 23
+    }
+  },
+  "by_label_source": {
+    "acne": {
+      "fitzpatrick17k": 517,
+      "scin": 88
+    },
+    "cellulitis": {
+      "scin": 19
+    },
+    "chickenpox": {
+      "scin": 1
+    },
+    "eczema": {
+      "fitzpatrick17k": 204,
+      "scin": 826
+    },
+    "fungal_infection": {
+      "scin": 136
+    },
+    "scabies": {
+      "fitzpatrick17k": 339,
+      "scin": 13
+    },
+    "unclear": {
+      "scin": 7945
+    },
+    "urticaria": {
+      "fitzpatrick17k": 151,
+      "scin": 359
+    }
+  },
+  "left_out": {
+    "fitzpatrick17k:not_used": 15349,
+    "fitzpatrick17k:wrongly_labelled": 17,
+    "scin:class_look_alike": 98,
+    "scin:shared_between_cases": 42,
+    "scin:tied_top_labels": 880
+  },
+  "class_size_check": {
+    "acne": {
+      "train": 425,
+      "test": 90,
+      "meets_minimum": true
+    },
+    "cellulitis": {
+      "train": 12,
+      "test": 3,
+      "meets_minimum": false
+    },
+    "chickenpox": {
+      "train": 1,
+      "test": 0,
+      "meets_minimum": false
+    },
+    "eczema": {
+      "train": 719,
+      "test": 154,
+      "meets_minimum": true
+    },
+    "fungal_infection": {
+      "train": 98,
+      "test": 17,
+      "meets_minimum": false
+    },
+    "scabies": {
+      "train": 247,
+      "test": 52,
+      "meets_minimum": true
+    },
+    "unclear": {
+      "train": 5561,
+      "test": 1193,
+      "meets_minimum": true
+    },
+    "urticaria": {
+      "train": 358,
+      "test": 75,
+      "meets_minimum": true
+    }
+  }
+}
