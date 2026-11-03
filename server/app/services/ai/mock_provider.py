@@ -494,6 +494,57 @@ class MockAiProvider:
             missing_field=None,
         )
 
+    @staticmethod
+    def _match_severity_terms(snippet: str) -> SeverityEnum:
+        """Match severity keywords in a given text snippet."""
+        severe_terms = [
+            "severe",
+            "terrible",
+            "really bad",
+            "worst",
+            "unbearable",
+            "extreme",
+            "intense",
+            "excruciating",
+            "tez",
+            "bahut tez",
+            "bahut zyada",
+            "very bad",
+        ]
+        if any(w in snippet for w in severe_terms):
+            return SeverityEnum.SEVERE
+        if any(
+            w in snippet
+            for w in [
+                "moderate",
+                "pretty bad",
+                "noticeable",
+                "medium",
+                "kafi",
+                "average",
+                "tolerable",
+            ]
+        ):
+            return SeverityEnum.MODERATE
+        if any(
+            w in snippet
+            for w in [
+                "mild",
+                "slight",
+                "little bit",
+                "minor",
+                "thoda sa",
+                "halka",
+                "not bad",
+                "not severe",
+                "not too bad",
+                "bearable",
+                "low",
+            ]
+        ):
+            return SeverityEnum.MILD
+        return SeverityEnum.UNKNOWN
+
     def _parse_severity(self, text: str, phrase: str | None = None) -> SeverityEnum:
         """Heuristic severity parser from descriptive English and Hinglish text.
 
@@ -513,52 +564,17 @@ class MockAiProvider:
                     target_text = clause
                     break
 
-        severe_terms = [
-            "severe",
-            "terrible",
-            "really bad",
-            "worst",
-            "unbearable",
-            "extreme",
-            "intense",
-            "excruciating",
-            "tez",
-            "bahut tez",
-            "bahut zyada",
-            "very bad",
-        ]
-        if any(w in target_text for w in severe_terms):
-            return SeverityEnum.SEVERE
-        if any(
-            w in target_text
-            for w in [
-                "moderate",
-                "pretty bad",
-                "noticeable",
-                "medium",
-                "kafi",
-                "average",
-                "tolerable",
-            ]
-        ):
-            return SeverityEnum.MODERATE
-        if any(
-            w in target_text
-            for w in [
-                "mild",
-                "slight",
-                "little bit",
-                "minor",
-                "thoda sa",
-                "halka",
-                "not bad",
-                "not severe",
-                "not too bad",
-                "bearable",
-                "low",
-            ]
-        ):
-            return SeverityEnum.MILD
+        matched = self._match_severity_terms(target_text)
+        if matched != SeverityEnum.UNKNOWN:
+            return matched
+
+        # Fallback: if the isolated clause has no severity, check if the full message
+        # mentions a severity for this symptom (e.g. 'headache started yesterday
+        # and it is mild') provided no competing symptom phrase is present.
+        competing = [p for p in FIXTURE_SYMPTOM_MAP if p in text and p != phrase]
+        if not competing:
+            return self._match_severity_terms(text)
+
         return SeverityEnum.UNKNOWN
 
     def _parse_duration(self, text: str) -> Duration | None:
@@ -570,7 +586,12 @@ class MockAiProvider:
         Returns:
             Parsed Duration instance or None.
         """
-        if "since yesterday" in text or "from yesterday" in text:
+        if (
+            "since yesterday" in text
+            or "from yesterday" in text
+            or "started yesterday" in text
+            or "yesterday" in text
+        ):
             return Duration(value=1.0, unit=DurationUnitEnum.DAY)
         if "for a couple days" in text or "couple of days" in text:
             return Duration(value=2.0, unit=DurationUnitEnum.DAY)
