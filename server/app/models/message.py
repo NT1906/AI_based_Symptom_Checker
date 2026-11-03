@@ -1,6 +1,6 @@
 """Ordered assessment messages without image storage.
 
-Owner: Harsh · Task: S0-HAR-1 · Requirements: FR-01
+Owner: Harsh · Task: S0-HAR-1, S1-DIM-4 (indexes: Dimple) · Requirements: FR-01, NFR-01
 """
 
 from typing import TYPE_CHECKING
@@ -34,7 +34,7 @@ class Message(RecordMixin, Base):
     )
 
     assessment_id: Mapped[UUID] = mapped_column(
-        ForeignKey("assessments.id", ondelete="RESTRICT")
+        ForeignKey("assessments.id", ondelete="RESTRICT"), index=True
     )
     position: Mapped[int] = mapped_column(Integer)
     role: Mapped[str] = mapped_column(String(16))
