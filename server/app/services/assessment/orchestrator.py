@@ -3,11 +3,13 @@
 Responsibilities:
     - Ingest user messages and record dialogue entries sequentially.
     - Coordinate with AI Gateway for symptom extraction and clarifying questions.
+    - Cap clarification turns at MAX_CLARIFICATION_TURNS (3) per FR-04/FR-19.
+    - Transition to CONFIRMING and flag low confidence when the turn budget is reached.
     - Merge newly extracted symptoms into current assessment state deterministically.
     - Enforce state machine transitions (SYMPTOM_COLLECTION, CLARIFYING, CONFIRMING).
     - Handle AI timeouts and failures gracefully without crashing or changing state.
 
-Owner: Darshil (orchestration) · Task: S1-DAR-2 · Requirements: FR-03, FR-17
+Owner: Darshil (orchestration) · Task: S1-DAR-3 · Requirements: FR-04, FR-19, FR-20
 """
 
 from dataclasses import dataclass, field
@@ -17,7 +19,12 @@ from uuid import UUID, uuid4
 from fastapi import status
 
 from app.core.logging import get_logger
-from app.schemas.assessment import AssessmentRead, AssessmentResult, ProcessResult
+from app.schemas.assessment import (
+    AssessmentRead,
+    AssessmentResult,
+    AssessmentStateResponse,
+    ProcessResult,
+)
 from app.schemas.enums import (
     AssessmentState,
     DurationUnit,
@@ -129,6 +136,7 @@ class AssessmentSession:
         state_machine: Guarded lifecycle state machine.
         messages: Sequential dialogue message history.
         symptoms: Accumulated canonical recognized symptoms.
+        is_low_confidence: Flag set when clarification loop cap was reached.
         created_at: Session creation timestamp in UTC.
         updated_at: Last activity timestamp in UTC.
     """
@@ -139,6 +147,7 @@ class AssessmentSession:
     state_machine: AssessmentStateMachine
     messages: list[MessageRead] = field(default_factory=list)
     symptoms: list[SymptomRead] = field(default_factory=list)
+    is_low_confidence: bool = False
     created_at: datetime = field(default_factory=lambda: datetime.now(UTC))
     updated_at: datetime = field(default_factory=lambda: datetime.now(UTC))
 
@@ -146,8 +155,8 @@ class AssessmentSession:
 class AssessmentOrchestrator:
     """Central orchestration service for conversational symptom assessment.
 
-    Coordinates chat intake, AI-driven extraction, symptom merging, and
-    lifecycle progression through the assessment state machine.
+    Coordinates chat intake, AI-driven extraction, symptom merging, clarification
+    limits, and lifecycle progression through the assessment state machine.
     """
 
     def __init__(
@@ -197,6 +206,7 @@ class AssessmentOrchestrator:
             state_machine=sm,
             messages=[],
             symptoms=[],
+            is_low_confidence=False,
             created_at=now,
             updated_at=now,
         )
@@ -243,6 +253,7 @@ class AssessmentOrchestrator:
             state_machine=state_machine,
             messages=list(messages or []),
             symptoms=list(symptoms or []),
+            is_low_confidence=state_machine.context.is_low_confidence,
             created_at=now,
             updated_at=now,
         )
@@ -312,6 +323,36 @@ class AssessmentOrchestrator:
             )
         return list(session.symptoms)
 
+    def get_state(self, assessment_id: UUID) -> AssessmentStateResponse:
+        """Retrieve complete state snapshot with clarification and confidence flags.
+
+        Args:
+            assessment_id: Unique assessment identifier.
+
+        Returns:
+            AssessmentStateResponse containing state, symptoms, clarification
+            counts, and low-confidence status.
+
+        Raises:
+            AssessmentServiceError: If assessment does not exist.
+        """
+        session = self._sessions.get(assessment_id)
+        if session is None:
+            raise AssessmentServiceError(
+                message=f"Assessment '{assessment_id}' was not found.",
+                code="ASSESSMENT_NOT_FOUND",
+                status_code=status.HTTP_404_NOT_FOUND,
+            )
+        sm = session.state_machine
+        return AssessmentStateResponse(
+            assessment_id=session.id,
+            state=sm.current_state,
+            symptoms=[Symptom.model_validate(s.model_dump()) for s in session.symptoms],
+            clarification_count=sm.context.clarification_count,
+            max_clarifications=sm.context.max_clarifications,
+            is_low_confidence=session.is_low_confidence,
+        )
+
     async def process_message(
         self,
         assessment_id: UUID,
@@ -327,7 +368,8 @@ class AssessmentOrchestrator:
         5. Handles extraction failures (timeouts, network drops) safely.
         6. Merges newly extracted symptoms into state without duplicates.
         7. Evaluates state machine transition (COLLECTION, CLARIFYING, CONFIRMING).
-        8. Generates and stores appropriate assistant response message.
+        8. Caps clarification at MAX_CLARIFICATION_TURNS (3) and flags low confidence.
+        9. Generates and stores appropriate assistant response message.
 
         Args:
             assessment_id: Unique identifier of the target assessment.
@@ -424,6 +466,7 @@ class AssessmentOrchestrator:
                 next_state=sm.current_state,
                 symptoms=session.symptoms,
                 result_type="ERROR",
+                is_low_confidence=session.is_low_confidence,
             )
         except AiError:
             logger.warning("ai_extraction_failure", assessment_id=str(assessment_id))
@@ -447,6 +490,7 @@ class AssessmentOrchestrator:
                 next_state=sm.current_state,
                 symptoms=session.symptoms,
                 result_type="ERROR",
+                is_low_confidence=session.is_low_confidence,
             )
 
         # Step 3: Merge newly extracted symptoms into current assessment state
@@ -482,41 +526,90 @@ class AssessmentOrchestrator:
             session.messages.append(assistant_msg)
             result_type = "TEXT"
 
-        # Case 2: Clarification branch: symptoms exist, AI clarifies, under cap
-        elif (
-            extraction.requires_clarification
-            and sm.context.clarification_count < sm.context.max_clarifications
-        ):
-            already_asked = [
-                m.content
-                for m in session.messages
-                if m.message_type == MessageType.CLARIFICATION
-            ]
-            clarification_res = await self._ai_gateway.generate_clarification(
-                structured_state={
-                    "symptoms": [s.model_dump() for s in session.symptoms]
-                },
-                already_asked=already_asked,
+        else:
+            # Determine whether clarification is required:
+            # 1. New extraction flagged requires_clarification, OR
+            # 2. Existing symptoms still lack essential duration attributes
+            has_unresolved_duration = any(s.duration is None for s in session.symptoms)
+            requires_clarification = (
+                extraction.requires_clarification
+                or (
+                    sm.current_state == AssessmentState.CLARIFYING
+                    and has_unresolved_duration
+                )
+                or (has_unresolved_duration and sm.context.clarification_count == 0)
             )
 
-            if clarification_res.should_ask and clarification_res.question:
-                sm.request_clarification()
-                assistant_msg = MessageRead(
-                    id=uuid4(),
-                    assessment_id=assessment_id,
-                    position=len(session.messages),
-                    role=MessageRole.ASSISTANT,
-                    content=clarification_res.question,
-                    message_type=MessageType.CLARIFICATION,
-                    created_at=datetime.now(UTC),
+            # Case 2: Clarification branch: needs clarification and under turn cap
+            if (
+                requires_clarification
+                and sm.context.clarification_count < sm.context.max_clarifications
+            ):
+                already_asked = [
+                    m.content
+                    for m in session.messages
+                    if m.message_type == MessageType.CLARIFICATION
+                ]
+                clarification_res = await self._ai_gateway.generate_clarification(
+                    structured_state={
+                        "symptoms": [s.model_dump() for s in session.symptoms]
+                    },
+                    already_asked=already_asked,
                 )
-                session.messages.append(assistant_msg)
-                result_type = "CLARIFICATION"
+
+                if clarification_res.should_ask and clarification_res.question:
+                    sm.request_clarification()
+                    assistant_msg = MessageRead(
+                        id=uuid4(),
+                        assessment_id=assessment_id,
+                        position=len(session.messages),
+                        role=MessageRole.ASSISTANT,
+                        content=clarification_res.question,
+                        message_type=MessageType.CLARIFICATION,
+                        created_at=datetime.now(UTC),
+                    )
+                    session.messages.append(assistant_msg)
+                    result_type = "CLARIFICATION"
+                else:
+                    # No further clarification questions available from provider
+                    sm.proceed_to_confirmation()
+                    confirm_text = (
+                        "Thank you for providing those details. "
+                        "Please review and confirm your symptoms "
+                        "so we can analyze them."
+                    )
+                    assistant_msg = MessageRead(
+                        id=uuid4(),
+                        assessment_id=assessment_id,
+                        position=len(session.messages),
+                        role=MessageRole.ASSISTANT,
+                        content=confirm_text,
+                        message_type=MessageType.CONFIRMATION,
+                        created_at=datetime.now(UTC),
+                    )
+                    session.messages.append(assistant_msg)
+                    result_type = "CONFIRMATION"
+
+            # Case 3: Confirmation branch: clarification done or capped at limit
             else:
+                # If ambiguity remained but budget was exhausted, flag low confidence
+                if (
+                    requires_clarification
+                    or sm.context.clarification_count >= sm.context.max_clarifications
+                ):
+                    session.is_low_confidence = True
+                    sm.context.is_low_confidence = True
+                    logger.info(
+                        "clarification_cap_reached_low_confidence_flagged",
+                        assessment_id=str(assessment_id),
+                        clarification_count=sm.context.clarification_count,
+                    )
+
                 sm.proceed_to_confirmation()
                 confirm_text = (
                     "Thank you for providing those details. "
-                    "Please review and confirm your symptoms so we can analyze them."
+                    "Please review and confirm your symptoms "
+                    "so we can analyze them."
                 )
                 assistant_msg = MessageRead(
                     id=uuid4(),
@@ -530,25 +623,6 @@ class AssessmentOrchestrator:
                 session.messages.append(assistant_msg)
                 result_type = "CONFIRMATION"
 
-        # Case 3: Confirmation branch: symptoms exist, clarification done or capped
-        else:
-            sm.proceed_to_confirmation()
-            confirm_text = (
-                "Thank you for providing those details. "
-                "Please review and confirm your symptoms so we can analyze them."
-            )
-            assistant_msg = MessageRead(
-                id=uuid4(),
-                assessment_id=assessment_id,
-                position=len(session.messages),
-                role=MessageRole.ASSISTANT,
-                content=confirm_text,
-                message_type=MessageType.CONFIRMATION,
-                created_at=datetime.now(UTC),
-            )
-            session.messages.append(assistant_msg)
-            result_type = "CONFIRMATION"
-
         session.updated_at = datetime.now(UTC)
         logger.info(
             "assessment_message_processed",
@@ -556,6 +630,7 @@ class AssessmentOrchestrator:
             next_state=sm.current_state.value,
             symptom_count=len(session.symptoms),
             result_type=result_type,
+            is_low_confidence=session.is_low_confidence,
         )
 
         return ProcessResult(
@@ -565,6 +640,7 @@ class AssessmentOrchestrator:
             next_state=sm.current_state,
             symptoms=session.symptoms,
             result_type=result_type,
+            is_low_confidence=session.is_low_confidence,
         )
 
     async def confirm_symptoms(
