@@ -42,6 +42,7 @@ class AssessmentContext:
         max_clarifications: Hard limit on clarification questions (default 3).
         is_confirmed: True when user has reviewed and confirmed symptoms.
         has_analysis_result: True when prediction and risk triage finished.
+        is_low_confidence: True when clarification loop was capped with ambiguity.
     """
 
     assessment_id: UUID | None = None
@@ -52,6 +53,7 @@ class AssessmentContext:
     max_clarifications: int = MAX_CLARIFICATION_TURNS
     is_confirmed: bool = False
     has_analysis_result: bool = False
+    is_low_confidence: bool = False
 
 
 GuardCallable = Callable[[AssessmentContext], tuple[bool, str | None]]
@@ -461,6 +463,7 @@ class AssessmentStateMachine:
             self._context.clarification_count = 0
             self._context.is_confirmed = False
             self._context.has_analysis_result = False
+            self._context.is_low_confidence = False
             return self.transition_to(to_state)
 
         # Force reset across other states (e.g. user clicks "Start Over" mid-flow)
@@ -469,6 +472,7 @@ class AssessmentStateMachine:
         self._context.clarification_count = 0
         self._context.is_confirmed = False
         self._context.has_analysis_result = False
+        self._context.is_low_confidence = False
         self._history.append((from_state, to_state, datetime.now(UTC)))
 
         logger.info(
