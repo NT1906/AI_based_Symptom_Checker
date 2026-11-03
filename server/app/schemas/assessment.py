@@ -63,6 +63,12 @@ class AssessmentStateResponse(SchemaBase):
         description="Clarification loop count (capped at 3)",
     )
     max_clarifications: int = Field(default=3, description="Hard cap on clarifications")
+    is_low_confidence: bool = Field(
+        default=False,
+        description=(
+            "Whether low confidence was flagged due to capped clarification loop"
+        ),
+    )
 
 
 class ProcessResult(SchemaBase):
@@ -77,6 +83,7 @@ class ProcessResult(SchemaBase):
         symptoms: Current list of recognized/merged symptoms.
         result_type: Message intent classification
             (TEXT, CLARIFICATION, CONFIRMATION, ERROR).
+        is_low_confidence: Flag set when clarification loop cap was reached.
     """
 
     assessment_id: UUID = Field(..., description="Unique assessment identifier")
@@ -102,6 +109,12 @@ class ProcessResult(SchemaBase):
     result_type: str = Field(
         default="TEXT",
         description="Result intent: CLARIFICATION, CONFIRMATION, TEXT, or ERROR",
+    )
+    is_low_confidence: bool = Field(
+        default=False,
+        description=(
+            "Whether low confidence is flagged after reaching clarification limit"
+        ),
     )
 
     def model_post_init(self, __context: object) -> None:
