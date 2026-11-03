@@ -83,12 +83,13 @@ Licence obligations we take on:
 
 ## 4. Data pipeline and split strategy (S1-NIS-5)
 
-1. **Download** with scripts in `ml/datasets/images/` (SCIN from its public Cloud Storage bucket, Fitzpatrick17k from its CSV of source URLs). Dead links are logged and counted, not retried forever.
-2. **Clean:** drop images that fail to decode or have a side shorter than 128 px. Remove duplicates by perceptual hash, both within and across datasets (SCIN alone has known duplicate images).
-3. **Map labels** from each source's vocabulary to the 8 classes, using a reviewed mapping table in the dataset card.
-   - A SCIN case is used for a class only when that class is its top-weighted dermatologist label.
-   - Cases with no label, or a label outside the 7 classes, go to `unclear`.
-4. **Skin-tone group:** use Fitzpatrick type (SCIN's dermatologist estimate, Fitzpatrick17k's label).
+Code, counts and the reviewed mapping table: [`ml/datasets/images/`](../ml/datasets/images/README.md) (dataset card).
+
+1. **Map labels** from each source's vocabulary to the 8 classes, using the reviewed mapping table in the dataset card. This step uses metadata only.
+   - A SCIN case is used for a class only when that class is its top-weighted dermatologist label. A tie between labels with different outcomes leaves the case out.
+   - SCIN cases with no label (not gradable), or a top label outside the 7 classes, go to `unclear`. Look-alikes of a class (for example tinea versicolor, infected eczema) are left out, so `unclear` never teaches "this class look-alike cannot be judged".
+   - Fitzpatrick17k only supplements the 7 classes; `unclear` comes from SCIN.
+2. **Skin-tone group:** use Fitzpatrick type (SCIN: lower median of the dermatologists' estimates; Fitzpatrick17k: its label).
 
    | Group | Fitzpatrick types |
    |---|---|
@@ -98,10 +99,12 @@ Licence obligations we take on:
    | `unknown` | missing |
 
    Images in `unknown` are still used for training, and are reported separately.
-5. **Split 70 / 15 / 15** (train / val / test) with seed 42:
-   - **Grouped by case:** all images of one SCIN case, or one Fitzpatrick17k source, land in the same split. Otherwise the test set leaks.
+3. **Split 70 / 15 / 15** (train / val / test) with seed 42, **from metadata only**, so dead links never change it:
+   - **Grouped by case:** all images of one SCIN case land in the same split. Each Fitzpatrick17k image is its own group (atlas pages group by condition, not patient). SCIN images reused across cases are left out.
    - **Stratified by class × skin-tone group**, so every split has the same mix of classes and skin tones.
-   - The **test split is frozen** once S1-NIS-5 merges. The split manifest (image ID → split, class, skin-tone group; no images) is versioned with the dataset card. Later tasks never re-split.
+   - The **test split is frozen** once S1-NIS-5 merges. The split manifest (image ID → split, class, skin-tone group; no images) is versioned with the dataset card, pinned to the metadata checksums. Later tasks never re-split.
+4. **Download** with scripts in `ml/datasets/images/` (SCIN from its public Cloud Storage bucket, Fitzpatrick17k from its CSV of source URLs). Dead links are logged and counted, not retried forever.
+5. **Clean** against the frozen split, which only removes rows: drop images that fail to decode or have a side shorter than 128 px. Remove near-duplicates by perceptual hash, both within and across datasets (SCIN alone has known duplicate images); each duplicate set keeps its test copy first, then val, so test never leaks into training. Sets with conflicting labels are dropped.
 
 ---
 
