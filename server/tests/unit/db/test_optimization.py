@@ -1,4 +1,4 @@
-"""Unit tests for hot-query indexes, index migration lifecycle, and realistic demo seed data.
+"""Unit tests for hot-query indexes, lifecycle, and realistic demo seed data.
 
 Owner: Dimple · Task: S1-DIM-4 · Requirements: NFR-01
 """
@@ -6,11 +6,11 @@ Owner: Dimple · Task: S1-DIM-4 · Requirements: NFR-01
 from pathlib import Path
 
 import pytest
+from alembic import command
 from alembic.config import Config
 from sqlalchemy import Engine, func, inspect, select
 from sqlalchemy.exc import IntegrityError
 
-from alembic import command
 from app.db.session import create_session_factory
 from app.models import Assessment, Consent, Message, Symptom, User
 from app.repositories.seed_repository import (
@@ -25,7 +25,7 @@ SERVER = Path(__file__).resolve().parents[3]
 
 
 def test_hot_query_indexes_present_in_schema(engine: Engine) -> None:
-    """The migrated schema contains all hot-query indexes on assessments, messages, and symptoms."""
+    """The schema contains all hot-query indexes on assessments, messages, symptoms."""
     with engine.connect() as connection:
         inspector = inspect(connection)
 
@@ -92,7 +92,7 @@ def test_migration_0002_downgrade_and_upgrade(engine: Engine) -> None:
 
 
 def test_realistic_demo_seeding_happy_path(engine: Engine) -> None:
-    """Realistic demo data populates multi-stage user, guest, message, and symptom graphs."""
+    """Realistic demo data populates user, guest, message, and symptom graphs."""
     factory = create_session_factory(engine)
     with factory.begin() as session:
         inserted = seed_realistic_demo_data(session)
@@ -127,7 +127,7 @@ def test_realistic_demo_seeding_happy_path(engine: Engine) -> None:
 
 
 def test_realistic_demo_seeding_idempotence(engine: Engine) -> None:
-    """Repeated calls to seed_realistic_demo_data return False and do not duplicate records."""
+    """Repeated calls to seed_realistic_demo_data return False and do not duplicate."""
     factory = create_session_factory(engine)
     with factory.begin() as session:
         assert seed_realistic_demo_data(session) is True

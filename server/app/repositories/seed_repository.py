@@ -1,4 +1,4 @@
-Test-Path ".\tracked-changes-backup.patch""""Idempotent fictional database seed and realistic demo datasets.
+"""Idempotent fictional database seed and realistic demo datasets.
 
 Owner: Dimple · Task: S1-DIM-4 · Requirements: NFR-01
 """
@@ -50,8 +50,10 @@ def seed_fictional_data(session: Session) -> bool:
 
     Args:
         session: Caller-owned transaction; this function flushes but never commits.
+
     Returns:
         True when inserted, False when the known seed assessment already exists.
+
     Raises:
         IntegrityError: If a seed identity conflicts; the caller must roll back.
     """
@@ -85,12 +87,14 @@ def seed_realistic_demo_data(session: Session) -> bool:
       2. Anonymous guest with active assessment in SYMPTOM_COLLECTION state.
       3. Registered patient with an assessment in CLARIFYING state.
 
-    All health descriptions are explicitly fictional and follow non-diagnostic safety rules.
+    All health descriptions are explicitly fictional and follow safety rules.
 
     Args:
         session: Caller-owned transaction; this function flushes but never commits.
+
     Returns:
         True when newly inserted, False if demo data already exists.
+
     Raises:
         IntegrityError: If identity conflicts occur; caller must roll back.
     """
@@ -116,19 +120,28 @@ def seed_realistic_demo_data(session: Session) -> bool:
                 id=DEMO_MSG1_ID,
                 position=0,
                 role="user",
-                content="FICTIONAL DEMO: I have had a mild throbbing headache and slight fatigue since yesterday morning.",
+                content=(
+                    "FICTIONAL DEMO: I have had a mild throbbing headache "
+                    "and slight fatigue since yesterday morning."
+                ),
             ),
             Message(
                 id=DEMO_MSG2_ID,
                 position=1,
                 role="assistant",
-                content="FICTIONAL DEMO: Thank you for providing these details. Are you experiencing any nausea, fever, or sensitivity to bright light?",
+                content=(
+                    "FICTIONAL DEMO: Thank you for providing these details. "
+                    "Are you experiencing any nausea, fever, or sensitivity to light?"
+                ),
             ),
             Message(
                 id=DEMO_MSG3_ID,
                 position=2,
                 role="user",
-                content="FICTIONAL DEMO: No fever or nausea, just mild tension around my temples after working on my computer.",
+                content=(
+                    "FICTIONAL DEMO: No fever or nausea, just mild tension "
+                    "around my temples after working on my computer."
+                ),
             ),
         ]
     )
@@ -155,7 +168,7 @@ def seed_realistic_demo_data(session: Session) -> bool:
             id=DEMO_GUEST_MSG_ID,
             position=0,
             role="user",
-            content="FICTIONAL DEMO: Mild dry cough and runny nose for the past 2 days.",
+            content="FICTIONAL DEMO: Mild dry cough and runny nose for 2 days.",
         )
     )
     assessment_guest.symptoms.extend(
@@ -185,13 +198,19 @@ def seed_realistic_demo_data(session: Session) -> bool:
                 id=DEMO_USER2_MSG1_ID,
                 position=0,
                 role="user",
-                content="FICTIONAL DEMO: Dull aching lower back discomfort after lifting boxes yesterday.",
+                content=(
+                    "FICTIONAL DEMO: Dull aching lower back discomfort "
+                    "after lifting boxes yesterday."
+                ),
             ),
             Message(
                 id=DEMO_USER2_MSG2_ID,
                 position=1,
                 role="assistant",
-                content="FICTIONAL DEMO: Does the discomfort radiate down into your legs, or do you notice any tingling, numbness, or weakness?",
+                content=(
+                    "FICTIONAL DEMO: Does the discomfort radiate into legs, "
+                    "or do you notice any tingling, numbness, or weakness?"
+                ),
             ),
         ]
     )
