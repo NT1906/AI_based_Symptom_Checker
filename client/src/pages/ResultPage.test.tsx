@@ -178,11 +178,13 @@ describe("ResultPage", () => {
     await user.click(startNewBtn);
     expect(onStartNewAssessment).toHaveBeenCalledTimes(1);
 
-    // Header "Start Over" button (accessible name comes from aria-label)
+    // Header "Start Over" button (accessible name comes from aria-label) opens confirmation dialog
     const headerStartOver = screen.getByRole("button", {
       name: /Start a new assessment from scratch/i,
     });
     await user.click(headerStartOver);
+    const confirmBtn = screen.getByRole("button", { name: /Yes, Start Over/i });
+    await user.click(confirmBtn);
     expect(onStartNewAssessment).toHaveBeenCalledTimes(2);
   });
 

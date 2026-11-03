@@ -5,8 +5,9 @@
  * - Happy path: Renders children, landmark elements, emergency phone button, and persistent disclaimer.
  * - Edge cases: Custom title, custom emergency number, offline status banner, and start-over actions.
  * - Safety case: Confirms mandatory non-diagnostic disclaimer text (DR-01) is strictly present.
+ * - Restart action: Confirms always-visible start-over button with confirmation dialog (FR-25).
  *
- * Owner: Mann (Frontend + Deployment · Testing) · Task: S0-MAN-1 · Requirements: DR-01, NFR-06
+ * Owner: Mann (Frontend + Deployment · Testing) · Tasks: S0-MAN-1, S1-MAN-4 · Requirements: DR-01, FR-25, NFR-06
  */
 
 import { describe, it, expect, vi } from "vitest";
@@ -104,7 +105,7 @@ describe("AppLayout", () => {
     expect(alert).toHaveTextContent(/You are currently offline/i);
   });
 
-  it("renders and triggers the Start Over button when enabled", () => {
+  it("renders and triggers the Start Over button with confirmation dialog (FR-25)", () => {
     const handleStartOver = vi.fn();
 
     render(
@@ -118,8 +119,19 @@ describe("AppLayout", () => {
     });
     expect(startOverBtn).toBeInTheDocument();
 
+    // Click trigger to open confirmation dialog
     fireEvent.click(startOverBtn);
+
+    const dialog = screen.getByRole("alertdialog");
+    expect(dialog).toBeInTheDocument();
+    expect(dialog).toHaveTextContent(/Start New Assessment\?/i);
+
+    // Confirm action
+    const confirmBtn = screen.getByRole("button", { name: /Yes, Start Over/i });
+    fireEvent.click(confirmBtn);
+
     expect(handleStartOver).toHaveBeenCalledTimes(1);
+    expect(screen.queryByRole("alertdialog")).not.toBeInTheDocument();
   });
 
   it("provides an accessible skip-to-content link (NFR-06 accessibility)", () => {
