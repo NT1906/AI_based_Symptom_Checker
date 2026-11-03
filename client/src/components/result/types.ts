@@ -1,10 +1,13 @@
 /**
- * @file TypeScript domain types and interfaces for candidate condition presentation.
- * Owner: Mann (Frontend + Deployment · Testing) · Task: S1-MAN-2 · Requirements: FR-22, FR-23, DR-01
+ * @file TypeScript domain types and interfaces for candidate condition presentation and triage results.
+ * Owner: Mann (Frontend + Deployment · Testing) · Tasks: S1-MAN-2, S1-MAN-3 · Requirements: FR-06, FR-15, FR-22, FR-23, DR-01, DR-02
  */
 
 /** Qualitative confidence tier matching backend ConfidenceLabel enum (FR-23, AI_RULES §2.3). */
 export type ConfidenceTier = "LIKELY" | "POSSIBLE" | "LESS_LIKELY";
+
+/** Deterministic clinical triage risk levels (FR-06, FR-15, DR-02). */
+export type RiskLevel = "SELF_CARE" | "CONSULT_DOCTOR" | "URGENT";
 
 /** Candidate condition item presented to users with non-diagnostic qualitative confidence. */
 export interface ConditionItem {
@@ -38,3 +41,40 @@ export interface ConditionListProps {
   title?: string;
 }
 
+/** Clinical guidance information covering self-care recommendations and warning signs. */
+export interface TriageGuidance {
+  /** Summary or headline for the guidance section. */
+  summary?: string;
+  /** Actionable self-care recommendations (rest, fluids, symptom monitoring). */
+  selfCareAdvice?: string[];
+  /** Red-flag warnings or symptoms indicating need for emergency evaluation. */
+  warningSigns?: string[];
+  /** Recommended timeframe for seeking medical evaluation (e.g. within 24-48 hours). */
+  timeframe?: string;
+}
+
+/** External doctor or clinic referral recommendation based on medical specialty. */
+export interface ReferralInfo {
+  /** Primary recommended medical specialty. */
+  specialty: string;
+  /** Additional suggested specialties if applicable. */
+  secondarySpecialties?: string[];
+  /** Suggested external map query string (e.g. "General Physician near me"). */
+  mapQuery?: string;
+}
+
+/** Complete assessment result data bundle composed by ResultPage. */
+export interface AssessmentResultData {
+  /** Assessment unique identifier, if persisted. */
+  assessmentId?: string;
+  /** Deterministic risk tier. */
+  riskLevel: RiskLevel;
+  /** Ranked list of candidate conditions. */
+  conditions: ConditionItem[];
+  /** Clinical triage guidance and self-care directions. */
+  guidance?: TriageGuidance;
+  /** Specialty referral recommendations. */
+  referral?: ReferralInfo;
+  /** ISO timestamp of when the assessment result was generated. */
+  completedAt?: string;
+}

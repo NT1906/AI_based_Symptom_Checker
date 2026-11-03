@@ -1,13 +1,15 @@
 /**
- * @file Application shell layout with accessible navigation landmarks and a persistent medical disclaimer footer.
+ * @file Application shell layout with accessible navigation landmarks, always-visible start over control, and a persistent medical disclaimer footer.
  *
- * Enforces requirement DR-01 (mandatory persistent medical disclaimer on every screen)
+ * Enforces requirement DR-01 (mandatory persistent medical disclaimer on every screen),
+ * FR-25 (always-visible "Start new assessment" button with confirm dialog),
  * and NFR-06 (accessible landmarks, high-contrast typography, and responsive layout).
  *
- * Owner: Mann (Frontend + Deployment · Testing) · Task: S0-MAN-1 · Requirements: DR-01, NFR-06
+ * Owner: Mann (Frontend + Deployment · Testing) · Tasks: S0-MAN-1, S1-MAN-4 · Requirements: DR-01, FR-25, NFR-06
  */
 
 import React from "react";
+import { StartNewAssessmentButton } from "./StartNewAssessmentButton";
 
 /** Props for the AppLayout component. */
 export interface AppLayoutProps {
@@ -23,10 +25,12 @@ export interface AppLayoutProps {
   isOffline?: boolean;
   /** Optional action slot displayed on the right side of the navigation header. */
   headerActions?: React.ReactNode;
-  /** Optional callback triggered when the user clicks the "Start Over" action. */
+  /** Optional callback triggered when the user confirms the "Start Over" action. */
   onStartOver?: () => void;
-  /** Whether to show the "Start Over" button in the navigation header. */
+  /** Whether to show the "Start Over" button in the navigation header. Defaults to true (FR-25). */
   showStartOver?: boolean;
+  /** Whether starting over opens a confirmation modal dialog. Defaults to true (FR-25). */
+  requireConfirmation?: boolean;
 }
 
 /** Standard non-diagnostic medical disclaimer text mandated by DR-01. */
@@ -34,8 +38,9 @@ export const MANDATORY_DISCLAIMER_TEXT =
   "This application is an informational triage aid and does not provide a medical diagnosis or treatment plan. Always consult a qualified healthcare professional for medical concerns. If you think you may be experiencing a life-threatening medical emergency, call emergency services immediately.";
 
 /**
- * Root application shell providing header landmarks, responsive container, and
- * a persistent medical disclaimer footer that is always visible.
+ * Root application shell providing header landmarks, responsive container,
+ * always-visible "Start Over" control with confirm dialog (FR-25), and a
+ * persistent medical disclaimer footer (DR-01).
  *
  * @param props Component properties.
  * @returns The rendered layout element.
@@ -48,7 +53,8 @@ export function AppLayout({
   isOffline = false,
   headerActions,
   onStartOver,
-  showStartOver = false,
+  showStartOver = true,
+  requireConfirmation = true,
 }: AppLayoutProps): React.ReactElement {
   return (
     <div className="flex min-h-screen flex-col bg-slate-50 text-slate-900 antialiased selection:bg-teal-100 selection:text-teal-900">
@@ -60,48 +66,41 @@ export function AppLayout({
         Skip to main content
       </a>
 
-      {/* Offline Status Alert Banner */}
+      {/* Offline Status Warning Banner (FR-07, NFR-06) */}
       {isOffline && (
-        <aside
+        <div
           role="status"
           aria-live="polite"
-          className="border-b border-amber-300 bg-amber-50 px-4 py-2.5 text-center text-sm font-medium text-amber-900 shadow-sm"
+          className="border-b border-amber-300 bg-amber-50 px-4 py-2 text-center text-xs font-semibold text-amber-900 sm:text-sm"
         >
-          <div className="mx-auto flex max-w-5xl items-center justify-center gap-2">
+          <span className="inline-flex items-center gap-1.5">
             <span aria-hidden="true">⚠️</span>
             <span>
-              You are currently offline. Symptom analysis requires an active connection. If in
-              distress, call{" "}
-              <a
-                href={`tel:${emergencyNumber}`}
-                className="font-bold underline hover:text-amber-950 focus:outline-none focus:ring-2 focus:ring-amber-800"
-              >
-                {emergencyNumber}
-              </a>
-              .
+              You are currently offline. Basic emergency information remains
+              accessible, but active assessment features may be limited.
             </span>
-          </div>
-        </aside>
+          </span>
+        </div>
       )}
 
-      {/* Application Header Landmark */}
+      {/* Primary Header Navigation Landmark */}
       <header
         role="banner"
         className="sticky top-0 z-40 border-b border-slate-200/80 bg-white/95 backdrop-blur-sm shadow-xs transition-colors"
       >
         <div className="mx-auto flex max-w-5xl items-center justify-between px-4 py-3 sm:px-6">
+          {/* Brand Logo & Landmark Title */}
           <div className="flex items-center gap-3">
-            {/* Healthcare cross emblem */}
             <div
               className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl bg-teal-700 text-white shadow-xs"
               aria-hidden="true"
             >
               <svg
                 className="h-6 w-6"
-                viewBox="0 0 24 24"
                 fill="none"
                 stroke="currentColor"
-                strokeWidth="2.5"
+                viewBox="0 0 24 24"
+                strokeWidth={2.5}
                 strokeLinecap="round"
                 strokeLinejoin="round"
               >
@@ -121,15 +120,14 @@ export function AppLayout({
 
           {/* Header Action Controls */}
           <div className="flex items-center gap-2 sm:gap-3">
-            {showStartOver && onStartOver && (
-              <button
-                type="button"
-                onClick={onStartOver}
-                className="inline-flex min-h-[44px] min-w-[44px] items-center justify-center rounded-lg border border-slate-300 bg-white px-3 py-2 text-xs font-medium text-slate-700 transition hover:bg-slate-50 hover:text-slate-900 focus:outline-none focus:ring-2 focus:ring-teal-700 focus:ring-offset-2"
-                aria-label="Start a new assessment from scratch"
-              >
-                Start Over
-              </button>
+            {/* Always-visible Start New Assessment button with confirm dialog (FR-25) */}
+            {showStartOver && (
+              <StartNewAssessmentButton
+                onConfirm={onStartOver}
+                variant="header"
+                label="Start Over"
+                skipConfirm={!requireConfirmation}
+              />
             )}
 
             {headerActions}
