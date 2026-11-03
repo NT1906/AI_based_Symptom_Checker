@@ -13,6 +13,7 @@ from typing import Any
 
 from app.services.ai.schemas import (
     Duration,
+    DurationUnitEnum,
     ExtractedSymptom,
     MissingFieldEnum,
     MissingInfoItem,
@@ -126,9 +127,20 @@ def _to_extracted_symptom(raw: ExtractedSymptom | dict[str, Any]) -> ExtractedSy
     elif not isinstance(sev, SeverityEnum):
         clean_dict["severity"] = SeverityEnum.UNKNOWN
 
-    # Normalize duration if invalid
+    # Normalize duration if invalid or dict
     dur = clean_dict.get("duration")
-    if dur is not None and not isinstance(dur, (Duration, dict)):
+    if isinstance(dur, dict):
+        unit_raw = str(dur.get("unit", "")).strip().upper()
+        if unit_raw.endswith("S"):
+            unit_raw = unit_raw[:-1]
+        try:
+            clean_dict["duration"] = {
+                **dur,
+                "unit": DurationUnitEnum(unit_raw),
+            }
+        except ValueError:
+            clean_dict["duration"] = None
+    elif dur is not None and not isinstance(dur, Duration):
         clean_dict["duration"] = None
 
     return ExtractedSymptom.model_validate(clean_dict)
