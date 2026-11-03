@@ -9,7 +9,10 @@ Responsibilities:
     - Enforce state machine transitions (SYMPTOM_COLLECTION, CLARIFYING, CONFIRMING).
     - Handle AI timeouts and failures gracefully without crashing or changing state.
 
-Owner: Darshil (orchestration) · Task: S1-DAR-3 · Requirements: FR-04, FR-19, FR-20
+    - Run real analysis in generate_result() via condition predictor, risk engine,
+      and result composer with safety-wording validation (FR-05, FR-06, FR-07, DR-05).
+
+Owner: Darshil (assessment) · Task: S2-DAR-5 · Requirements: FR-05, FR-06, FR-07, DR-05
 """
 
 from dataclasses import dataclass, field
@@ -30,7 +33,6 @@ from app.schemas.enums import (
     DurationUnit,
     MessageRole,
     MessageType,
-    RiskLevel,
     Severity,
     SymptomSource,
 )
@@ -38,7 +40,19 @@ from app.schemas.message import MessageRead
 from app.schemas.symptom import Duration, Symptom, SymptomRead
 from app.services.ai.factory import get_ai_gateway
 from app.services.ai.gateway import AiError, AiGateway, AiTimeoutError
+from collections.abc import Sequence
 from app.services.ai.schemas import ExtractedSymptom
+from app.services.prediction.condition_predictor import (
+    BaselineConditionModel,
+    ConditionModel,
+)
+from app.services.prediction.result_composer import ResultComposer
+from app.services.prediction.risk_engine import assess_risk
+from app.services.prediction.risk_schemas import ReportedSymptom
+from app.services.privacy.safety_guard import (
+    UnsafeWordingError,
+    assert_safe_wording,
+)
 from app.services.assessment.exceptions import (
     AssessmentServiceError,
     InvalidStateTransitionError,
@@ -162,14 +176,27 @@ class AssessmentOrchestrator:
     def __init__(
         self,
         ai_gateway: AiGateway | None = None,
+        result_composer: ResultComposer | None = None,
+        condition_model: ConditionModel | None = None,
     ) -> None:
         """Initialize the AssessmentOrchestrator.
 
         Args:
             ai_gateway: Optional provider conforming to the AiGateway protocol.
                 Defaults to the configured application AI gateway.
+            result_composer: Optional composer for generating triage results with
+                safety-wording validation. Defaults to ResultComposer with
+                assert_safe_wording.
+            condition_model: Optional model conforming to ConditionModel protocol.
+                Defaults to BaselineConditionModel.
         """
         self._ai_gateway = ai_gateway or get_ai_gateway()
+        self._result_composer = result_composer or ResultComposer(
+            wording_guard=assert_safe_wording
+        )
+        self._condition_model: ConditionModel = (
+            condition_model or BaselineConditionModel()
+        )
         self._sessions: dict[UUID, AssessmentSession] = {}
 
     def create_assessment(
@@ -688,11 +715,23 @@ class AssessmentOrchestrator:
     async def generate_result(
         self,
         assessment_id: UUID,
+        self_care_guidance: Sequence[str] = (),
     ) -> AssessmentResult:
         """Trigger analysis and transition session through ANALYZING to COMPLETED.
 
+        Executes the clinical evaluation pipeline:
+        1. Transitions state machine from READY to ANALYZING.
+        2. Maps confirmed symptoms to ReportedSymptom domain representations.
+        3. Predicts ranked conditions via the configured condition model.
+        4. Evaluates clinical risk level deterministically via the risk engine.
+        5. Composes AssessmentResult with safety-wording guard validation.
+        6. On UnsafeWordingError, transitions state machine to ERROR and re-raises.
+        7. On success, transitions state machine from ANALYZING to COMPLETED.
+
         Args:
             assessment_id: Unique assessment identifier.
+            self_care_guidance: Optional additional general self-care advice for
+                low-risk results.
 
         Returns:
             AssessmentResult with triage risk tier, conditions, and safety disclaimer.
@@ -700,6 +739,7 @@ class AssessmentOrchestrator:
         Raises:
             AssessmentServiceError: If assessment is not found.
             InvalidStateTransitionError: If session is not in READY state.
+            UnsafeWordingError: If generated text violates safety-wording rules.
         """
         session = self._sessions.get(assessment_id)
         if session is None:
@@ -711,18 +751,34 @@ class AssessmentOrchestrator:
 
         sm = session.state_machine
         sm.start_analysis()
+
+        reported = [
+            ReportedSymptom(id=s.name, severity=s.severity) for s in session.symptoms
+        ]
+        symptom_ids = [s.name for s in session.symptoms]
+        predictions = self._condition_model.predict(symptom_ids)
+        decision = assess_risk(reported, predictions)
+
+        try:
+            result = self._result_composer.compose(
+                assessment_id=assessment_id,
+                decision=decision,
+                predictions=predictions,
+                self_care_guidance=self_care_guidance,
+            )
+        except UnsafeWordingError as exc:
+            logger.error(
+                "unsafe_wording_detected_in_result",
+                assessment_id=str(assessment_id),
+                error_code=exc.code,
+            )
+            sm.transition_to_error(reason="Safety wording check failed.")
+            session.updated_at = datetime.now(UTC)
+            raise
+
         sm.complete_analysis()
         session.updated_at = datetime.now(UTC)
-
-        return AssessmentResult(
-            assessment_id=assessment_id,
-            risk_level=RiskLevel.CONSULT_DOCTOR,
-            conditions=[],
-            disclaimer=(
-                "This is not a medical diagnosis. "
-                "Always consult a qualified healthcare professional."
-            ),
-        )
+        return result
 
 
 __all__ = [
