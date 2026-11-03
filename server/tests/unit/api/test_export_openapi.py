@@ -81,6 +81,7 @@ def test_openapi_contains_all_assessment_operations(app: FastAPI) -> None:
         ("/api/v1/assessments/{id}/symptoms", "patch"),
         ("/api/v1/assessments/{id}/analyze", "post"),
         ("/api/v1/assessments/{id}/result", "get"),
+        ("/api/v1/assessments/{id}/images", "post"),
     ]
 
     for path, method in expected_routes:
