@@ -1,11 +1,11 @@
-"""Assessment API endpoints returning static stubs for walking skeleton.
+"""Assessment API endpoints delegating to injected assessment services.
 
 Responsibilities:
     - Expose REST API routes for assessment lifecycle, chat, and results.
-    - Return deterministic static stub payloads (AI_RULES.md §1, S1-VIV-1).
+    - Delegate operations to injected assessment service via FastAPI Depends.
     - Provide complete OpenAPI operation metadata, status codes, and error models.
 
-Owner: Vivek (api) · Task: S1-VIV-1 · Requirements: —
+Owner: Vivek (api) · Task: S1-VIV-1, S1-VIV-3 · Requirements: —
 """
 
 from typing import Annotated, Any
@@ -14,17 +14,10 @@ from uuid import UUID
 from fastapi import APIRouter, Path, status
 from pydantic import Field
 
-from app.api.v1._assessment_stubs import (
-    STUB_ASSESSMENT_ID,
-    STUB_URGENT_ASSESSMENT_ID,
-    make_assessment_read_stub,
-    make_assessment_result_stub,
-    make_assessment_state_stub,
-    make_conversation_messages_stub,
-    make_send_message_stub,
-    make_symptoms_stub,
-    make_updated_symptoms_stub,
-    make_urgent_result_stub,
+from app.api.deps import (
+    AnalyzeResponse,
+    AssessmentServiceDep,
+    SendMessageResponse,
 )
 from app.core.errors import ErrorResponse
 from app.core.logging import get_logger
@@ -34,7 +27,6 @@ from app.schemas.assessment import (
     AssessmentStateResponse,
 )
 from app.schemas.base import SchemaBase
-from app.schemas.enums import AssessmentState
 from app.schemas.message import MessageCreate, MessageRead
 from app.schemas.result import AssessmentResult
 from app.schemas.symptom import SymptomRead, SymptomUpdate
@@ -45,43 +37,8 @@ router = APIRouter(prefix="/assessments", tags=["assessments"])
 
 
 # ---------------------------------------------------------------------------
-# Router-local response and request envelopes (to be merged into app/schemas
-# by Darshil in a subsequent task; see S1-VIV-1 specification).
+# Router request envelope
 # ---------------------------------------------------------------------------
-
-
-class SendMessageResponse(SchemaBase):
-    """Response returned after appending a message to an assessment session."""
-
-    message: MessageRead = Field(
-        ...,
-        description="User message recorded in session",
-    )
-    assistant_message: MessageRead = Field(
-        ...,
-        description="Assistant reply or clarification prompt",
-    )
-    next_state: AssessmentState = Field(
-        ...,
-        description="Assessment lifecycle state after message processing",
-    )
-
-
-class AnalyzeResponse(SchemaBase):
-    """Response returned upon triggering clinical triage analysis."""
-
-    assessment_id: UUID = Field(
-        ...,
-        description="Evaluated assessment identifier",
-    )
-    state: AssessmentState = Field(
-        default=AssessmentState.COMPLETED,
-        description="Current lifecycle state",
-    )
-    result_available: bool = Field(
-        default=True,
-        description="Whether clinical evaluation result is ready for retrieval",
-    )
 
 
 class UpdateSymptomsRequest(SchemaBase):
@@ -139,22 +96,21 @@ STATE_CONFLICT_ERROR_RESPONSES: dict[int | str, dict[str, Any]] = {
         },
     },
 )
-async def create_assessment(payload: AssessmentCreate) -> AssessmentRead:
+async def create_assessment(
+    payload: AssessmentCreate,
+    service: AssessmentServiceDep,
+) -> AssessmentRead:
     """Initialize a new assessment session.
 
     Args:
         payload: Assessment creation payload containing consentId.
+        service: Injected assessment domain service.
 
     Returns:
         AssessmentRead: Created assessment with START state.
     """
-    logger.info("assessment_created_stub", consent_id=str(payload.consent_id))
-    return make_assessment_read_stub(
-        assessment_id=STUB_ASSESSMENT_ID,
-        consent_id=payload.consent_id,
-        user_id=payload.user_id,
-        state=AssessmentState.START,
-    )
+    logger.info("assessment_created", consent_id=str(payload.consent_id))
+    return await service.create_assessment(payload)
 
 
 @router.get(
@@ -166,22 +122,19 @@ async def create_assessment(payload: AssessmentCreate) -> AssessmentRead:
 )
 async def get_assessment(
     id: Annotated[UUID, Path(description="Unique assessment identifier")],
+    service: AssessmentServiceDep,
 ) -> AssessmentRead:
     """Retrieve an assessment by ID.
 
     Args:
         id: Unique assessment identifier.
+        service: Injected assessment domain service.
 
     Returns:
         AssessmentRead: Current assessment summary.
     """
-    logger.info("assessment_fetch_stub", assessment_id=str(id))
-    return make_assessment_read_stub(
-        assessment_id=id,
-        consent_id=STUB_ASSESSMENT_ID,
-        user_id=None,
-        state=AssessmentState.START,
-    )
+    logger.info("assessment_fetch", assessment_id=str(id))
+    return await service.get_assessment(id)
 
 
 @router.get(
@@ -196,17 +149,19 @@ async def get_assessment(
 )
 async def get_assessment_state(
     id: Annotated[UUID, Path(description="Unique assessment identifier")],
+    service: AssessmentServiceDep,
 ) -> AssessmentStateResponse:
     """Retrieve current state machine details of an assessment.
 
     Args:
         id: Unique assessment identifier.
+        service: Injected assessment domain service.
 
     Returns:
         AssessmentStateResponse: Current state machine and symptom count snapshot.
     """
-    logger.info("assessment_state_fetch_stub", assessment_id=str(id))
-    return make_assessment_state_stub(assessment_id=id)
+    logger.info("assessment_state_fetch", assessment_id=str(id))
+    return await service.get_state(id)
 
 
 @router.post(
@@ -222,31 +177,25 @@ async def get_assessment_state(
 async def send_message(
     payload: MessageCreate,
     id: Annotated[UUID, Path(description="Unique assessment identifier")],
+    service: AssessmentServiceDep,
 ) -> SendMessageResponse:
     """Append a user message to the guided assessment dialogue.
 
     Args:
         payload: User message text payload (max 4000 characters).
         id: Unique assessment identifier.
+        service: Injected assessment domain service.
 
     Returns:
         SendMessageResponse: Echoed user message, assistant response, and next state.
     """
     # Note: AI_RULES.md §4.9: Never log user message text.
     logger.info(
-        "assessment_message_sent_stub",
+        "assessment_message_sent",
         assessment_id=str(id),
         content_length=len(payload.content),
     )
-    user_msg, assistant_msg, next_state = make_send_message_stub(
-        assessment_id=id,
-        content=payload.content,
-    )
-    return SendMessageResponse(
-        message=user_msg,
-        assistant_message=assistant_msg,
-        next_state=next_state,
-    )
+    return await service.process_message(id, payload.content)
 
 
 @router.get(
@@ -258,17 +207,19 @@ async def send_message(
 )
 async def get_messages(
     id: Annotated[UUID, Path(description="Unique assessment identifier")],
+    service: AssessmentServiceDep,
 ) -> list[MessageRead]:
     """Retrieve dialogue history for an assessment.
 
     Args:
         id: Unique assessment identifier.
+        service: Injected assessment domain service.
 
     Returns:
         list[MessageRead]: Sequential list of dialogue messages.
     """
-    logger.info("assessment_messages_fetch_stub", assessment_id=str(id))
-    return make_conversation_messages_stub(assessment_id=id)
+    logger.info("assessment_messages_fetch", assessment_id=str(id))
+    return await service.list_messages(id)
 
 
 @router.get(
@@ -280,17 +231,19 @@ async def get_messages(
 )
 async def get_symptoms(
     id: Annotated[UUID, Path(description="Unique assessment identifier")],
+    service: AssessmentServiceDep,
 ) -> list[SymptomRead]:
     """Retrieve extracted symptoms list for an assessment.
 
     Args:
         id: Unique assessment identifier.
+        service: Injected assessment domain service.
 
     Returns:
         list[SymptomRead]: List of extracted symptoms.
     """
-    logger.info("assessment_symptoms_fetch_stub", assessment_id=str(id))
-    return make_symptoms_stub()
+    logger.info("assessment_symptoms_fetch", assessment_id=str(id))
+    return await service.list_symptoms(id)
 
 
 @router.patch(
@@ -306,22 +259,24 @@ async def get_symptoms(
 async def update_symptoms(
     payload: UpdateSymptomsRequest,
     id: Annotated[UUID, Path(description="Unique assessment identifier")],
+    service: AssessmentServiceDep,
 ) -> list[SymptomRead]:
     """Confirm or modify symptoms before clinical analysis.
 
     Args:
         payload: List of symptoms to confirm, update, or remove.
         id: Unique assessment identifier.
+        service: Injected assessment domain service.
 
     Returns:
         list[SymptomRead]: Updated list of confirmed symptoms.
     """
     logger.info(
-        "assessment_symptoms_updated_stub",
+        "assessment_symptoms_updated",
         assessment_id=str(id),
         symptom_count=len(payload.symptoms),
     )
-    return make_updated_symptoms_stub(payload.symptoms)
+    return await service.update_symptoms(id, payload.symptoms)
 
 
 @router.post(
@@ -336,21 +291,19 @@ async def update_symptoms(
 )
 async def analyze_assessment(
     id: Annotated[UUID, Path(description="Unique assessment identifier")],
+    service: AssessmentServiceDep,
 ) -> AnalyzeResponse:
     """Trigger clinical triage analysis on confirmed symptoms.
 
     Args:
         id: Unique assessment identifier.
+        service: Injected assessment domain service.
 
     Returns:
         AnalyzeResponse: Evaluation status indicating results are available.
     """
-    logger.info("assessment_analysis_triggered_stub", assessment_id=str(id))
-    return AnalyzeResponse(
-        assessment_id=id,
-        state=AssessmentState.COMPLETED,
-        result_available=True,
-    )
+    logger.info("assessment_analysis_triggered", assessment_id=str(id))
+    return await service.analyze_assessment(id)
 
 
 @router.get(
@@ -365,16 +318,16 @@ async def analyze_assessment(
 )
 async def get_assessment_result(
     id: Annotated[UUID, Path(description="Unique assessment identifier")],
+    service: AssessmentServiceDep,
 ) -> AssessmentResult:
     """Retrieve final evaluation result for a completed assessment.
 
     Args:
         id: Unique assessment identifier.
+        service: Injected assessment domain service.
 
     Returns:
         AssessmentResult: Clinical triage result with mandatory disclaimer.
     """
-    logger.info("assessment_result_fetch_stub", assessment_id=str(id))
-    if id == STUB_URGENT_ASSESSMENT_ID:
-        return make_urgent_result_stub(assessment_id=id)
-    return make_assessment_result_stub(assessment_id=id)
+    logger.info("assessment_result_fetch", assessment_id=str(id))
+    return await service.generate_result(id)
