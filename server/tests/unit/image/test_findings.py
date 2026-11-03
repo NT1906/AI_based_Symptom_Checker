@@ -67,11 +67,11 @@ def test_photo_never_adds_symptoms_it_cannot_show() -> None:
 
 
 def test_build_analysis_fills_condition_and_symptoms() -> None:
-    analysis = build_analysis(ImageLabel.CELLULITIS, "test")
+    analysis = build_analysis(ImageLabel.ECZEMA, "test")
 
     assert analysis.is_clear
-    assert analysis.condition_id == "cellulitis"
-    assert analysis.symptom_ids == ("spreading_redness", "skin_swelling")
+    assert analysis.condition_id == "atopic_dermatitis"
+    assert analysis.symptom_ids == ("dry_skin", "scaly_skin", "skin_rash")
     assert analysis.reason is None
 
 
@@ -92,7 +92,7 @@ def test_unclear_keeps_given_reason() -> None:
 
 def test_rejects_reason_on_clear_label() -> None:
     with pytest.raises(ValidationError, match="only an unclear analysis"):
-        build_analysis(ImageLabel.ACNE, "test", UnclearReason.LOW_CONFIDENCE)
+        build_analysis(ImageLabel.URTICARIA, "test", UnclearReason.LOW_CONFIDENCE)
 
 
 def test_rejects_unclear_analysis_with_findings() -> None:
@@ -113,7 +113,9 @@ def test_rejects_unclear_analysis_without_reason() -> None:
 def test_rejects_clear_analysis_without_symptoms() -> None:
     with pytest.raises(ValidationError, match="needs a condition and symptoms"):
         ImageAnalysis(
-            label=ImageLabel.ACNE, condition_id="acne", analyzer_version="test"
+            label=ImageLabel.ECZEMA,
+            condition_id="atopic_dermatitis",
+            analyzer_version="test",
         )
 
 

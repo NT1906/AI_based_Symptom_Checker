@@ -42,13 +42,10 @@ Only symptoms a photo can show are added. Itching, pain, warmth and fever always
 | Label | Condition | Symptoms added |
 |---|---|---|
 | `eczema` | `atopic_dermatitis` | `dry_skin`, `scaly_skin`, `skin_rash` |
-| `fungal_infection` | `fungal_skin_infection` | `ring_shaped_rash`, `scaly_skin` |
 | `urticaria` | `urticaria` | `hives` |
-| `scabies` | `scabies` | `small_itchy_bumps`, `skin_burrows` |
-| `acne` | `acne` | `pimples`, `blackheads_or_whiteheads` |
-| `chickenpox` | `chickenpox` | `fluid_filled_blisters` |
-| `cellulitis` | `cellulitis` | `spreading_redness`, `skin_swelling` |
 | `unclear` | — | nothing |
+
+Only conditions with enough training photos are labels ([dataset card](../../../../ml/datasets/images/README.md) §8). Fungal infection, scabies, acne, chickenpox and cellulitis were merged into `unclear` by the class-size rule (cv-plan §2); they still come from the user's text symptoms.
 
 Tests check that the labels match `ml/cv/configs/baseline.yaml` in order, and that every added symptom belongs to that condition in the dataset.
 `hives` from a photo plus breathing trouble from the chat still triggers the anaphylaxis red flag.
