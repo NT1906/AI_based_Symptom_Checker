@@ -1,12 +1,13 @@
 # Assessment Service Module
 
-**Owner:** Darshil (Assessment Orchestration) · **Task:** S1-DAR-2, S1-DAR-3, S2-DAR-5 · **Requirements:** FR-03, FR-04, FR-05, FR-06, FR-07, FR-17, FR-19, FR-20, DR-05
+**Owner:** Darshil (Assessment Orchestration) · **Task:** S1-DAR-2, S1-DAR-3, S1-DAR-4, S2-DAR-5 · **Requirements:** FR-03, FR-04, FR-05, FR-06, FR-07, FR-16, FR-17, FR-19, FR-20, FR-21, FR-25, DR-05
 
 The Assessment Service orchestrates the conversational symptom assessment lifecycle. It provides:
 1. **Assessment State Machine**: Strictly governs valid states and enforces medical-safety guards throughout the user experience.
 2. **Assessment Orchestrator**: Coordinates user chat intake, calls the AI Gateway for structured symptom extraction and clarification, deterministically merges recognized symptoms, and progresses assessment lifecycle states.
 3. **Clarification Turn Limiting & Low-Confidence Flagging**: Strictly enforces a maximum of 3 clarification questions (FR-04, FR-19). If ambiguity remains after 3 turns, forces transition to CONFIRMING and marks the session with `is_low_confidence=True` (FR-20).
 4. **Clinical Analysis & Triage Results**: Executes the clinical prediction and risk evaluation pipeline upon symptom confirmation (`generate_result()`), applying the safety-wording guard before user delivery (FR-05, FR-06, FR-07, DR-05).
+5. **Symptom Confirmation, Editing & Session Restart**: Enables user review and modification (add, remove, edit severity/duration, bulk update) of recognized symptoms before analysis (`confirm_symptoms()`, `update_symptoms()`), stepping back to chat (`step_back_to_chat()`), and cleanly starting over (`restart_assessment()`) per FR-16, FR-21, and FR-25.
 
 ---
 
@@ -116,7 +117,24 @@ ANALYZING State
 
 ---
 
-## 6. Running Unit Tests
+---
+
+## 6. Symptom Confirmation, Editing & Restart (S1-DAR-4)
+
+Per **FR-16**, **FR-21**, and **FR-25**:
+Before triage analysis, the application reflects back extracted symptoms for user review on the confirmation card (Wireframe UX-03). The user has full control to modify symptoms:
+
+- **`confirm_symptoms(assessment_id, symptoms=None)`**: Confirms recorded symptoms, updates provenance to `USER_CONFIRMED`, and advances state machine to `READY` (FR-21). Accepts an optional replacement or updated symptoms sequence. Empty symptom lists are rejected with HTTP 400 `EMPTY_SYMPTOMS`.
+- **`add_symptom(assessment_id, symptom)`**: Adds a new symptom with `USER` provenance or updates attributes if the symptom name already exists with `USER_CORRECTED` (FR-16).
+- **`remove_symptom(assessment_id, symptom_id)`**: Removes a symptom by UUID or name string (FR-16).
+- **`edit_symptom(assessment_id, symptom_update)`**: Updates severity, duration, or anatomical body site, recording provenance as `USER_CORRECTED`.
+- **`update_symptoms(assessment_id, symptoms)`**: Bulk applies symptom additions, edits, and confirmations.
+- **`step_back_to_chat(assessment_id)`**: Reverts session state from `CONFIRMING` or `READY` to `SYMPTOM_COLLECTION` when user clicks "Back to Chat" for conversational re-entry.
+- **`restart_assessment(assessment_id, to_state=START)`**: Handles "Start Over" (FR-25). Resets state machine, clears dialogue history and recorded symptoms, resets clarification counters and confidence flags, allowing a clean assessment restart.
+
+---
+
+## 7. Running Unit Tests
 
 From `server/`:
 
