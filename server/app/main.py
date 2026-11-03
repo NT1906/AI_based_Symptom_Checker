@@ -5,7 +5,8 @@ Responsibilities:
     - Initialize structured logging and register central error handlers.
     - Wire versioned API routers.
 
-Owner: Vivek (api) · Task: S0-VIV-1 · Requirements: NFR-08
+Owner: Vivek (api) · Task: S0-VIV-1, S1-VIV-2, S1-VIV-3
+Requirements: NFR-05, NFR-08, NFR-10
 """
 
 from collections.abc import AsyncIterator
@@ -13,10 +14,12 @@ from contextlib import asynccontextmanager
 
 from fastapi import FastAPI
 
-from app.api.v1 import health
+from app.api.v1 import assessments, health
 from app.core.config import get_settings
 from app.core.errors import register_error_handlers
 from app.core.logging import configure_logging, get_logger
+from app.core.request_id import RequestIdMiddleware
+from app.db.session import create_db_engine, create_session_factory
 
 logger = get_logger(__name__)
 
@@ -41,7 +44,13 @@ async def lifespan(app: FastAPI) -> AsyncIterator[None]:
         app_env=settings.app_env,
         app_version=settings.app_version,
     )
-    yield
+    engine = create_db_engine(settings.database_url)
+    app.state.db_engine = engine
+    app.state.session_factory = create_session_factory(engine)
+    try:
+        yield
+    finally:
+        engine.dispose()
     logger.info("application_shutdown")
 
 
@@ -64,8 +73,10 @@ def create_app() -> FastAPI:
     )
 
     register_error_handlers(app)
+    app.add_middleware(RequestIdMiddleware)
 
     app.include_router(health.router, prefix="/api/v1")
+    app.include_router(assessments.router, prefix="/api/v1")
 
     return app
 
