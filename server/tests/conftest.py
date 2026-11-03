@@ -39,9 +39,7 @@ from httpx import ASGITransport, AsyncClient
 FAKE_ASSESSMENT_ID: uuid.UUID = uuid.UUID("00000000-0000-0000-0000-000000000001")
 
 #: A deterministic assessment UUID that triggers the URGENT result stub.
-FAKE_URGENT_ASSESSMENT_ID: uuid.UUID = uuid.UUID(
-    "00000000-dead-beef-0000-000000000002"
-)
+FAKE_URGENT_ASSESSMENT_ID: uuid.UUID = uuid.UUID("00000000-dead-beef-0000-000000000002")
 
 #: A deterministic consent UUID used when creating assessments in tests.
 FAKE_CONSENT_ID: uuid.UUID = uuid.UUID("00000000-0000-0000-0000-000000000003")
@@ -178,9 +176,7 @@ def send_message_payload() -> dict[str, Any]:
     Returns:
         dict: JSON-serialisable payload.
     """
-    return {
-        "content": "I have a test headache and mild test fatigue since yesterday"
-    }
+    return {"content": "I have a test headache and mild test fatigue since yesterday"}
 
 
 @pytest.fixture
