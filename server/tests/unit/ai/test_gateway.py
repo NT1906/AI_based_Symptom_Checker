@@ -39,7 +39,7 @@ def test_factory_returns_openai_provider_when_configured(
 ) -> None:
     """Factory returns PrivacyAiGateway wrapping OpenAiProvider when configured."""
     monkeypatch.setenv("AI_PROVIDER", "openai")
-    monkeypatch.setenv("OPENAI_API_KEY", "sk-mock-key-for-testing")
+    monkeypatch.setenv("OPENAI_API_KEY", "test-mock-key")
     get_settings.cache_clear()
     get_ai_gateway.cache_clear()
 

@@ -58,7 +58,7 @@ def _make_mock_completion(
 
 def test_openai_provider_implements_ai_gateway_protocol() -> None:
     """OpenAiProvider must satisfy the runtime-checkable AiGateway protocol."""
-    provider = OpenAiProvider(api_key="sk-test-key-mock")
+    provider = OpenAiProvider(api_key="test-mock-key")
     assert isinstance(provider, AiGateway)
 
 
