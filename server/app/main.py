@@ -5,7 +5,7 @@ Responsibilities:
     - Initialize structured logging and register central error handlers.
     - Wire versioned API routers.
 
-Owner: Vivek (api) · Task: S0-VIV-1, S1-VIV-2, S1-VIV-3
+Owner: Vivek (api) · Task: S0-VIV-1, S1-VIV-2, S1-VIV-3, S1-VIV-4
 Requirements: NFR-05, NFR-08, NFR-10
 """
 
@@ -14,11 +14,12 @@ from contextlib import asynccontextmanager
 
 from fastapi import FastAPI
 
-from app.api.v1 import assessments, health
+from app.api.v1 import assessments, consents, health
 from app.core.config import get_settings
 from app.core.errors import register_error_handlers
 from app.core.logging import configure_logging, get_logger
 from app.core.request_id import RequestIdMiddleware
+from app.core.upload import configure_multipart_spool
 from app.db.session import create_db_engine, create_session_factory
 
 logger = get_logger(__name__)
@@ -35,6 +36,10 @@ async def lifespan(app: FastAPI) -> AsyncIterator[None]:
         None after startup configuration completes.
     """
     settings = get_settings()
+
+    # Why: Configure Starlette's MultiPartParser.spool_max_size (6 MB) so all
+    # symptom image uploads up to 5 MB remain strictly in volatile memory (DR-06).
+    configure_multipart_spool()
     configure_logging(
         log_level="INFO",
         json_format=(settings.app_env in ("production", "staging")),
@@ -62,6 +67,10 @@ def create_app() -> FastAPI:
     """
     settings = get_settings()
 
+    # Why: Configure Starlette's MultiPartParser.spool_max_size (6 MB) so all
+    # symptom image uploads up to 5 MB remain strictly in volatile memory (DR-06).
+    configure_multipart_spool()
+
     app = FastAPI(
         title="AI-Based Symptom Checker API",
         description=(
@@ -77,6 +86,7 @@ def create_app() -> FastAPI:
 
     app.include_router(health.router, prefix="/api/v1")
     app.include_router(assessments.router, prefix="/api/v1")
+    app.include_router(consents.router, prefix="/api/v1")
 
     return app
 
