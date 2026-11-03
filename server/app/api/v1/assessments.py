@@ -5,13 +5,13 @@ Responsibilities:
     - Delegate operations to injected assessment service via FastAPI Depends.
     - Provide complete OpenAPI operation metadata, status codes, and error models.
 
-Owner: Vivek (api) · Task: S1-VIV-1, S1-VIV-3 · Requirements: —
+Owner: Vivek (api) · Task: S1-VIV-1, S1-VIV-3, S1-VIV-4 · Requirements: idea §3, DR-06
 """
 
 from typing import Annotated, Any
 from uuid import UUID
 
-from fastapi import APIRouter, Path, status
+from fastapi import APIRouter, File, Path, UploadFile, status
 from pydantic import Field
 
 from app.api.deps import (
@@ -21,6 +21,7 @@ from app.api.deps import (
 )
 from app.core.errors import ErrorResponse
 from app.core.logging import get_logger
+from app.core.upload import CappedUploadRoute
 from app.schemas.assessment import (
     AssessmentCreate,
     AssessmentRead,
@@ -30,10 +31,13 @@ from app.schemas.base import SchemaBase
 from app.schemas.message import MessageCreate, MessageRead
 from app.schemas.result import AssessmentResult
 from app.schemas.symptom import SymptomRead, SymptomUpdate
+from app.services.upload import SanitizedImage, validate_and_sanitize_image
+from starlette.concurrency import run_in_threadpool
 
 logger = get_logger(__name__)
 
 router = APIRouter(prefix="/assessments", tags=["assessments"])
+images_router = APIRouter(route_class=CappedUploadRoute, tags=["assessments"])
 
 
 # ---------------------------------------------------------------------------
@@ -47,6 +51,23 @@ class UpdateSymptomsRequest(SchemaBase):
     symptoms: list[SymptomUpdate] = Field(
         ...,
         description="List of updated, added, or confirmed symptoms",
+    )
+
+
+class ImageUploadResponse(SchemaBase):
+    """Response returned upon successful receipt and sanitization of an image."""
+
+    assessment_id: UUID = Field(
+        ...,
+        description="Unique assessment identifier linked to uploaded image",
+    )
+    status: str = Field(
+        default="processed",
+        description="Ingestion and sanitization status",
+    )
+    content_type: str = Field(
+        ...,
+        description="Sanitized MIME format (e.g. image/jpeg, image/png, image/webp)",
     )
 
 
@@ -331,3 +352,87 @@ async def get_assessment_result(
     """
     logger.info("assessment_result_fetch", assessment_id=str(id))
     return await service.generate_result(id)
+
+
+@images_router.post(
+    "/{id}/images",
+    response_model=ImageUploadResponse,
+    status_code=status.HTTP_200_OK,
+    summary="Upload and validate an optional symptom image",
+    description=(
+        "Receives an optional symptom image (JPEG, PNG, WebP up to 5 MB), "
+        "validates magic bytes, strips all EXIF/metadata, and processes strictly "
+        "in volatile memory without writing to disk or database (DR-06)."
+    ),
+    responses={
+        status.HTTP_400_BAD_REQUEST: {
+            "model": ErrorResponse,
+            "description": (
+                "Image validation failed (size, format, or corrupted content)"
+            ),
+        },
+        status.HTTP_404_NOT_FOUND: {
+            "model": ErrorResponse,
+            "description": "Assessment not found",
+        },
+        status.HTTP_422_UNPROCESSABLE_ENTITY: {
+            "model": ErrorResponse,
+            "description": "Validation error on path parameter or multipart form",
+        },
+    },
+)
+async def upload_assessment_image(
+    id: Annotated[UUID, Path(description="Unique assessment identifier")],
+    file: Annotated[
+        UploadFile,
+        File(description="Symptom photo (JPEG, PNG, WebP up to 5 MB)"),
+    ],
+    service: AssessmentServiceDep,
+) -> ImageUploadResponse:
+    """Upload and validate an assessment symptom image in memory.
+
+    Args:
+        id: Unique assessment identifier.
+        file: Multipart uploaded file payload.
+        service: Injected assessment domain service.
+
+    Returns:
+        ImageUploadResponse: Confirmation of processed and sanitized image.
+    """
+    # 1. Verify assessment exists (raises 404 via service if missing)
+    await service.get_assessment(id)
+
+    # 2. Read bytes into memory with guaranteed cleanup
+    try:
+        raw_bytes = await file.read()
+    finally:
+        await file.close()
+
+    # 3. CPU-bound validation, decoding, and EXIF purge in threadpool
+    sanitized: SanitizedImage = await run_in_threadpool(
+        validate_and_sanitize_image,
+        raw_bytes,
+        file.content_type,
+    )
+
+    # Log sanitized receipt safely without logging raw bytes or user filenames
+    logger.info(
+        "image_sanitized_in_memory",
+        assessment_id=str(id),
+        content_type=sanitized.content_type,
+        width=sanitized.width,
+        height=sanitized.height,
+        sanitized_bytes=len(sanitized.data),
+    )
+
+    # TODO(#46, #Nisarg): Pass sanitized.data to Nisarg's ImageAnalyzer (S1-NIS-4)
+    # when the analyzer protocol and orchestration hook are wired.
+
+    return ImageUploadResponse(
+        assessment_id=id,
+        status="processed",
+        content_type=sanitized.content_type,
+    )
+
+
+router.include_router(images_router)

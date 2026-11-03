@@ -5,7 +5,8 @@ Responsibilities:
     - Provide FastAPI error handlers returning uniform JSON with requestId.
     - Prevent leaking internal stack traces or database errors to clients.
 
-Owner: Vivek (core) · Task: S0-VIV-1, S1-VIV-2 · Requirements: NFR-05, NFR-08, NFR-10
+Owner: Vivek (core) · Task: S0-VIV-1, S1-VIV-2, S1-VIV-4
+Requirements: NFR-05, NFR-08, NFR-10
 """
 
 from collections.abc import Sequence
@@ -283,7 +284,9 @@ async def http_exception_handler(
         JSONResponse: Formatted error payload preserving original headers.
     """
     request_id = _resolve_request_id(request)
-    code = "HTTP_ERROR"
+    code = getattr(exc, "code", None)
+    if code is None:
+        code = "HTTP_ERROR"
     if exc.status_code == status.HTTP_404_NOT_FOUND:
         code = "NOT_FOUND"
     elif exc.status_code == status.HTTP_405_METHOD_NOT_ALLOWED:

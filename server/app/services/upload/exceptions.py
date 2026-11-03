@@ -79,4 +79,3 @@ class InvalidImageError(UploadError):
             code="INVALID_IMAGE",
             details=details,
         )
-
