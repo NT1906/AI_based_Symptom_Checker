@@ -187,6 +187,7 @@ Unit tests for a module are written by its owner in the same PR (`server/tests/u
 | S2-DAR-2 | Darshil | Merge image findings into assessment state. | idea §3 |
 | S2-DAR-3 | Darshil | Pass profile context (age, chronic conditions) into analysis, as in the activity diagram. | FR-02 |
 | S2-DAR-4 | Darshil | Idempotent message processing + transactions (no double answers on retry). | NFR-05 |
+| S2-DAR-5 | Darshil | Real analysis in `generate_result()`: predictor → risk engine → `ResultComposer` with `assert_safe_wording`; unsafe wording moves the assessment to `ERROR`, never `COMPLETED`. Do this before S2-DAR-2. | FR-05, FR-06, FR-07, DR-05 |
 | S2-VIV-1 | Vivek | Auth: register, login, logout; argon2 hashing; JWT in an HttpOnly, Secure, SameSite=Lax cookie (same-origin through the Vercel proxy). | FR-01 |
 | S2-VIV-2 | Vivek | JWT expiry/refresh, secure cookie flags, CSRF protection. | NFR-03 |
 | S2-VIV-3 | Vivek | Profile endpoints (read / update the optional profile). | FR-02 |
@@ -269,7 +270,7 @@ Unit tests for a module are written by its owner in the same PR (`server/tests/u
 | Nishith, Kavya | 1 | 4 | 4 | 3 | 12 each (≈ 7 AI/ML + 5 Database) |
 | Everyone else | 1 | 4 | 4 | 3 | 12 each |
 
-- **Load:** everyone has 12 tasks of similar size; the leader takes 20. AI/ML work splits roughly Nisarg 60%, Nishith 20%, Kavya 20%. If a task turns out much bigger, the leader splits it and moves part to the next sprint.
+- **Load:** everyone has 12 tasks of similar size; the leader takes 20. AI/ML work splits roughly Nisarg 60%, Nishith 20%, Kavya 20%. If a task turns out much bigger, the leader splits it and moves part to the next sprint. Darshil has one extra Sprint 2 task (S2-DAR-5, 13 in total), because the Sprint 1 plan had no task that wired the analysis into the assessment flow.
 - **One task at a time:** you may have only **one open PR** (the "PR policy" check enforces this). Start the next task after the current PR is merged.
 - **Commit target:** at least **3 meaningful commits per PR**, which comes to about **40–60 commits per member** by 20 Nov. Commit each logical step: scaffold → logic → tests → docs.
 - **Padding is not allowed.** Commits like "update", "fix typo" ×10, or whitespace-only changes are rejected in review. Quality counts, not just quantity.
