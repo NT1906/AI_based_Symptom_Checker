@@ -1,6 +1,6 @@
 """Unit tests for the AiGateway protocol, provider factory, and prompt files.
 
-Owner: Nishith · Task: S1-NIT-1 · Requirements: FR-03, FR-17, NFR-05
+Owner: Nishith · Task: S1-NIT-2 · Requirements: FR-04, FR-19, FR-20
 """
 
 from pathlib import Path
@@ -10,6 +10,7 @@ import pytest
 from app.services.ai.factory import get_ai_gateway
 from app.services.ai.gateway import AiError, AiGateway
 from app.services.ai.mock_provider import MockAiProvider
+from app.services.privacy.gateway import PrivacyAiGateway
 
 
 def test_mock_provider_implements_ai_gateway_protocol() -> None:
@@ -21,13 +22,13 @@ def test_mock_provider_implements_ai_gateway_protocol() -> None:
 def test_factory_returns_mock_provider_by_default(
     monkeypatch: pytest.MonkeyPatch,
 ) -> None:
-    """Factory returns MockAiProvider when AI_PROVIDER is unset or set to 'mock'."""
+    """Factory returns PrivacyAiGateway-wrapped provider when AI_PROVIDER is unset."""
     monkeypatch.delenv("AI_PROVIDER", raising=False)
     # Clear lru_cache to ensure fresh resolution
     get_ai_gateway.cache_clear()
 
     gateway = get_ai_gateway()
-    assert isinstance(gateway, MockAiProvider)
+    assert isinstance(gateway, PrivacyAiGateway)
     assert isinstance(gateway, AiGateway)
 
 
@@ -64,8 +65,8 @@ def test_versioned_extraction_prompt_exists_and_valid() -> None:
     assert "NEUROLOGICAL" in content
 
 
-def test_versioned_clarification_prompt_exists_and_valid() -> None:
-    """Versioned clarification prompt file must exist and enforce the 3-question cap."""
+def test_versioned_clarification_prompt_v1_exists_and_valid() -> None:
+    """Versioned prompt v1 must exist and enforce the 3-question cap."""
     prompts_dir = (
         Path(__file__).resolve().parents[3] / "app" / "services" / "ai" / "prompts"
     )
@@ -76,4 +77,21 @@ def test_versioned_clarification_prompt_exists_and_valid() -> None:
     assert len(content.strip()) > 100
     assert "{structured_state_json}" in content
     assert "{previously_asked_questions}" in content
+    assert "3" in content
+
+
+def test_versioned_clarification_prompt_v2_exists_and_valid() -> None:
+    """Versioned prompt v2 must exist, enforce 3 turns, and include missing info."""
+    prompts_dir = (
+        Path(__file__).resolve().parents[3] / "app" / "services" / "ai" / "prompts"
+    )
+    prompt_file = prompts_dir / "clarification.v2.txt"
+
+    assert prompt_file.exists(), f"Missing prompt file: {prompt_file}"
+    content = prompt_file.read_text(encoding="utf-8")
+    assert len(content.strip()) > 150
+    assert "{structured_state_json}" in content
+    assert "{detected_missing_info_json}" in content
+    assert "{previously_asked_questions}" in content
+    assert "NEVER provide a medical diagnosis" in content
     assert "3" in content
