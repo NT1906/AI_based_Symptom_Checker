@@ -117,8 +117,9 @@ def test_skin_tone_without_estimate_is_unknown() -> None:
     assert skin_tone_group([], GROUPS) == "unknown"
 
 
-def test_mapping_targets_are_config_classes() -> None:
-    classes = set(load_config().class_names)
+def test_mapping_targets_are_config_classes_or_merged() -> None:
+    config = load_config()
+    classes = set(config.class_names) | set(config.data.merged_into_unclear)
 
     assert set(SCIN_LABELS.values()) <= classes
     assert set(FITZPATRICK17K_LABELS.values()) <= classes

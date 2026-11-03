@@ -107,11 +107,18 @@ def parse_config(raw: Any) -> TrainConfig:  # Any: whatever the YAML parser retu
     require_exact_keys(inference, {"abstain_threshold"}, "inference")
     tracking = read_mapping(root["tracking"], "tracking")
     require_exact_keys(tracking, {"wandb_project"}, "tracking")
+    classes = _parse_classes(root["classes"])
+    data = _parse_data(root["data"])
+    overlap = {c.name for c in classes} & set(data.merged_into_unclear)
+    if overlap:
+        raise ConfigError(
+            f"data.merged_into_unclear: {sorted(overlap)} are also model classes"
+        )
     return TrainConfig(
         version=version,
         seed=read_integer(root, "seed", "config", minimum=0),
-        classes=_parse_classes(root["classes"]),
-        data=_parse_data(root["data"]),
+        classes=classes,
+        data=data,
         model=_parse_model(root["model"]),
         training=_parse_training(root["training"]),
         # Why: 0 would never abstain and 1 would always abstain (docs/cv-plan.md §2).
@@ -157,9 +164,16 @@ def _parse_data(raw: Any) -> DataConfig:  # Any: parsed YAML
         data,
         {"sources", "resize_size", "image_size", "mean", "std", "split"}
         | {"skin_tone_groups", "min_train_images_per_class"}
-        | {"min_test_images_per_class"},
+        | {"min_test_images_per_class", "merged_into_unclear"},
         "data",
     )
+    merged = read_string_list(data, "merged_into_unclear", "data")
+    if len(set(merged)) != len(merged) or not all(
+        NAME_PATTERN.match(m) and m != UNCLEAR_CLASS for m in merged
+    ):
+        raise ConfigError(
+            "data.merged_into_unclear: expected unique snake_case labels, not 'unclear'"
+        )
     sources = read_string_list(data, "sources", "data")
     unknown = set(sources) - SOURCES
     if not sources or unknown:
@@ -182,6 +196,7 @@ def _parse_data(raw: Any) -> DataConfig:  # Any: parsed YAML
         min_test_images_per_class=read_integer(
             data, "min_test_images_per_class", "data", minimum=1
         ),
+        merged_into_unclear=tuple(merged),
     )
 
 
