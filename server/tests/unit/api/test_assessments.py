@@ -6,10 +6,17 @@ Responsibilities:
     - Validate failure scenarios (422 validation, 405 method not allowed).
     - Enforce medical-safety rules (AI_RULES.md §2).
 
-Owner: Vivek (tests) · Task: S1-VIV-1 · Requirements: —
+Owner: Vivek (tests) · Task: S1-VIV-1, S1-VIV-3 · Requirements: —
 """
 
-from fastapi import status
+from unittest.mock import AsyncMock
+from uuid import UUID
+
+from fastapi import FastAPI, status
+from app.api.deps import AssessmentService, get_assessment_service
+from app.schemas.assessment import AssessmentRead, AssessmentStateResponse
+from app.schemas.enums import AssessmentState, RiskLevel
+from app.schemas.result import AssessmentResult
 from fastapi.testclient import TestClient
 
 from app.api.v1._assessment_stubs import (
@@ -274,3 +281,70 @@ def test_urgent_result_stub_includes_emergency_number_112(
     assert data["riskLevel"] == "URGENT"
     assert data["referral"]["required"] is True
     assert data["referral"]["emergencyNumber"] == "112"
+
+
+def test_assessment_router_uses_dependency_injection_override(
+    app: FastAPI, client: TestClient
+) -> None:
+    """Verify assessment endpoints invoke the injected AssessmentService."""
+    mock_service = AsyncMock(spec=AssessmentService)
+
+    mock_service.create_assessment.return_value = AssessmentRead(
+        id=UUID(SAMPLE_UUID),
+        state=AssessmentState.START,
+        consent_id=UUID(SAMPLE_CONSENT_ID),
+        user_id=None,
+    )
+    mock_service.get_assessment.return_value = AssessmentRead(
+        id=UUID(SAMPLE_UUID),
+        state=AssessmentState.START,
+        consent_id=UUID(SAMPLE_CONSENT_ID),
+        user_id=None,
+    )
+    mock_service.get_state.return_value = AssessmentStateResponse(
+        assessment_id=UUID(SAMPLE_UUID),
+        state=AssessmentState.START,
+        clarification_turns=0,
+        symptom_count=0,
+    )
+    mock_service.generate_result.return_value = AssessmentResult(
+        assessment_id=UUID(SAMPLE_UUID),
+        risk_level=RiskLevel.SELF_CARE,
+        conditions=[],
+        disclaimer=DEFAULT_DISCLAIMER,
+    )
+
+    app.dependency_overrides[get_assessment_service] = lambda: mock_service
+    try:
+        # Test POST /api/v1/assessments
+        resp = client.post("/api/v1/assessments", json={"consentId": SAMPLE_CONSENT_ID})
+        assert resp.status_code == status.HTTP_201_CREATED
+        mock_service.create_assessment.assert_awaited_once()
+
+        # Test GET /api/v1/assessments/{id}
+        resp = client.get(f"/api/v1/assessments/{SAMPLE_UUID}")
+        assert resp.status_code == status.HTTP_200_OK
+        mock_service.get_assessment.assert_awaited_once_with(UUID(SAMPLE_UUID))
+
+        # Test GET /api/v1/assessments/{id}/state
+        resp = client.get(f"/api/v1/assessments/{SAMPLE_UUID}/state")
+        assert resp.status_code == status.HTTP_200_OK
+        mock_service.get_state.assert_awaited_once_with(UUID(SAMPLE_UUID))
+
+        # Test GET /api/v1/assessments/{id}/result
+        resp = client.get(f"/api/v1/assessments/{SAMPLE_UUID}/result")
+        assert resp.status_code == status.HTTP_200_OK
+        mock_service.generate_result.assert_awaited_once_with(UUID(SAMPLE_UUID))
+    finally:
+        app.dependency_overrides.pop(get_assessment_service, None)
+
+
+def test_layering_guard_no_stubs_or_repos_imported_in_assessments_router() -> None:
+    """Verify assessments router does not import stubs or repositories directly."""
+    import inspect
+    from app.api.v1 import assessments
+
+    source = inspect.getsource(assessments)
+    assert "_assessment_stubs" not in source
+    assert "app.repositories" not in source
+    assert "sqlalchemy.orm" not in source

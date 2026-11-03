@@ -131,6 +131,10 @@ class AssessmentService(Protocol):
         """Confirm symptoms and advance assessment state toward triage."""
         ...
 
+    async def analyze_assessment(self, assessment_id: UUID) -> AnalyzeResponse:
+        """Trigger clinical triage analysis on confirmed symptoms."""
+        ...
+
     async def generate_result(self, assessment_id: UUID) -> AssessmentResult:
         """Generate final clinical assessment result and safety disclaimer."""
         ...
@@ -224,6 +228,13 @@ class DefaultAssessmentService:
             state=AssessmentState.COMPLETED,
             result_available=True,
         )
+
+    async def analyze_assessment(self, assessment_id: UUID) -> AnalyzeResponse:
+        """Trigger clinical triage analysis on confirmed symptoms.
+
+        TODO(#40): Delegate to Darshil's orchestrator.start_analysis
+        """
+        return await self.confirm_symptoms(assessment_id)
 
     async def generate_result(self, assessment_id: UUID) -> AssessmentResult:
         """Generate final clinical evaluation result.
