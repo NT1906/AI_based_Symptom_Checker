@@ -3,10 +3,10 @@
 Responsibilities:
     - Define typed contracts for extracted symptoms, duration, severity,
       onset, and body site.
-    - Define schema for targeted follow-up clarification questions.
+    - Define schemas for missing-information detection and clarification questions.
     - Validate AI outputs at the service boundary.
 
-Owner: Nishith · Task: S1-NIT-1 · Requirements: FR-03, FR-17, NFR-05
+Owner: Nishith · Task: S1-NIT-2 · Requirements: FR-04, FR-19, FR-20, NFR-05
 """
 
 from enum import StrEnum
@@ -32,6 +32,60 @@ class DurationUnitEnum(StrEnum):
     WEEK = "WEEK"
     MONTH = "MONTH"
     YEAR = "YEAR"
+
+
+class QuestionTypeEnum(StrEnum):
+    """Categorization of clarification questions for triage completeness."""
+
+    DURATION = "DURATION"
+    SEVERITY = "SEVERITY"
+    LOCATION = "LOCATION"
+    ONSET = "ONSET"
+    ASSOCIATED = "ASSOCIATED"
+    CONTEXT = "CONTEXT"
+
+
+class MissingFieldEnum(StrEnum):
+    """Clinical attribute fields that may be absent from symptom descriptions."""
+
+    DURATION = "DURATION"
+    SEVERITY = "SEVERITY"
+    BODY_SITE = "BODY_SITE"
+    ONSET = "ONSET"
+    ASSOCIATED = "ASSOCIATED"
+
+
+class MissingInfoItem(BaseModel):
+    """Single clinical information gap identified during triage analysis.
+
+    Attributes:
+        symptom_name: Canonical symptom name where information is missing.
+        missing_field: Specific clinical attribute that is absent or unknown.
+        priority: Priority rank (1 = safety-critical / highest, 5 = lowest).
+        reason: Plain-text justification for why this detail is needed.
+    """
+
+    model_config = ConfigDict(frozen=True)
+
+    symptom_name: str = Field(
+        min_length=1,
+        max_length=128,
+        description="Canonical symptom identifier",
+    )
+    missing_field: MissingFieldEnum = Field(
+        description="Missing clinical attribute type",
+    )
+    priority: int = Field(
+        default=2,
+        ge=1,
+        le=5,
+        description="Clinical triage priority rank (1 = highest urgency)",
+    )
+    reason: str = Field(
+        min_length=1,
+        max_length=300,
+        description="Justification for the information request",
+    )
 
 
 class Duration(BaseModel):
@@ -107,15 +161,26 @@ class ExtractedSymptom(BaseModel):
 
         Returns:
             Normalized dictionary with both body_site and body_location populated.
+
+        Raises:
+            ValueError: If both fields are provided with conflicting values.
         """
         if isinstance(data, dict):
-            site = data.get("body_site") or data.get("body_location")
-            if site is not None:
+            site = data.get("body_site")
+            loc = data.get("body_location")
+            if (
+                site is not None
+                and loc is not None
+                and str(site).strip().lower() != str(loc).strip().lower()
+            ):
+                raise ValueError(
+                    f"Conflicting body_site ('{site}') and body_location ('{loc}')"
+                )
+            chosen = site if site is not None else loc
+            if chosen is not None:
                 updated = dict(data)
-                if "body_site" not in updated or updated["body_site"] is None:
-                    updated["body_site"] = site
-                if "body_location" not in updated or updated["body_location"] is None:
-                    updated["body_location"] = site
+                updated["body_site"] = chosen
+                updated["body_location"] = chosen
                 return updated
         return data
 
@@ -178,11 +243,15 @@ class ClarificationResult(BaseModel):
         max_length=500,
         description="Conversational, non-diagnostic follow-up question text",
     )
-    question_type: str | None = Field(
+    question_type: QuestionTypeEnum | str | None = Field(
         default=None,
         description="Type of question (e.g. DURATION, SEVERITY, LOCATION, ASSOCIATED)",
     )
     target_symptom: str | None = Field(
         default=None,
         description="Canonical symptom name that this question focuses on",
+    )
+    missing_field: MissingFieldEnum | str | None = Field(
+        default=None,
+        description="Specific missing clinical attribute triggering this question",
     )
