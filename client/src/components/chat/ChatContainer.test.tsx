@@ -14,7 +14,7 @@
  */
 
 import { beforeEach, describe, it, expect, vi } from "vitest";
-import { render, screen } from "@testing-library/react";
+import { fireEvent, render, screen } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { ChatContainer } from "./ChatContainer";
 import type { AssessmentMessage } from "../../stores/assessmentStore";
@@ -167,6 +167,31 @@ describe("ChatContainer", () => {
       );
 
       expect(screen.getByRole("textbox", { name: /type your message/i })).toBeDisabled();
+    } finally {
+      if (originalOnLine) {
+        Object.defineProperty(navigator, "onLine", originalOnLine);
+      } else {
+        Reflect.deleteProperty(navigator, "onLine");
+      }
+    }
+  });
+  it("restores the composer when the browser comes back online", () => {
+    const originalOnLine = Object.getOwnPropertyDescriptor(Navigator.prototype, "onLine");
+
+    Object.defineProperty(navigator, "onLine", {
+      configurable: true,
+      value: false,
+    });
+
+    try {
+      render(<ChatContainer messages={[]} onSend={vi.fn()} />);
+
+      expect(screen.getByRole("alert")).toHaveTextContent(/You're offline/i);
+
+      fireEvent(window, new Event("online"));
+
+      expect(screen.queryByRole("alert")).not.toBeInTheDocument();
+      expect(screen.getByRole("textbox", { name: /type your message/i })).toBeEnabled();
     } finally {
       if (originalOnLine) {
         Object.defineProperty(navigator, "onLine", originalOnLine);
