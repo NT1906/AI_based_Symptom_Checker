@@ -10,7 +10,7 @@
  * - Accessibility: Exposes the conversation as an accessible live log.
  * - Failure case: Handles unavailable browser auto-scroll.
  *
- * Owner: Rutva · Task: S1-RUT-1 · Requirements: idea §1, §2
+ * Owner: Rutva - Task: S1-RUT-3 - Issue: #57
  */
 
 import { beforeEach, describe, it, expect, vi } from "vitest";
@@ -107,6 +107,72 @@ describe("ChatContainer", () => {
         configurable: true,
         value: originalScrollIntoView,
       });
+    }
+  });
+  it("shows the assistant typing indicator", () => {
+    render(<ChatContainer messages={mockMessages} onSend={vi.fn()} isTyping />);
+
+    expect(screen.getByRole("status")).toHaveTextContent("Assistant is typing...");
+  });
+
+  it("shows loading feedback and disables the composer", () => {
+    render(<ChatContainer messages={mockMessages} onSend={vi.fn()} isLoading />);
+
+    expect(screen.getByText("Sending your message...")).toBeInTheDocument();
+    expect(screen.getByRole("textbox", { name: /type your message/i })).toBeDisabled();
+  });
+
+  it("shows an error and invokes retry", async () => {
+    const user = userEvent.setup();
+    const onRetry = vi.fn();
+
+    render(
+      <ChatContainer
+        messages={mockMessages}
+        onSend={vi.fn()}
+        error="Unable to send your message."
+        onRetry={onRetry}
+      />,
+    );
+
+    expect(screen.getByRole("alert")).toHaveTextContent("Unable to send your message.");
+
+    await user.click(screen.getByRole("button", { name: /retry/i }));
+
+    expect(onRetry).toHaveBeenCalledOnce();
+  });
+
+  it("shows an error without a retry button when no retry callback exists", () => {
+    render(
+      <ChatContainer messages={mockMessages} onSend={vi.fn()} error="Something went wrong." />,
+    );
+
+    expect(screen.getByRole("alert")).toHaveTextContent("Something went wrong.");
+    expect(screen.queryByRole("button", { name: /retry/i })).not.toBeInTheDocument();
+  });
+
+  it("shows the emergency message when the browser is offline", () => {
+    const originalOnLine = Object.getOwnPropertyDescriptor(Navigator.prototype, "onLine");
+
+    Object.defineProperty(navigator, "onLine", {
+      configurable: true,
+      value: false,
+    });
+
+    try {
+      render(<ChatContainer messages={[]} onSend={vi.fn()} />);
+
+      expect(screen.getByRole("alert")).toHaveTextContent(
+        "You're offline. If this is an emergency, call 112.",
+      );
+
+      expect(screen.getByRole("textbox", { name: /type your message/i })).toBeDisabled();
+    } finally {
+      if (originalOnLine) {
+        Object.defineProperty(navigator, "onLine", originalOnLine);
+      } else {
+        Reflect.deleteProperty(navigator, "onLine");
+      }
     }
   });
 });
