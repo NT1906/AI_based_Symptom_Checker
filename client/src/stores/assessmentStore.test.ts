@@ -1,6 +1,6 @@
 /**
  * @file Assessment store tests.
- * Owner: Rutva · Task: S0-RUT-1 · Requirements: NFR-08, NFR-09
+ * Owner: Rutva · Task: S1-RUT-2 · Issue: #56
  */
 import { beforeEach, describe, expect, it } from "vitest";
 import { useAssessmentStore, type AssessmentMessage } from "./assessmentStore";
@@ -13,7 +13,45 @@ const exampleMessage: AssessmentMessage = {
 
 describe("assessment store", () => {
   beforeEach(() => {
-    useAssessmentStore.getState().clearMessages();
+    useAssessmentStore.getState().clearAssessment();
+  });
+  it("starts without an active assessment", () => {
+    expect(useAssessmentStore.getState().assessmentId).toBeNull();
+    expect(useAssessmentStore.getState().assessmentState).toBeNull();
+  });
+
+  it("stores assessment metadata", () => {
+    useAssessmentStore.getState().setAssessment({
+      id: "assessment-123",
+      consentId: "consent-123",
+      state: "START",
+    });
+
+    expect(useAssessmentStore.getState().assessmentId).toBe("assessment-123");
+    expect(useAssessmentStore.getState().assessmentState).toBe("START");
+  });
+
+  it("updates the assessment lifecycle state", () => {
+    useAssessmentStore.getState().setAssessmentState("CLARIFYING");
+
+    expect(useAssessmentStore.getState().assessmentState).toBe("CLARIFYING");
+  });
+
+  it("clears assessment metadata and conversation together", () => {
+    const store = useAssessmentStore.getState();
+
+    store.setAssessment({
+      id: "assessment-123",
+      consentId: "consent-123",
+      state: "START",
+    });
+    store.addMessage(exampleMessage);
+
+    useAssessmentStore.getState().clearAssessment();
+
+    expect(useAssessmentStore.getState().assessmentId).toBeNull();
+    expect(useAssessmentStore.getState().assessmentState).toBeNull();
+    expect(useAssessmentStore.getState().messages).toEqual([]);
   });
 
   it("starts with an empty conversation", () => {
