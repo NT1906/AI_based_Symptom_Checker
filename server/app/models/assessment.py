@@ -1,6 +1,6 @@
 """Assessment ownership, consent linkage, and state persistence.
 
-Owner: Harsh, Kavya · Task: S0-HAR-1, S1-KAV-4 · Requirements: FR-01, idea § 10
+Owner: Harsh, Dimple, Kavya · Task: S0-HAR-1, S1-DIM-4, S1-KAV-4 · Requirements: FR-01, NFR-01, idea § 10
 """
 
 from typing import TYPE_CHECKING
@@ -32,11 +32,13 @@ class Assessment(RecordMixin, Base):
             "'CONFIRMING', 'READY', 'ANALYZING', 'COMPLETED')",
             name="state_allowed",
         ),
+        Index("ix_assessments_created_at", "created_at"),
+        Index("ix_assessments_user_id_created_at", "user_id", "created_at"),
         Index("ix_assessments_guest_session_id", "guest_session_id"),
     )
 
     user_id: Mapped[UUID | None] = mapped_column(
-        ForeignKey("users.id", ondelete="RESTRICT"), nullable=True
+        ForeignKey("users.id", ondelete="RESTRICT"), index=True
     )
     guest_session_id: Mapped[UUID | None] = mapped_column(
         ForeignKey("guest_sessions.id", ondelete="SET NULL"), nullable=True
@@ -44,7 +46,7 @@ class Assessment(RecordMixin, Base):
     consent_id: Mapped[UUID] = mapped_column(
         ForeignKey("consents.id", ondelete="RESTRICT"), unique=True
     )
-    state: Mapped[str] = mapped_column(String(32), server_default="START")
+    state: Mapped[str] = mapped_column(String(32), server_default="START", index=True)
     user: Mapped["User | None"] = relationship(back_populates="assessments")
     guest_session: Mapped["GuestSession | None"] = relationship(
         back_populates="assessments"

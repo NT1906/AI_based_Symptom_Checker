@@ -1,0 +1,1677 @@
+{
+  "components": {
+    "schemas": {
+      "AnalyzeResponse": {
+        "description": "Response returned upon triggering clinical triage analysis.",
+        "properties": {
+          "assessmentId": {
+            "description": "Evaluated assessment identifier",
+            "format": "uuid",
+            "title": "Assessmentid",
+            "type": "string"
+          },
+          "resultAvailable": {
+            "default": true,
+            "description": "Whether clinical evaluation result is ready for retrieval",
+            "title": "Resultavailable",
+            "type": "boolean"
+          },
+          "state": {
+            "$ref": "#/components/schemas/AssessmentState",
+            "default": "COMPLETED",
+            "description": "Current lifecycle state"
+          }
+        },
+        "required": [
+          "assessmentId"
+        ],
+        "title": "AnalyzeResponse",
+        "type": "object"
+      },
+      "AssessmentCreate": {
+        "description": "Payload to initialize a new assessment with user consent.",
+        "properties": {
+          "consentId": {
+            "description": "Unique consent record identifier",
+            "format": "uuid",
+            "title": "Consentid",
+            "type": "string"
+          },
+          "userId": {
+            "anyOf": [
+              {
+                "format": "uuid",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "description": "Optional registered user ID",
+            "title": "Userid"
+          }
+        },
+        "required": [
+          "consentId"
+        ],
+        "title": "AssessmentCreate",
+        "type": "object"
+      },
+      "AssessmentRead": {
+        "description": "Summary of an existing assessment.",
+        "properties": {
+          "consentId": {
+            "description": "Associated consent identifier",
+            "format": "uuid",
+            "title": "Consentid",
+            "type": "string"
+          },
+          "createdAt": {
+            "description": "Timestamp in UTC",
+            "format": "date-time",
+            "title": "Createdat",
+            "type": "string"
+          },
+          "id": {
+            "description": "Unique assessment identifier",
+            "format": "uuid",
+            "title": "Id",
+            "type": "string"
+          },
+          "state": {
+            "$ref": "#/components/schemas/AssessmentState",
+            "description": "Current lifecycle state"
+          },
+          "updatedAt": {
+            "description": "Timestamp in UTC",
+            "format": "date-time",
+            "title": "Updatedat",
+            "type": "string"
+          },
+          "userId": {
+            "anyOf": [
+              {
+                "format": "uuid",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "description": "Registered user identifier",
+            "title": "Userid"
+          }
+        },
+        "required": [
+          "id",
+          "state",
+          "consentId"
+        ],
+        "title": "AssessmentRead",
+        "type": "object"
+      },
+      "AssessmentResult": {
+        "description": "Final triage assessment result and safety guidance.\n\nAttributes:\n    assessment_id: Foreign key to the evaluated assessment.\n    risk_level: Deterministic risk tier (SELF_CARE, CONSULT_DOCTOR, URGENT).\n    conditions: Ranked candidate conditions with categorical confidence.\n    guidance: General self-care, warning signs, and monitoring advice.\n    referral: Healthcare referral details.\n    limitations: Disclosed limitations of the automated informational triage aid.\n    model_version: Version identifier of the risk engine and models.\n    disclaimer: Mandatory medical safety disclaimer.\n    created_at: UTC timestamp when the result was composed.",
+        "properties": {
+          "assessmentId": {
+            "description": "Unique assessment identifier",
+            "format": "uuid",
+            "title": "Assessmentid",
+            "type": "string"
+          },
+          "conditions": {
+            "description": "Ranked candidate conditions",
+            "items": {
+              "$ref": "#/components/schemas/Condition"
+            },
+            "title": "Conditions",
+            "type": "array"
+          },
+          "createdAt": {
+            "description": "Timestamp in UTC",
+            "format": "date-time",
+            "title": "Createdat",
+            "type": "string"
+          },
+          "disclaimer": {
+            "default": "This is not a medical diagnosis. Always consult a qualified healthcare professional.",
+            "description": "Mandatory medical safety disclaimer",
+            "title": "Disclaimer",
+            "type": "string"
+          },
+          "guidance": {
+            "description": "Self-care advice or next steps",
+            "items": {
+              "type": "string"
+            },
+            "title": "Guidance",
+            "type": "array"
+          },
+          "limitations": {
+            "description": "Known evaluation limitations",
+            "items": {
+              "type": "string"
+            },
+            "title": "Limitations",
+            "type": "array"
+          },
+          "modelVersion": {
+            "default": "1.0.0",
+            "description": "Semantic version of triage engine",
+            "title": "Modelversion",
+            "type": "string"
+          },
+          "referral": {
+            "$ref": "#/components/schemas/ReferralInfo",
+            "description": "Doctor referral information"
+          },
+          "riskLevel": {
+            "$ref": "#/components/schemas/RiskLevel",
+            "description": "Triage risk tier"
+          }
+        },
+        "required": [
+          "assessmentId",
+          "riskLevel"
+        ],
+        "title": "AssessmentResult",
+        "type": "object"
+      },
+      "AssessmentState": {
+        "description": "Lifecycle states of an assessment session.\n\nFlow: START -> SYMPTOM_COLLECTION -> CLARIFYING -> CONFIRMING -> READY ->\nANALYZING -> COMPLETED",
+        "enum": [
+          "START",
+          "SYMPTOM_COLLECTION",
+          "CLARIFYING",
+          "CONFIRMING",
+          "READY",
+          "ANALYZING",
+          "COMPLETED",
+          "ERROR"
+        ],
+        "title": "AssessmentState",
+        "type": "string"
+      },
+      "AssessmentStateResponse": {
+        "description": "Detailed state snapshot for state polling and validation.",
+        "properties": {
+          "assessmentId": {
+            "description": "Unique assessment identifier",
+            "format": "uuid",
+            "title": "Assessmentid",
+            "type": "string"
+          },
+          "clarificationCount": {
+            "default": 0,
+            "description": "Clarification loop count (capped at 3)",
+            "maximum": 3.0,
+            "minimum": 0.0,
+            "title": "Clarificationcount",
+            "type": "integer"
+          },
+          "isLowConfidence": {
+            "default": false,
+            "description": "Whether low confidence was flagged due to capped clarification loop",
+            "title": "Islowconfidence",
+            "type": "boolean"
+          },
+          "maxClarifications": {
+            "default": 3,
+            "description": "Hard cap on clarifications",
+            "title": "Maxclarifications",
+            "type": "integer"
+          },
+          "state": {
+            "$ref": "#/components/schemas/AssessmentState",
+            "description": "Current lifecycle state"
+          },
+          "symptoms": {
+            "description": "Currently recorded symptoms",
+            "items": {
+              "$ref": "#/components/schemas/Symptom"
+            },
+            "title": "Symptoms",
+            "type": "array"
+          }
+        },
+        "required": [
+          "assessmentId",
+          "state"
+        ],
+        "title": "AssessmentStateResponse",
+        "type": "object"
+      },
+      "Body_upload_assessment_image_api_v1_assessments__id__images_post": {
+        "properties": {
+          "file": {
+            "description": "Symptom photo (JPEG, PNG, WebP up to 5 MB)",
+            "format": "binary",
+            "title": "File",
+            "type": "string"
+          }
+        },
+        "required": [
+          "file"
+        ],
+        "title": "Body_upload_assessment_image_api_v1_assessments__id__images_post",
+        "type": "object"
+      },
+      "Condition": {
+        "description": "A possible condition associated with the reported symptoms.\n\nAttributes:\n    name: Clinical or plain-language name of the potential condition.\n    confidence: Categorical confidence tier (Likely, Possible, Less likely).\n    rank: Rank index based on symptom-overlap scoring (1 = highest match).\n    icd10_code: Standard ICD-10 clinical coding classification, if available.\n    specialty: Recommended medical specialty for clinical evaluation.\n    description: Brief informational summary of the condition.",
+        "properties": {
+          "confidence": {
+            "$ref": "#/components/schemas/ConfidenceLabel",
+            "description": "Categorical confidence label (never a raw percentage)"
+          },
+          "description": {
+            "anyOf": [
+              {
+                "maxLength": 1000,
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "description": "Overview",
+            "title": "Description"
+          },
+          "icd10Code": {
+            "anyOf": [
+              {
+                "maxLength": 32,
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "description": "ICD-10 code",
+            "title": "Icd10Code"
+          },
+          "name": {
+            "description": "Condition name",
+            "maxLength": 256,
+            "minLength": 1,
+            "title": "Name",
+            "type": "string"
+          },
+          "rank": {
+            "default": 1,
+            "description": "Relative match rank",
+            "minimum": 1.0,
+            "title": "Rank",
+            "type": "integer"
+          },
+          "specialty": {
+            "anyOf": [
+              {
+                "maxLength": 128,
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "description": "Medical specialty",
+            "title": "Specialty"
+          }
+        },
+        "required": [
+          "name",
+          "confidence"
+        ],
+        "title": "Condition",
+        "type": "object"
+      },
+      "ConfidenceLabel": {
+        "description": "Categorical confidence labels presented to users.\n\nRaw statistical scores are never exposed directly to users (AI_RULES.md \u00a72).",
+        "enum": [
+          "LIKELY",
+          "POSSIBLE",
+          "LESS_LIKELY"
+        ],
+        "title": "ConfidenceLabel",
+        "type": "string"
+      },
+      "ConsentRequest": {
+        "description": "Policy version accepted by the user.",
+        "properties": {
+          "policyVersion": {
+            "title": "Policyversion",
+            "type": "string"
+          }
+        },
+        "required": [
+          "policyVersion"
+        ],
+        "title": "ConsentRequest",
+        "type": "object"
+      },
+      "ConsentResponse": {
+        "description": "ID of the persisted consent record.",
+        "properties": {
+          "consentId": {
+            "format": "uuid",
+            "title": "Consentid",
+            "type": "string"
+          }
+        },
+        "required": [
+          "consentId"
+        ],
+        "title": "ConsentResponse",
+        "type": "object"
+      },
+      "Duration": {
+        "description": "Structured duration of a symptom.\n\nAttributes:\n    value: Non-negative duration length.\n    unit: Duration time unit (HOUR, DAY, WEEK, MONTH, YEAR).",
+        "properties": {
+          "unit": {
+            "$ref": "#/components/schemas/DurationUnit",
+            "default": "DAY",
+            "description": "Duration unit"
+          },
+          "value": {
+            "description": "Duration numeric value",
+            "minimum": 0.0,
+            "title": "Value",
+            "type": "number"
+          }
+        },
+        "required": [
+          "value"
+        ],
+        "title": "Duration",
+        "type": "object"
+      },
+      "DurationUnit": {
+        "description": "Time units for symptom duration tracking.",
+        "enum": [
+          "HOUR",
+          "DAY",
+          "WEEK",
+          "MONTH",
+          "YEAR"
+        ],
+        "title": "DurationUnit",
+        "type": "string"
+      },
+      "ErrorResponse": {
+        "description": "Uniform error response schema returned to clients.\n\nAttributes:\n    code: Machine-readable uppercase snake_case error identifier.\n    message: Safe, human-readable error description.\n    details: Optional additional diagnostic details.\n    request_id: Correlated request identifier matching the X-Request-ID header.",
+        "properties": {
+          "code": {
+            "title": "Code",
+            "type": "string"
+          },
+          "details": {
+            "anyOf": [
+              {},
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Details"
+          },
+          "message": {
+            "title": "Message",
+            "type": "string"
+          },
+          "requestId": {
+            "title": "Requestid",
+            "type": "string"
+          }
+        },
+        "required": [
+          "code",
+          "message",
+          "requestId"
+        ],
+        "title": "ErrorResponse",
+        "type": "object"
+      },
+      "HTTPValidationError": {
+        "properties": {
+          "detail": {
+            "items": {
+              "$ref": "#/components/schemas/ValidationError"
+            },
+            "title": "Detail",
+            "type": "array"
+          }
+        },
+        "title": "HTTPValidationError",
+        "type": "object"
+      },
+      "HealthResponse": {
+        "description": "Schema for health check response.\n\nAttributes:\n    status: Service health status, defaults to 'ok'.\n    version: Deployed version or git commit SHA.",
+        "properties": {
+          "status": {
+            "default": "ok",
+            "title": "Status",
+            "type": "string"
+          },
+          "version": {
+            "title": "Version",
+            "type": "string"
+          }
+        },
+        "required": [
+          "version"
+        ],
+        "title": "HealthResponse",
+        "type": "object"
+      },
+      "ImageUploadResponse": {
+        "description": "Response returned upon successful receipt and sanitization of an image.",
+        "properties": {
+          "assessmentId": {
+            "description": "Unique assessment identifier linked to uploaded image",
+            "format": "uuid",
+            "title": "Assessmentid",
+            "type": "string"
+          },
+          "contentType": {
+            "description": "Sanitized MIME format (e.g. image/jpeg, image/png, image/webp)",
+            "title": "Contenttype",
+            "type": "string"
+          },
+          "status": {
+            "default": "processed",
+            "description": "Ingestion and sanitization status",
+            "title": "Status",
+            "type": "string"
+          }
+        },
+        "required": [
+          "assessmentId",
+          "contentType"
+        ],
+        "title": "ImageUploadResponse",
+        "type": "object"
+      },
+      "MessageCreate": {
+        "description": "Payload sent by client to append a user message.",
+        "properties": {
+          "content": {
+            "description": "User response text",
+            "maxLength": 4000,
+            "minLength": 1,
+            "title": "Content",
+            "type": "string"
+          }
+        },
+        "required": [
+          "content"
+        ],
+        "title": "MessageCreate",
+        "type": "object"
+      },
+      "MessageRead": {
+        "description": "Message payload returned to clients.",
+        "properties": {
+          "assessmentId": {
+            "description": "Associated assessment identifier",
+            "format": "uuid",
+            "title": "Assessmentid",
+            "type": "string"
+          },
+          "content": {
+            "description": "Message text",
+            "maxLength": 4000,
+            "minLength": 1,
+            "title": "Content",
+            "type": "string"
+          },
+          "createdAt": {
+            "description": "Timestamp in UTC",
+            "format": "date-time",
+            "title": "Createdat",
+            "type": "string"
+          },
+          "id": {
+            "description": "Message unique identifier",
+            "format": "uuid",
+            "title": "Id",
+            "type": "string"
+          },
+          "messageType": {
+            "$ref": "#/components/schemas/MessageType",
+            "default": "TEXT",
+            "description": "Message type"
+          },
+          "position": {
+            "default": 0,
+            "description": "Sequential message order index",
+            "minimum": 0.0,
+            "title": "Position",
+            "type": "integer"
+          },
+          "role": {
+            "$ref": "#/components/schemas/MessageRole",
+            "default": "user",
+            "description": "Message sender role"
+          }
+        },
+        "required": [
+          "assessmentId",
+          "content"
+        ],
+        "title": "MessageRead",
+        "type": "object"
+      },
+      "MessageRole": {
+        "description": "Sender roles in assessment conversational exchange.",
+        "enum": [
+          "user",
+          "assistant",
+          "system"
+        ],
+        "title": "MessageRole",
+        "type": "string"
+      },
+      "MessageType": {
+        "description": "Categorization of message intent in the assessment flow.",
+        "enum": [
+          "TEXT",
+          "CLARIFICATION",
+          "CONFIRMATION",
+          "RESULT",
+          "ERROR"
+        ],
+        "title": "MessageType",
+        "type": "string"
+      },
+      "ReferralInfo": {
+        "description": "Clinical referral guidance based on triage severity.\n\nAttributes:\n    required: Whether a consultation with a healthcare provider is recommended.\n    specialty: Recommended clinical specialty (e.g., General Medicine, Cardiology).\n    reason: Plain-language rationale for the recommendation.\n    emergency_number: Emergency response telephone number when risk is URGENT.",
+        "properties": {
+          "emergencyNumber": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "description": "Emergency helpline number (e.g., 112) for URGENT tier",
+            "title": "Emergencynumber"
+          },
+          "reason": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "description": "Triage referral explanation",
+            "title": "Reason"
+          },
+          "required": {
+            "default": false,
+            "description": "Is medical referral recommended",
+            "title": "Required",
+            "type": "boolean"
+          },
+          "specialty": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "description": "Suggested medical department",
+            "title": "Specialty"
+          }
+        },
+        "title": "ReferralInfo",
+        "type": "object"
+      },
+      "RiskLevel": {
+        "description": "Deterministic triage risk tiers.\n\nURGENT takes precedence on any red-flag symptom.",
+        "enum": [
+          "SELF_CARE",
+          "CONSULT_DOCTOR",
+          "URGENT"
+        ],
+        "title": "RiskLevel",
+        "type": "string"
+      },
+      "SendMessageResponse": {
+        "description": "Response returned after appending a message to an assessment session.",
+        "properties": {
+          "assistantMessage": {
+            "$ref": "#/components/schemas/MessageRead",
+            "description": "Assistant reply or clarification prompt"
+          },
+          "message": {
+            "$ref": "#/components/schemas/MessageRead",
+            "description": "User message recorded in session"
+          },
+          "nextState": {
+            "$ref": "#/components/schemas/AssessmentState",
+            "description": "Assessment lifecycle state after message processing"
+          }
+        },
+        "required": [
+          "message",
+          "assistantMessage",
+          "nextState"
+        ],
+        "title": "SendMessageResponse",
+        "type": "object"
+      },
+      "Severity": {
+        "description": "Clinical severity levels reported or inferred for a symptom.",
+        "enum": [
+          "MILD",
+          "MODERATE",
+          "SEVERE",
+          "UNKNOWN"
+        ],
+        "title": "Severity",
+        "type": "string"
+      },
+      "Symptom": {
+        "description": "Canonical representation of an extracted or user-reported symptom.\n\nAttributes:\n    id: Unique identifier for the symptom record.\n    name: Normalized canonical symptom name.\n    severity: Clinical severity level.\n    duration: Structured duration or None if unknown.\n    body_location: Anatomical body site or None if systemic.\n    source: Provenance of the symptom report.\n    extraction_confidence: AI extraction confidence score between 0.0 and 1.0.",
+        "properties": {
+          "bodyLocation": {
+            "anyOf": [
+              {
+                "maxLength": 128,
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "description": "Body site",
+            "title": "Bodylocation"
+          },
+          "duration": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/Duration"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "description": "Symptom duration"
+          },
+          "extractionConfidence": {
+            "anyOf": [
+              {
+                "maximum": 1.0,
+                "minimum": 0.0,
+                "type": "number"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "description": "AI extraction confidence (technical metric, not diagnosis)",
+            "title": "Extractionconfidence"
+          },
+          "id": {
+            "description": "Unique symptom identifier",
+            "format": "uuid",
+            "title": "Id",
+            "type": "string"
+          },
+          "name": {
+            "description": "Canonical symptom name",
+            "maxLength": 128,
+            "minLength": 1,
+            "title": "Name",
+            "type": "string"
+          },
+          "severity": {
+            "$ref": "#/components/schemas/Severity",
+            "default": "UNKNOWN",
+            "description": "Symptom severity"
+          },
+          "source": {
+            "$ref": "#/components/schemas/SymptomSource",
+            "default": "USER",
+            "description": "Symptom source"
+          }
+        },
+        "required": [
+          "name"
+        ],
+        "title": "Symptom",
+        "type": "object"
+      },
+      "SymptomRead": {
+        "description": "Response schema returning full symptom details.",
+        "properties": {
+          "bodyLocation": {
+            "anyOf": [
+              {
+                "maxLength": 128,
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "description": "Body site",
+            "title": "Bodylocation"
+          },
+          "duration": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/Duration"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "description": "Symptom duration"
+          },
+          "extractionConfidence": {
+            "anyOf": [
+              {
+                "maximum": 1.0,
+                "minimum": 0.0,
+                "type": "number"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "description": "AI extraction confidence (technical metric, not diagnosis)",
+            "title": "Extractionconfidence"
+          },
+          "id": {
+            "description": "Unique symptom identifier",
+            "format": "uuid",
+            "title": "Id",
+            "type": "string"
+          },
+          "name": {
+            "description": "Canonical symptom name",
+            "maxLength": 128,
+            "minLength": 1,
+            "title": "Name",
+            "type": "string"
+          },
+          "severity": {
+            "$ref": "#/components/schemas/Severity",
+            "default": "UNKNOWN",
+            "description": "Symptom severity"
+          },
+          "source": {
+            "$ref": "#/components/schemas/SymptomSource",
+            "default": "USER",
+            "description": "Symptom source"
+          }
+        },
+        "required": [
+          "name"
+        ],
+        "title": "SymptomRead",
+        "type": "object"
+      },
+      "SymptomSource": {
+        "description": "Origin of the symptom record.",
+        "enum": [
+          "USER",
+          "AI_EXTRACTED",
+          "USER_CONFIRMED",
+          "USER_CORRECTED"
+        ],
+        "title": "SymptomSource",
+        "type": "string"
+      },
+      "SymptomUpdate": {
+        "description": "Schema for editing or confirming an existing symptom.",
+        "properties": {
+          "bodyLocation": {
+            "anyOf": [
+              {
+                "maxLength": 128,
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Bodylocation"
+          },
+          "duration": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/Duration"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "id": {
+            "anyOf": [
+              {
+                "format": "uuid",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "description": "Existing symptom identifier if updating",
+            "title": "Id"
+          },
+          "name": {
+            "anyOf": [
+              {
+                "maxLength": 128,
+                "minLength": 1,
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Name"
+          },
+          "severity": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/Severity"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "source": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/SymptomSource"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "description": "Updated symptom source"
+          }
+        },
+        "title": "SymptomUpdate",
+        "type": "object"
+      },
+      "UpdateSymptomsRequest": {
+        "description": "Request payload to confirm, add, or update recorded symptoms.",
+        "properties": {
+          "symptoms": {
+            "description": "List of updated, added, or confirmed symptoms",
+            "items": {
+              "$ref": "#/components/schemas/SymptomUpdate"
+            },
+            "title": "Symptoms",
+            "type": "array"
+          }
+        },
+        "required": [
+          "symptoms"
+        ],
+        "title": "UpdateSymptomsRequest",
+        "type": "object"
+      },
+      "ValidationError": {
+        "properties": {
+          "loc": {
+            "items": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "integer"
+                }
+              ]
+            },
+            "title": "Location",
+            "type": "array"
+          },
+          "msg": {
+            "title": "Message",
+            "type": "string"
+          },
+          "type": {
+            "title": "Error Type",
+            "type": "string"
+          }
+        },
+        "required": [
+          "loc",
+          "msg",
+          "type"
+        ],
+        "title": "ValidationError",
+        "type": "object"
+      }
+    }
+  },
+  "info": {
+    "description": "Informational triage aid backend providing symptom collection, prediction orchestration, and risk engine evaluation.",
+    "title": "AI-Based Symptom Checker API",
+    "version": "dev"
+  },
+  "openapi": "3.1.0",
+  "paths": {
+    "/api/v1/assessments": {
+      "post": {
+        "description": "Initializes a new assessment session linked to a mandatory user consent record. Returns initial START lifecycle state.",
+        "operationId": "create_assessment_api_v1_assessments_post",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/AssessmentCreate"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "201": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/AssessmentRead"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "400": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            },
+            "description": "Invalid consent identifier or consent missing"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            },
+            "description": "Validation error on payload"
+          }
+        },
+        "summary": "Create a new assessment session",
+        "tags": [
+          "assessments"
+        ]
+      }
+    },
+    "/api/v1/assessments/{id}": {
+      "get": {
+        "description": "Fetches current status and metadata of an assessment session.",
+        "operationId": "get_assessment_api_v1_assessments__id__get",
+        "parameters": [
+          {
+            "description": "Unique assessment identifier",
+            "in": "path",
+            "name": "id",
+            "required": true,
+            "schema": {
+              "description": "Unique assessment identifier",
+              "format": "uuid",
+              "title": "Id",
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/AssessmentRead"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "404": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            },
+            "description": "Assessment not found"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            },
+            "description": "Request or parameter validation failed"
+          }
+        },
+        "summary": "Get assessment details",
+        "tags": [
+          "assessments"
+        ]
+      }
+    },
+    "/api/v1/assessments/{id}/analyze": {
+      "post": {
+        "description": "Submits confirmed symptoms to the deterministic risk engine and condition prediction models. Transitions state to COMPLETED.",
+        "operationId": "analyze_assessment_api_v1_assessments__id__analyze_post",
+        "parameters": [
+          {
+            "description": "Unique assessment identifier",
+            "in": "path",
+            "name": "id",
+            "required": true,
+            "schema": {
+              "description": "Unique assessment identifier",
+              "format": "uuid",
+              "title": "Id",
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/AnalyzeResponse"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "404": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            },
+            "description": "Assessment not found"
+          },
+          "409": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            },
+            "description": "Operation invalid for current assessment state"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            },
+            "description": "Request or parameter validation failed"
+          }
+        },
+        "summary": "Trigger clinical assessment analysis",
+        "tags": [
+          "assessments"
+        ]
+      }
+    },
+    "/api/v1/assessments/{id}/images": {
+      "post": {
+        "description": "Receives an optional symptom image (JPEG, PNG, WebP up to 5 MB), validates magic bytes, strips all EXIF/metadata, and processes strictly in volatile memory without writing to disk or database (DR-06).",
+        "operationId": "upload_assessment_image_api_v1_assessments__id__images_post",
+        "parameters": [
+          {
+            "description": "Unique assessment identifier",
+            "in": "path",
+            "name": "id",
+            "required": true,
+            "schema": {
+              "description": "Unique assessment identifier",
+              "format": "uuid",
+              "title": "Id",
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "multipart/form-data": {
+              "schema": {
+                "$ref": "#/components/schemas/Body_upload_assessment_image_api_v1_assessments__id__images_post"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ImageUploadResponse"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "400": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            },
+            "description": "Image validation failed (size, format, or corrupted content)"
+          },
+          "404": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            },
+            "description": "Assessment not found"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            },
+            "description": "Validation error on path parameter or multipart form"
+          }
+        },
+        "summary": "Upload and validate an optional symptom image",
+        "tags": [
+          "assessments",
+          "assessments"
+        ]
+      }
+    },
+    "/api/v1/assessments/{id}/messages": {
+      "get": {
+        "description": "Returns sequential ordered history of messages in the assessment.",
+        "operationId": "get_messages_api_v1_assessments__id__messages_get",
+        "parameters": [
+          {
+            "description": "Unique assessment identifier",
+            "in": "path",
+            "name": "id",
+            "required": true,
+            "schema": {
+              "description": "Unique assessment identifier",
+              "format": "uuid",
+              "title": "Id",
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "items": {
+                    "$ref": "#/components/schemas/MessageRead"
+                  },
+                  "title": "Response Get Messages Api V1 Assessments  Id  Messages Get",
+                  "type": "array"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "404": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            },
+            "description": "Assessment not found"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            },
+            "description": "Request or parameter validation failed"
+          }
+        },
+        "summary": "Get conversation message history",
+        "tags": [
+          "assessments"
+        ]
+      },
+      "post": {
+        "description": "Appends a user chat message to the assessment dialogue and returns the recorded user message, assistant clarification, and next state.",
+        "operationId": "send_message_api_v1_assessments__id__messages_post",
+        "parameters": [
+          {
+            "description": "Unique assessment identifier",
+            "in": "path",
+            "name": "id",
+            "required": true,
+            "schema": {
+              "description": "Unique assessment identifier",
+              "format": "uuid",
+              "title": "Id",
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/MessageCreate"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/SendMessageResponse"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "404": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            },
+            "description": "Assessment not found"
+          },
+          "409": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            },
+            "description": "Operation invalid for current assessment state"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            },
+            "description": "Request or parameter validation failed"
+          }
+        },
+        "summary": "Send a message in the assessment conversation",
+        "tags": [
+          "assessments"
+        ]
+      }
+    },
+    "/api/v1/assessments/{id}/result": {
+      "get": {
+        "description": "Retrieves final clinical triage outcome, candidate conditions with categorical confidence, guidance, limitations, and medical disclaimer.",
+        "operationId": "get_assessment_result_api_v1_assessments__id__result_get",
+        "parameters": [
+          {
+            "description": "Unique assessment identifier",
+            "in": "path",
+            "name": "id",
+            "required": true,
+            "schema": {
+              "description": "Unique assessment identifier",
+              "format": "uuid",
+              "title": "Id",
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/AssessmentResult"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "404": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            },
+            "description": "Assessment not found"
+          },
+          "409": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            },
+            "description": "Operation invalid for current assessment state"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            },
+            "description": "Request or parameter validation failed"
+          }
+        },
+        "summary": "Get assessment result and triage outcome",
+        "tags": [
+          "assessments"
+        ]
+      }
+    },
+    "/api/v1/assessments/{id}/state": {
+      "get": {
+        "description": "Retrieves detailed state snapshot including active symptoms, clarification loop counter, and lifecycle phase.",
+        "operationId": "get_assessment_state_api_v1_assessments__id__state_get",
+        "parameters": [
+          {
+            "description": "Unique assessment identifier",
+            "in": "path",
+            "name": "id",
+            "required": true,
+            "schema": {
+              "description": "Unique assessment identifier",
+              "format": "uuid",
+              "title": "Id",
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/AssessmentStateResponse"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "404": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            },
+            "description": "Assessment not found"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            },
+            "description": "Request or parameter validation failed"
+          }
+        },
+        "summary": "Get assessment state snapshot",
+        "tags": [
+          "assessments"
+        ]
+      }
+    },
+    "/api/v1/assessments/{id}/symptoms": {
+      "get": {
+        "description": "Retrieves recognized symptoms list for the assessment.",
+        "operationId": "get_symptoms_api_v1_assessments__id__symptoms_get",
+        "parameters": [
+          {
+            "description": "Unique assessment identifier",
+            "in": "path",
+            "name": "id",
+            "required": true,
+            "schema": {
+              "description": "Unique assessment identifier",
+              "format": "uuid",
+              "title": "Id",
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "items": {
+                    "$ref": "#/components/schemas/SymptomRead"
+                  },
+                  "title": "Response Get Symptoms Api V1 Assessments  Id  Symptoms Get",
+                  "type": "array"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "404": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            },
+            "description": "Assessment not found"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            },
+            "description": "Request or parameter validation failed"
+          }
+        },
+        "summary": "Get recognized symptoms",
+        "tags": [
+          "assessments"
+        ]
+      },
+      "patch": {
+        "description": "Allows user to confirm, edit, add, or delete symptoms prior to triage evaluation.",
+        "operationId": "update_symptoms_api_v1_assessments__id__symptoms_patch",
+        "parameters": [
+          {
+            "description": "Unique assessment identifier",
+            "in": "path",
+            "name": "id",
+            "required": true,
+            "schema": {
+              "description": "Unique assessment identifier",
+              "format": "uuid",
+              "title": "Id",
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/UpdateSymptomsRequest"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "items": {
+                    "$ref": "#/components/schemas/SymptomRead"
+                  },
+                  "title": "Response Update Symptoms Api V1 Assessments  Id  Symptoms Patch",
+                  "type": "array"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "404": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            },
+            "description": "Assessment not found"
+          },
+          "409": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            },
+            "description": "Operation invalid for current assessment state"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            },
+            "description": "Request or parameter validation failed"
+          }
+        },
+        "summary": "Confirm or update symptoms",
+        "tags": [
+          "assessments"
+        ]
+      }
+    },
+    "/api/v1/consents": {
+      "post": {
+        "description": "Save acceptance of the supplied policy version and return its ID.",
+        "operationId": "create_consent_api_v1_consents_post",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/ConsentRequest"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "201": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ConsentResponse"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Record consent",
+        "tags": [
+          "consents"
+        ]
+      }
+    },
+    "/api/v1/health": {
+      "get": {
+        "description": "Returns current service status and deployed version.",
+        "operationId": "get_health_api_v1_health_get",
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HealthResponse"
+                }
+              }
+            },
+            "description": "Successful Response"
+          }
+        },
+        "summary": "Service Health Check",
+        "tags": [
+          "health"
+        ]
+      }
+    }
+  }
+}

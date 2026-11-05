@@ -1,11 +1,11 @@
 # Database foundation
 
-Owner: Harsh, Kavya · Tasks: S0-HAR-1, S1-KAV-4 · Issues: #9, #37 · Requirements: FR-01, idea § 10
+Owner: Harsh, Dimple, Kavya · Tasks: S0-HAR-1, S1-DIM-4, S1-KAV-4 · Issues: #9, #38, #37 · Requirements: FR-01, NFR-01, idea § 10
 
 This change supplies PostgreSQL-oriented SQLAlchemy 2 models, session factories,
-Alembic migrations (initial revision `0001_database_foundation` and guest session
-revision `0002_guest_sessions`), guest session repository, fictional seed data,
-and isolated unit tests.
+Alembic migrations (initial revision `0001_database_foundation`, hot-query indexes
+revision `0002_hot_query_indexes`, and guest session revision `0003_guest_sessions`),
+guest session repository, fictional seed data, and isolated unit tests.
 
 ## Current status and team handoff
 
@@ -100,8 +100,7 @@ NULL hash; seed accounts deliberately have no login credential. Hashing and
 validation belong to the auth module. Never store plaintext passwords.
 
 No image column, doctor directory, profile fields, prediction scores, or medical
-recommendations are introduced. Structured symptom JSONB is S1-HAR-2. Hot-query
-indexes beyond primary/unique indexes and realistic demo content are S1-HAR-4.
+recommendations are introduced. Structured symptom JSONB is S1-HAR-2.
 
 ## Windows local setup (existing Docker database)
 
@@ -128,7 +127,7 @@ docker exec harsh-symptom-db psql -U symptom_dev -d symptom_checker -c "SELECT v
 docker exec harsh-symptom-db psql -U symptom_dev -d symptom_checker -c "SELECT 'users' AS table_name, count(*) FROM users UNION ALL SELECT 'consents', count(*) FROM consents UNION ALL SELECT 'guest_sessions', count(*) FROM guest_sessions UNION ALL SELECT 'assessments', count(*) FROM assessments UNION ALL SELECT 'messages', count(*) FROM messages UNION ALL SELECT 'symptoms', count(*) FROM symptoms;"
 ```
 
-Expect revision `0002_guest_sessions`. Running seed again adds nothing and never overwrites records.
+Expect revision `0003_guest_sessions`. Running seed again adds nothing and never overwrites records.
 If an identity conflicts, the transaction fails and rolls back instead of
 modifying existing data. The seed uses reserved `.invalid` email addresses,
 fixed UUIDs, and text explicitly marked fictional. Use it only for local testing.
@@ -174,3 +173,39 @@ with factory.begin() as session:
 `Config.attributes["connection"]`. These patterns follow the official
 [SQLAlchemy transaction documentation](https://docs.sqlalchemy.org/en/20/orm/session_basics.html)
 and [Alembic connection-sharing cookbook](https://alembic.sqlalchemy.org/en/latest/cookbook.html).
+
+## Hot-query indexes and demo seed data (S1-DIM-4)
+
+Owner: Dimple · Task: S1-DIM-4 · Issue: #38 · Requirement: NFR-01
+
+Revision `0002_hot_query_indexes` introduces B-tree indexes for all hot query patterns identified in the assessment lifecycle and data retention flows:
+
+| Table | Index Name | Columns | Query Pattern / Rationale |
+|---|---|---|---|
+| `assessments` | `ix_assessments_user_id` | `user_id` | Fetching past assessments for registered users (`WHERE user_id = :uid`). |
+| `assessments` | `ix_assessments_created_at` | `created_at` | Guest assessment TTL purge job (`WHERE user_id IS NULL AND created_at < :cutoff`). |
+| `assessments` | `ix_assessments_state` | `state` | Filtering active assessments by state machine state. |
+| `assessments` | `ix_assessments_user_id_created_at` | `user_id, created_at` | Composite covering index for user history ordered by recency. |
+| `messages` | `ix_messages_assessment_id` | `assessment_id` | Fast retrieval of conversation turns for an active assessment. |
+| `symptoms` | `ix_symptoms_assessment_id` | `assessment_id` | Fast retrieval of extracted/confirmed symptoms for an active assessment. |
+
+### Migration execution
+
+To generate offline SQL to inspect DDL before applying:
+```powershell
+alembic upgrade head --sql
+```
+
+To apply the migration online:
+```powershell
+alembic upgrade head
+```
+
+### Realistic demo seed data
+
+`server/app/repositories/seed_repository.py` provides `seed_realistic_demo_data(session)` with three realistic, non-diagnostic triage scenarios:
+1. **Registered Patient (Completed):** User with multi-turn chat messages, normalized symptoms ("headache", "fatigue"), and `COMPLETED` state.
+2. **Anonymous Guest (Active):** Guest session with no user account, in `SYMPTOM_COLLECTION` state with active symptoms ("cough", "runny nose").
+3. **Registered Patient (Clarifying):** Assessment in `CLARIFYING` state with targeted follow-up dialogue.
+
+All demo data uses reserved `.invalid` emails (`demo-patient@example.invalid`, `demo-patient2@example.invalid`), fixed deterministic UUIDs, and explicitly fictional text. Seeding is idempotent and safe to run repeatedly.

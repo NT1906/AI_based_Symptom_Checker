@@ -17,7 +17,7 @@ The server only loads the exported ONNX model from Hugging Face Hub (`server/app
 | `requirements.txt` | Training dependencies (torch, timm, onnx, wandb, …) |
 | `test_*.py` | Unit tests; they need only PyYAML (`ml/requirements-ci.txt`) |
 
-Coming in later tasks: `ml/datasets/images/` (S1-NIS-5), `evaluate.py` (S1-NIS-6), `export_onnx.py` (S2-NIS-5).
+Training data: [`ml/datasets/images/`](../datasets/images/README.md) (dataset card, frozen split manifest). Coming in later tasks: `evaluate.py` (S1-NIS-6), `export_onnx.py` (S2-NIS-5).
 
 ## Public interface
 

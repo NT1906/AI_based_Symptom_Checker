@@ -1,15 +1,15 @@
 """Create guest_sessions table and add guest_session_id to assessments.
 
 Owner: Kavya · Task: S1-KAV-4 · Requirements: idea § 10
-Revision ID: 0002_guest_sessions
-Revises: 0001_database_foundation
+Revision ID: 0003_guest_sessions
+Revises: 0002_hot_query_indexes
 """
 
 import sqlalchemy as sa
 from alembic import op
 
-revision: str = "0002_guest_sessions"
-down_revision: str | None = "0001_database_foundation"
+revision: str = "0003_guest_sessions"
+down_revision: str | None = "0002_hot_query_indexes"
 branch_labels: str | None = None
 depends_on: str | None = None
 

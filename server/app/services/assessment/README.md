@@ -1,11 +1,12 @@
 # Assessment Service Module
 
-**Owner:** Darshil (Assessment Orchestration) · **Task:** S1-DAR-2, S1-DAR-3 · **Requirements:** FR-03, FR-04, FR-17, FR-19, FR-20
+**Owner:** Darshil (Assessment Orchestration) · **Task:** S1-DAR-2, S1-DAR-3, S2-DAR-5 · **Requirements:** FR-03, FR-04, FR-05, FR-06, FR-07, FR-17, FR-19, FR-20, DR-05
 
 The Assessment Service orchestrates the conversational symptom assessment lifecycle. It provides:
 1. **Assessment State Machine**: Strictly governs valid states and enforces medical-safety guards throughout the user experience.
 2. **Assessment Orchestrator**: Coordinates user chat intake, calls the AI Gateway for structured symptom extraction and clarification, deterministically merges recognized symptoms, and progresses assessment lifecycle states.
 3. **Clarification Turn Limiting & Low-Confidence Flagging**: Strictly enforces a maximum of 3 clarification questions (FR-04, FR-19). If ambiguity remains after 3 turns, forces transition to CONFIRMING and marks the session with `is_low_confidence=True` (FR-20).
+4. **Clinical Analysis & Triage Results**: Executes the clinical prediction and risk evaluation pipeline upon symptom confirmation (`generate_result()`), applying the safety-wording guard before user delivery (FR-05, FR-06, FR-07, DR-05).
 
 ---
 
@@ -81,37 +82,44 @@ User Message
        (if capped with ambiguity: is_low_confidence = True)
 ```
 
-### Usage Example
+---
 
-```python
-from uuid import uuid4
-from app.services.assessment import AssessmentOrchestrator
+## 5. Clinical Analysis Pipeline (`generate_result()`)
 
-orchestrator = AssessmentOrchestrator()
+Per **FR-05**, **FR-06**, **FR-07**, and **DR-05**:
+Once symptoms are confirmed and the session enters `READY`, calling `generate_result()` executes the end-to-end evaluation pipeline:
 
-# Initialize an assessment session
-consent_id = uuid4()
-assessment = orchestrator.create_assessment(consent_id=consent_id)
-
-# Process a user message
-result = await orchestrator.process_message(
-    assessment_id=assessment.id,
-    message="I have had a mild headache and fever since yesterday.",
-)
-
-# Inspect results
-print(result.next_state)  # AssessmentState.CONFIRMING or CLARIFYING
-print(result.symptoms)  # Extracted canonical symptoms
-print(result.is_low_confidence)  # False (or True if capped with ambiguity)
+```text
+READY State
+    │
+    ▼ sm.start_analysis()
+ANALYZING State
+    │
+    ├── 1. Map confirmed symptoms to ReportedSymptom(id, severity)
+    ├── 2. Condition Prediction: BaselineConditionModel().predict(symptom_ids)
+    ├── 3. Deterministic Risk Engine: assess_risk(reported, predictions)
+    └── 4. Result Composition & Safety Check:
+           ResultComposer(wording_guard=assert_safe_wording).compose(...)
+               │
+               ├── Safe wording passes ──► sm.complete_analysis() ──► COMPLETED State
+               │                                                      (returns AssessmentResult)
+               │
+               └── Unsafe wording fails ─► sm.transition_to_error() ──► ERROR State
+                                           (re-raises UnsafeWordingError 500)
 ```
+
+### Safety & Guarding Rules
+- **No Diagnostic Language:** Composed text is validated against `assert_safe_wording` (DR-05) to block banned phrases.
+- **Fail-Closed on Unsafe Wording:** If `UnsafeWordingError` is raised, the state transitions to `ERROR` and the error propagates; the assessment never reaches `COMPLETED` and no result is leaked.
+- **Deterministic Risk:** Red-flag symptoms (e.g. chest pain + sweating) always trigger `URGENT` triage with 112 referral instructions.
+- **Dependency Injection:** Custom `ResultComposer` and `ConditionModel` instances can be injected into `AssessmentOrchestrator` for testing and model extension.
 
 ---
 
-## 5. Running Unit Tests
+## 6. Running Unit Tests
 
 From `server/`:
 
 ```powershell
 pytest tests/unit/assessment -v
 ```
-
