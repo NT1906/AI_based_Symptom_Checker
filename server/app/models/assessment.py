@@ -1,6 +1,7 @@
 """Assessment ownership, consent linkage, and state persistence.
 
-Owner: Harsh, Dimple, Kavya · Task: S0-HAR-1, S1-DIM-4, S1-KAV-4 · Requirements: FR-01, NFR-01, idea § 10
+Owner: Harsh, Dimple, Kavya · Task: S0-HAR-1, S1-DIM-4, S1-KAV-4
+Requirements: FR-01, NFR-01, idea § 10
 """
 
 from typing import TYPE_CHECKING
