@@ -218,7 +218,8 @@ def main(argv: Sequence[str] | None = None) -> int:
         raise ValueError(f"{UNKNOWN_SKIN_TONE!r} is reserved for missing skin types")
 
     records, left_out = build_records(fetch_metadata(args.metadata_dir), groups)
-    unexpected = {r.label for r in records} - set(config.class_names)
+    known = set(config.class_names) | set(config.data.merged_into_unclear)
+    unexpected = {r.label for r in records} - known
     if unexpected:
         raise ValueError(f"labels not in the config: {sorted(unexpected)}")
     splits = assign_splits(records, config.data.split, config.seed)

@@ -7,21 +7,13 @@ version: 1
 seed: 42
 
 # Order = model output index. `unclear` must be last (docs/cv-plan.md §2).
+# Only classes that meet the class-size rule after cleaning are listed
+# (ml/datasets/images/README.md §8); the rest are in data.merged_into_unclear.
 classes:
   - name: eczema
     condition_id: atopic_dermatitis
-  - name: fungal_infection
-    condition_id: fungal_skin_infection
   - name: urticaria
     condition_id: urticaria
-  - name: scabies
-    condition_id: scabies
-  - name: acne
-    condition_id: acne
-  - name: chickenpox
-    condition_id: chickenpox
-  - name: cellulitis
-    condition_id: cellulitis
   - name: unclear
     condition_id: null
 
@@ -42,6 +34,9 @@ data:
     dark: [5, 6]
   min_train_images_per_class: 150
   min_test_images_per_class: 30
+  # Manifest labels below the class-size rule: trained as `unclear` (cv-plan §2).
+  merged_into_unclear:
+    [fungal_infection, scabies, acne, chickenpox, cellulitis]
 
 model:
   backbone: efficientnet_b0

@@ -35,7 +35,12 @@ Safety boundaries (AI_RULES.md §2), which every CV task must keep:
 
 ## 2. Target classes
 
-The classes are the 7 skin conditions marked `visual: true` in
+> **Outcome after S1-NIS-5 (3 Nov 2026):** only `eczema` and `urticaria` (plus `unclear`) have enough photos after cleaning.
+> The other five failed the class-size rule below: DermaAmin's images are gone and SCIN has few of them. They are listed in
+> `data.merged_into_unclear` and trained as `unclear`, and stay reachable through text symptoms.
+> Counts: [dataset card §8](../ml/datasets/images/README.md). The table below is the original candidate list.
+
+The candidate classes are the 7 skin conditions marked `visual: true` in
 [`ml/datasets/conditions/conditions.json`](../ml/datasets/conditions/conditions.json), plus `unclear`.
 Conjunctivitis is also `visual: true`, but it is an eye photo, not a skin photo, so this model leaves it out.
 
@@ -118,6 +123,20 @@ Transfer learning from an ImageNet-pretrained backbone in `timm`. The baseline t
 | MobileNetV3-Large | `mobilenetv3_large_100` | ~5.5 M | ~22 MB | Lower latency on CPU if B0 misses the speed budget |
 
 Both stay under the 25 MB limit even before INT8 quantization (roughly 4× smaller after).
+With 3 classes, both are about 4 M parameters (≈ 16–17 MB FP32).
+`timm` downloads the ImageNet weights from the Hugging Face Hub (`timm/efficientnet_b0.ra_in1k`, `timm/mobilenetv3_large_100.ra_in1k`).
+
+**Ready-made skin models on Hugging Face** were checked on 3 Nov 2026, to cover the merged conditions without our own data. None is used:
+
+- **Community skin-disease classifiers** (for example `Jayanth2002/dinov2-base-finetuned-SkinDisease`, `Siraja704/DermaAI`, `*-finetuned-dermnet`) are ruled out:
+  - Their training data is unstated, or is DermNet-derived (excluded in §3: no derivatives).
+  - Accuracy is reported only on their own splits, with no skin-tone evaluation.
+  - Several are skin-cancer models, which is out of scope.
+  - The DINOv2 and ViT ones (≈ 86 M parameters) are also far over the 25 MB budget.
+- **Google Derm Foundation** (`google/derm-foundation`) is ruled out:
+  - It is a strong dermatology embedding model, but it is gated under the Health AI Developer Foundations terms.
+  - It is about 1.5 GB (TensorFlow, BiT ResNet-101x3), so it cannot meet the 512 MB / 1 s production budget.
+  - It could still be a teacher, or an offline evaluation reference, in a later version.
 Larger backbones (ResNet-50, ViT) are ruled out by the memory and latency budget.
 
 **Training setup**, from `configs/baseline.yaml`:

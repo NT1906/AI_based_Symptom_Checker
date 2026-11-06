@@ -47,7 +47,8 @@ def test_manifest_has_expected_columns() -> None:
 
 
 def test_manifest_rows_are_valid(rows: list[dict[str, str]]) -> None:
-    classes = set(load_config().class_names)
+    config = load_config()
+    classes = set(config.class_names) | set(config.data.merged_into_unclear)
 
     assert {r["split"] for r in rows} <= set(SPLITS)
     assert {r["label"] for r in rows} <= classes
