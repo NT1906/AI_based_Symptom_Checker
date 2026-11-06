@@ -1,18 +1,20 @@
 # NLP extraction evaluation cases & harness
 
-**Owner:** Kavya (AI/ML, Database) · **Task:** S1-KAV-2 · **Requirements:** NFR-07, FR-03
+**Owner:** Kavya (AI/ML, Database) · **Tasks:** S1-KAV-2, S2-KAV-2 · **Requirements:** NFR-07, FR-03, FR-19
 
-Benchmark cases and evaluation harness for measuring symptom-extraction precision, recall, and F1. Each case pairs a realistic user input with the expected canonical symptoms the extractor should produce.
+Benchmark cases and evaluation harness for measuring symptom-extraction precision, recall, and F1 across canonical symptoms, explicit severity ratings, duration normalization, and linguistic subgroups.
 
 | Read by | For |
 |---|---|
 | NLP eval harness (`evaluate.py`) | Computing precision, recall and F1 reports across test cases |
-| Prompt engineering (S2-NIT-1, Nishith) | Regression testing when LLM prompts change |
-| Eval set v2 (S2-KAV-2) | Expanding to 100 cases with Hinglish and colloquial variants |
+| Prompt engineering (S2-NIT-1, Nishith) | Regression testing and target recommendations for prompt v2 |
+| Quality assurance (S2-MOH-4, Mohit) | Baseline NLP benchmark verification |
 
-## Case format
+---
 
-`cases.json` (schema version `1.0`):
+## 1. Case format (`cases.json`)
+
+`cases.json` (schema version `1.0`, dataset version `2.0`):
 
 ```json
 {
@@ -25,7 +27,8 @@ Benchmark cases and evaluation harness for measuring symptom-extraction precisio
     ],
     "duration": "1 day"
   },
-  "notes": "Tests 'bad headache' → severity SEVERE, 'throwing up' → nausea"
+  "notes": "Tests 'bad headache' → severity SEVERE, 'throwing up' → nausea",
+  "tags": ["standard"]
 }
 ```
 
@@ -33,93 +36,81 @@ Benchmark cases and evaluation harness for measuring symptom-extraction precisio
 
 | Field | Type | Required | Description |
 |---|---|---|---|
-| `id` | string | yes | Unique case identifier (`case_NNN`) |
-| `input` | string | yes | Raw user text as entered (English or Hinglish) |
+| `id` | string | yes | Unique case identifier (`case_NNN`, `case_001` – `case_100`) |
+| `input` | string | yes | Raw user text as entered (English, Hinglish, or misspelled) |
 | `expected.symptoms` | object[] | yes | Canonical symptoms the extractor should find |
 | `expected.symptoms[].id` | string | yes | Canonical symptom ID from `ml/datasets/symptoms/symptoms.json` |
 | `expected.symptoms[].severity` | string | no | `MILD`, `MODERATE` or `SEVERE` — omit if not inferable |
-| `expected.duration` | string | no | Normalized duration (e.g., `"3 days"`, `"1 week"`) |
-| `notes` | string | no | Specific extraction challenge tested |
+| `expected.duration` | string | no | Normalized duration (e.g., `"1 day"`, `"3 days"`, `"1 week"`) |
+| `notes` | string | yes | Specific clinical and NLP extraction challenge tested |
+| `tags` | string[] | no | Category tags (`standard`, `hinglish`, `misspelling`, `red_flag`, `multi_symptom`) |
 
 ### Severity rules
 
-- `SEVERE`: "really bad", "worst ever", "extreme", "unbearable", "severe", "tez", "bahut"
+- `SEVERE`: "really bad", "worst ever", "extreme", "unbearable", "severe", "tez", "bahut", "bohot tez"
 - `MODERATE`: "quite", "noticeable", "moderate", "significant"
 - `MILD`: "slight", "mild", "a little", "minor", "thoda", "halka"
 - Omit severity when the user does not indicate intensity.
 
-## Dataset coverage (v1, 50 cases)
+---
 
-The benchmark includes 50 diverse cases spanning common presentations, emergencies, and language styles:
+## 2. Dataset coverage (v2, 100 cases)
+
+The v2 benchmark includes 100 diverse cases covering 100% of the canonical symptoms in `symptoms.json`:
 
 | Dimension | Count | Details |
 |---|---|---|
-| Total cases | 50 | `case_001` through `case_050` |
-| Multi-symptom (3+ symptoms) | 23 | Complex presentations spanning multiple body systems |
-| With duration | 16 | Temporal mentions ("2 days", "3 weeks", "1 month") |
-| With explicit severity | 12 | Mild, moderate, and severe markers |
-| Hinglish queries | 12 | Transliterated Hindi expressions ("tez bukhar", "pet me dard", "kamzori") |
-| Red flags / emergencies | 8 | Meningitis, stroke, cardiac ischemia, GI bleed, respiratory failure |
-| Misspellings / colloquialisms | 4 | "headack", "stomake", "diarrhoea", "vomting" |
+| **Total cases** | 100 | `case_001` through `case_100` |
+| **Canonical vocabulary coverage** | 100 / 100 | All 100 clinical symptoms represented in benchmark expectations |
+| **Multi-symptom (3+ symptoms)** | 46 | Complex multi-system complaints testing co-occurrence extraction |
+| **With normalized duration** | 31 | Temporal durations ("1 hour", "1 day", "3 days", "2 weeks", "1 month") |
+| **With explicit severity** | 31 | Explicit mild, moderate, and severe markers |
+| **Transliterated Hinglish** | 28 | Indian linguistic patterns ("sir me dard", "pet saaf nahi", "dast lag gaye") |
+| **Misspelled / colloquial input** | 30 | Phonetic typos ("naucea", "dizzynes", "blured vission", "stomake aking") |
+| **Emergency red flags** | 31 | Stroke (FAST), meningitis, cauda equina, GI bleed, psychiatric emergencies |
 
-## Evaluation harness (`evaluate.py`)
+---
+
+## 3. Evaluation harness (`evaluate.py`)
 
 The evaluation script `evaluate.py` is standalone ML code (no server dependencies) that runs test cases through any implementation satisfying the `Extractor` protocol and produces precision, recall, and F1 reports.
 
-### Architecture
+### Per-field evaluation metrics (NFR-07)
 
-```mermaid
-flowchart LR
-    A["cases.json (50 cases)"] --> C["evaluate_case()"]
-    B["symptoms.json"] --> E["SimpleWordMatchExtractor"]
-    E --> C
-    C --> D["CaseResult (P, R, F1)"]
-    D --> F["compute_metrics()"]
-    F --> G["AggregateMetrics (Micro/Macro)"]
-    G --> H["print_report()"]
-    G --> I["JSON summary file (optional)"]
-```
+1. **Canonical Symptoms:** Micro- and Macro-averaged Precision, Recall, and F1 at the symptom ID level.
+2. **Severity Rating:** Accuracy and F1 score for matching severity ratings on true positive symptoms.
+3. **Duration Normalization:** Precision, recall, and match accuracy on extracted temporal expressions.
+4. **Linguistic Subgroups:** Granular performance breakdowns across `standard`, `hinglish`, `misspelling`, `red_flag`, and `multi_symptom` subsets.
 
 ### Running the evaluation
 
-Default run (evaluates all 50 cases with baseline word-match extractor):
+Default run (all 100 cases with baseline extractor and per-field report):
 
 ```bash
 python ml/nlp_eval/evaluate.py
 ```
 
-Verbose mode (prints per-case breakdown table):
+Generate Markdown report feeding S2-NIT-1:
 
 ```bash
-python ml/nlp_eval/evaluate.py --verbose
+python ml/nlp_eval/evaluate.py --report ml/nlp_eval/report_v2.md
 ```
 
-Export results to JSON:
+Export detailed metrics to JSON:
 
 ```bash
 python ml/nlp_eval/evaluate.py --json ml/nlp_eval/results.json
 ```
 
-Custom case and vocabulary paths:
+Verbose per-case breakdown:
 
 ```bash
-python ml/nlp_eval/evaluate.py --cases path/to/cases.json --vocab path/to/symptoms.json
+python ml/nlp_eval/evaluate.py --verbose
 ```
 
-### Metrics definition
+---
 
-For each case, predictions are compared against ground truth at the canonical symptom-ID level:
-
-- **True Positives ($TP$):** Predicted symptoms matching expected symptoms.
-- **False Positives ($FP$):** Predicted symptoms not present in expected set.
-- **False Negatives ($FN$):** Expected symptoms missed by the extractor.
-- **Precision ($P$):** $\frac{TP}{TP + FP}$ (defined as 1.0 if $TP+FP=0$ and no expected symptoms).
-- **Recall ($R$):** $\frac{TP}{TP + FN}$ (defined as 1.0 if $TP+FN=0$).
-- **F1 Score:** $\frac{2 \times P \times R}{P + R}$ (0.0 when $P+R=0$).
-
-Both **micro-averaged** (summing $TP, FP, FN$ globally) and **macro-averaged** (unweighted mean of per-case scores) metrics are computed and reported.
-
-## Testing
+## 4. Testing
 
 The evaluation harness and dataset are verified by unit and integration tests:
 
@@ -127,5 +118,5 @@ The evaluation harness and dataset are verified by unit and integration tests:
 python -m pytest ml/nlp_eval/
 ```
 
-- `test_cases.py`: Schema validation, ID format, non-empty text, vocabulary alignment.
-- `test_evaluate.py`: Metric correctness, edge cases (zero overlap, empty predictions), protocol compliance, CLI options, and end-to-end dataset evaluation.
+- `test_cases.py`: Schema validation, 100-case count, 100% vocabulary parity, severity and duration checks.
+- `test_evaluate.py`: Per-field metrics, duration and severity scoring, subgroup aggregation, protocol conformance, and CLI options.
