@@ -1,0 +1,802 @@
+{
+  "_version": "1.0.0",
+  "_reviewed_by": "Dimple (Medical Safety & Privacy Lead) & Kavya (Knowledge Lead)",
+  "_task": "S2-KAV-1",
+  "_requirements": [
+    "idea §8",
+    "DR-05"
+  ],
+  "conditions": [
+    {
+      "condition_id": "common_cold",
+      "condition_name": "Common cold",
+      "general_advice": [
+        "Ensure adequate physical rest to support recovery.",
+        "Drink plenty of fluids such as warm water, herbal teas, or clear broths to stay hydrated.",
+        "Use saline nasal sprays or rinses to ease nasal congestion.",
+        "Use a cool-mist humidifier or inhale steam from a warm shower to soothe irritated airways.",
+        "Gargle with warm salt water to help relieve throat irritation."
+      ],
+      "when_to_seek_care": [
+        "Fever lasting more than 3 to 4 days, or fever returning after subsiding.",
+        "Shortness of breath, wheezing, or chest discomfort.",
+        "Severe sinus headache or facial swelling that persists or worsens.",
+        "Inability to swallow fluids or signs of dehydration."
+      ],
+      "monitoring_tips": [
+        "Track symptom progression over 7 to 10 days; common cold symptoms typically resolve within this window.",
+        "Check body temperature if feeling chills or feverish."
+      ]
+    },
+    {
+      "condition_id": "influenza",
+      "condition_name": "Influenza (flu)",
+      "general_advice": [
+        "Prioritize bed rest and limit physical exertion.",
+        "Maintain steady fluid intake with water, oral rehydration solutions, or warm broths.",
+        "Rest in a quiet, temperature-regulated room.",
+        "Apply a cool, damp washcloth to the forehead to ease feverish discomfort."
+      ],
+      "when_to_seek_care": [
+        "Difficulty breathing, shortness of breath, or persistent chest pressure.",
+        "Persistent high fever unresponsive to supportive measures.",
+        "Confusion, dizziness, or severe lethargy.",
+        "Bluish lips or pale skin."
+      ],
+      "monitoring_tips": [
+        "Monitor daily fluid intake and ensure regular urination.",
+        "Watch for secondary worsening after initial improvement."
+      ]
+    },
+    {
+      "condition_id": "covid_19",
+      "condition_name": "COVID-19",
+      "general_advice": [
+        "Rest in a well-ventilated room and separate from others where possible.",
+        "Stay well hydrated by sipping water and clear fluids throughout the day.",
+        "Rest in prone (lying on stomach) or side-lying positions to improve respiratory comfort if helpful.",
+        "Use steam inhalation or lozenges to soothe dry cough or throat irritation."
+      ],
+      "when_to_seek_care": [
+        "Trouble breathing, persistent pain or pressure in the chest.",
+        "Oxygen saturation falling below 94% on a pulse oximeter if available.",
+        "New confusion or inability to wake or stay alert.",
+        "Bluish or pale lips, face, or nail beds."
+      ],
+      "monitoring_tips": [
+        "Check oxygen saturation and body temperature twice daily if monitoring at home.",
+        "Note any sudden shortness of breath during minimal exertion."
+      ]
+    },
+    {
+      "condition_id": "acute_pharyngitis",
+      "condition_name": "Sore throat (pharyngitis)",
+      "general_advice": [
+        "Gargle with warm salt water (half teaspoon salt in a glass of warm water) several times daily.",
+        "Sip warm liquids like herbal tea with honey or clear broths to soothe throat tissue.",
+        "Rest your voice and avoid exposure to tobacco smoke or dry indoor air.",
+        "Use a cool-mist humidifier near your resting area."
+      ],
+      "when_to_seek_care": [
+        "Difficulty swallowing liquids or saliva, or difficulty opening the mouth.",
+        "Severe pain lasting longer than 5 to 7 days.",
+        "High fever or swollen, tender neck lymph nodes.",
+        "Development of a widespread rash or breathing difficulties."
+      ],
+      "monitoring_tips": [
+        "Observe throat appearance for white patches or severe swelling.",
+        "Check whether swallowing improves or becomes more difficult over 48 hours."
+      ]
+    },
+    {
+      "condition_id": "acute_sinusitis",
+      "condition_name": "Sinusitis",
+      "general_advice": [
+        "Use warm facial compresses over the bridge of the nose and forehead to relieve sinus pressure.",
+        "Perform gentle saline nasal irrigations or use sterile saline nasal drops.",
+        "Inhale warm steam from a bowl of hot water or a warm shower.",
+        "Keep the head elevated while sleeping to promote sinus drainage.",
+        "Stay well hydrated to help thin mucus secretions."
+      ],
+      "when_to_seek_care": [
+        "Swelling, redness, or pain around one or both eyes.",
+        "Severe frontal headache with high fever or stiff neck.",
+        "Vision changes, double vision, or confusion.",
+        "Symptoms lasting more than 10 days without any improvement."
+      ],
+      "monitoring_tips": [
+        "Note whether sinus pressure is one-sided or bilateral.",
+        "Observe nasal discharge color and consistency over several days."
+      ]
+    },
+    {
+      "condition_id": "acute_bronchitis",
+      "condition_name": "Chest infection (acute bronchitis)",
+      "general_advice": [
+        "Get plenty of rest to support airway recovery.",
+        "Drink ample warm fluids to help loosen chest secretions.",
+        "Use a cool-mist humidifier in the bedroom to keep airways moist.",
+        "Avoid respiratory irritants such as cigarette smoke, dust, and cold air.",
+        "Sip warm water with honey to calm irritating cough spasms."
+      ],
+      "when_to_seek_care": [
+        "Shortness of breath, wheezing, or difficulty catching your breath.",
+        "Coughing up blood or rust-colored phlegm.",
+        "Fever higher than 38.5°C (101.3°F) or fever lasting more than 3 days.",
+        "Underlying chronic lung or heart disease (such as asthma or COPD)."
+      ],
+      "monitoring_tips": [
+        "Note that post-viral cough can linger for 2 to 3 weeks; watch for progressive worsening.",
+        "Monitor for any new chest tightness or wheezing."
+      ]
+    },
+    {
+      "condition_id": "allergic_rhinitis",
+      "condition_name": "Allergic rhinitis (hay fever)",
+      "general_advice": [
+        "Identify and minimize contact with known airborne allergens like pollen, dust mites, or pet dander.",
+        "Rinse nasal passages with sterile saline to wash away trapped allergen particles.",
+        "Keep residential windows closed during high pollen count hours.",
+        "Wash face and hands and change clothes after returning from outdoors.",
+        "Use dust-mite proof covers on pillows and mattresses."
+      ],
+      "when_to_seek_care": [
+        "Severe symptoms that significantly impair sleep or daytime functioning.",
+        "Development of wheezing, chest tightness, or persistent cough.",
+        "Ear pain, severe facial pain, or persistent sinus pressure.",
+        "Symptoms unresponsive to environmental avoidance measures."
+      ],
+      "monitoring_tips": [
+        "Keep a simple journal tracking symptom flare-ups against outdoor activities or environmental triggers.",
+        "Notice whether symptoms are strictly seasonal or year-round."
+      ]
+    },
+    {
+      "condition_id": "gastroenteritis",
+      "condition_name": "Gastroenteritis (stomach bug)",
+      "general_advice": [
+        "Sip small, frequent amounts of oral rehydration solutions, clear broths, or diluted juices.",
+        "Gradually reintroduce bland foods (rice, bananas, toast, applesauce) once vomiting subsides.",
+        "Avoid dairy, greasy, highly spiced, or sugary foods until digestion settles.",
+        "Rest comfortably and allow the digestive system time to recover.",
+        "Wash hands thoroughly with soap and water to prevent spreading to others."
+      ],
+      "when_to_seek_care": [
+        "Signs of dehydration: extreme thirst, dry mouth, little to no urination, or dark urine.",
+        "Inability to keep liquids down for more than 24 hours.",
+        "Blood in stool or vomit, or black tarry stools.",
+        "Severe, persistent abdominal pain or high fever."
+      ],
+      "monitoring_tips": [
+        "Monitor frequency of fluid intake and urine output.",
+        "Watch for lightheadedness upon standing."
+      ]
+    },
+    {
+      "condition_id": "gerd",
+      "condition_name": "Acid reflux (GERD)",
+      "general_advice": [
+        "Eat smaller, more frequent meals rather than large, heavy meals.",
+        "Avoid lying down for at least 2 to 3 hours after eating.",
+        "Elevate the head of your bed by 15 to 20 cm (6 to 8 inches).",
+        "Identify and limit personal trigger foods such as fatty foods, chocolate, caffeine, mint, and citrus.",
+        "Avoid tight clothing that puts pressure on the abdomen."
+      ],
+      "when_to_seek_care": [
+        "Difficulty or pain when swallowing food or liquids.",
+        "Chest pain radiating to the jaw, neck, shoulder, or arm (seek immediate emergency care).",
+        "Unexplained weight loss or vomiting.",
+        "Persistent heartburn occurring multiple times weekly despite lifestyle changes."
+      ],
+      "monitoring_tips": [
+        "Maintain a food and symptom diary to recognize personal dietary triggers.",
+        "Track evening meal timing relative to bedtime."
+      ]
+    },
+    {
+      "condition_id": "migraine",
+      "condition_name": "Migraine",
+      "general_advice": [
+        "Rest in a quiet, dark, and cool room with eyes closed.",
+        "Apply a cold compress or ice pack wrapped in a cloth to the forehead or back of the neck.",
+        "Stay hydrated by sipping room-temperature water.",
+        "Limit sensory stimuli such as bright screens, loud noises, and strong odors.",
+        "Practice gentle relaxation or deep breathing techniques."
+      ],
+      "when_to_seek_care": [
+        "Sudden, severe headache reaching maximum intensity in seconds ('thunderclap' headache).",
+        "Headache accompanied by fever, neck stiffness, confusion, seizures, or double vision.",
+        "Weakness, numbness, or difficulty speaking that persists or is new.",
+        "New or changing headache pattern in individuals over age 50."
+      ],
+      "monitoring_tips": [
+        "Keep a headache log noting duration, potential triggers (lack of sleep, missed meals, stress), and prodrome symptoms.",
+        "Record the frequency of attacks per month."
+      ]
+    },
+    {
+      "condition_id": "tension_headache",
+      "condition_name": "Tension-type headache",
+      "general_advice": [
+        "Apply a warm heating pad or warm towel to the neck, shoulders, or back of head.",
+        "Gently stretch and massage neck, shoulder, and scalp muscles.",
+        "Take regular screen breaks using the 20-20-20 rule to reduce eye strain.",
+        "Ensure consistent sleep schedules and balanced daily hydration.",
+        "Practice mindful posture adjustments while sitting or working at a desk."
+      ],
+      "when_to_seek_care": [
+        "Headache that worsens progressively over days or weeks.",
+        "Headache triggered by coughing, sneezing, or sudden movement.",
+        "Accompanying neurological symptoms like weakness or numbness.",
+        "Headaches that begin after a recent head injury."
+      ],
+      "monitoring_tips": [
+        "Note workplace ergonomics, lighting conditions, and daily stress levels.",
+        "Track whether breaks and gentle stretching reduce headache intensity."
+      ]
+    },
+    {
+      "condition_id": "urinary_tract_infection",
+      "condition_name": "Urinary tract infection (UTI)",
+      "general_advice": [
+        "Drink plenty of water to help flush the urinary tract.",
+        "Empty the bladder completely whenever you feel the urge to urinate.",
+        "Apply a warm heating pad across the lower abdomen to ease cramping discomfort.",
+        "Avoid bladder irritants like caffeine, alcohol, and spicy foods until symptoms clear.",
+        "Seek timely clinical evaluation for proper diagnostic confirmation and professional management."
+      ],
+      "when_to_seek_care": [
+        "Fever, chills, or night sweats.",
+        "Pain in the lower back or side near the ribs (flank pain).",
+        "Visible blood in the urine or cloudy, foul-smelling urine.",
+        "Nausea and vomiting accompanying urinary discomfort."
+      ],
+      "monitoring_tips": [
+        "Monitor urinary frequency and changes in urine color.",
+        "Check temperature for signs of upper urinary tract involvement."
+      ]
+    },
+    {
+      "condition_id": "kidney_stones",
+      "condition_name": "Kidney stones",
+      "general_advice": [
+        "Drink ample water throughout the day if tolerated, aiming to maintain pale urine.",
+        "Apply a warm heating pad to the side or lower back to help soothe muscle tension.",
+        "Rest in positions of comfort that reduce strain on the back.",
+        "Seek urgent medical evaluation for severe, colicky pain and diagnostic ultrasound or imaging."
+      ],
+      "when_to_seek_care": [
+        "Severe, unbearable flank or abdominal pain that does not ease.",
+        "Inability to pass urine or complete urinary blockage.",
+        "Fever and chills accompanying back or side pain.",
+        "Visible blood in the urine, persistent vomiting, or extreme lightheadedness."
+      ],
+      "monitoring_tips": [
+        "Observe urine for sediment or small passed particles.",
+        "Track fluid intake and urine output volumes."
+      ]
+    },
+    {
+      "condition_id": "iron_deficiency_anaemia",
+      "condition_name": "Iron deficiency anaemia",
+      "general_advice": [
+        "Incorporate iron-rich foods (beans, lentils, dark leafy greens, fortified cereals, seeds) into your balanced diet.",
+        "Pair plant-based iron sources with vitamin C rich foods (citrus fruits, bell peppers) to support absorption.",
+        "Limit consumption of tea and coffee during meals, as tannins can hinder iron uptake.",
+        "Pace daily activities to conserve energy and take short rest breaks when fatigued.",
+        "Consult a doctor for appropriate blood tests before considering supplements."
+      ],
+      "when_to_seek_care": [
+        "Chest discomfort, heart palpitations, or shortness of breath during routine activities.",
+        "Severe dizziness, fainting spells, or confusion.",
+        "Unusually heavy menstrual bleeding or visible blood in stool.",
+        "Pale skin accompanied by persistent extreme weakness."
+      ],
+      "monitoring_tips": [
+        "Notice energy levels throughout the day and how exertion affects stamina.",
+        "Discuss periodic blood checkups with your doctor."
+      ]
+    },
+    {
+      "condition_id": "type_2_diabetes",
+      "condition_name": "Type 2 diabetes",
+      "general_advice": [
+        "Adopt a balanced, whole-foods diet emphasizing fiber, vegetables, and complex carbohydrates while moderating refined sugars.",
+        "Engage in regular, gentle physical activity like daily brisk walking as appropriate.",
+        "Stay well hydrated with plain water and unsweetened beverages.",
+        "Inspect feet daily for cuts, blisters, redness, or swelling.",
+        "Schedule a clinical evaluation for comprehensive metabolic blood testing and professional guidance."
+      ],
+      "when_to_seek_care": [
+        "Frequent excessive urination accompanied by unquenchable thirst, nausea, and rapid breathing.",
+        "Confusion, fruity-smelling breath, or persistent vomiting.",
+        "Cuts, sores, or skin infections on the feet or legs that are slow to heal.",
+        "Sudden blurred vision or loss of sensation in fingers or toes."
+      ],
+      "monitoring_tips": [
+        "Keep a log of fasting blood glucose readings if using a home glucometer.",
+        "Record daily meals and physical activity patterns."
+      ]
+    },
+    {
+      "condition_id": "conjunctivitis",
+      "condition_name": "Conjunctivitis (pink eye)",
+      "general_advice": [
+        "Apply a clean, cool or warm damp compress over closed eyelids to soothe irritation.",
+        "Avoid rubbing or touching your eyes to prevent exacerbating inflammation or spreading.",
+        "Wash hands thoroughly and often with soap and water.",
+        "Use a fresh clean washcloth and towel each time, and do not share towels or pillowcases.",
+        "Temporarily discontinue contact lens wear until symptoms resolve and a professional clears lens use."
+      ],
+      "when_to_seek_care": [
+        "Moderate to severe eye pain, or extreme sensitivity to light (photophobia).",
+        "Changes in vision, such as blurriness or halos around lights.",
+        "Copious yellow or green discharge causing eyelids to stick shut.",
+        "Symptoms that do not improve after 48 to 72 hours."
+      ],
+      "monitoring_tips": [
+        "Observe whether one or both eyes are involved.",
+        "Notice whether discharge is watery or thick."
+      ]
+    },
+    {
+      "condition_id": "low_back_pain",
+      "condition_name": "Low back pain",
+      "general_advice": [
+        "Stay gently active; avoid prolonged strict bed rest, which can prolong stiffness.",
+        "Apply ice packs wrapped in a cloth for the first 48 hours, followed by warm compresses to relax muscles.",
+        "Perform gentle walking on level surfaces and light lower-back stretches as tolerated.",
+        "Maintain ergonomic seating with lumbar support and avoid heavy lifting or sudden twisting.",
+        "Sleep on your side with a pillow between your knees, or on your back with a pillow under your knees."
+      ],
+      "when_to_seek_care": [
+        "Loss of bowel or bladder control (cauda equina warning sign — seek emergency care immediately).",
+        "Numbness, tingling, or weakness in the groin, inner thighs ('saddle anesthesia'), or legs.",
+        "Back pain accompanied by unexplained fever or unexplained weight loss.",
+        "Severe pain following a fall, accident, or physical trauma."
+      ],
+      "monitoring_tips": [
+        "Monitor mobility changes and walking tolerance over a few days.",
+        "Note specific positions that relieve or aggravate the discomfort."
+      ]
+    },
+    {
+      "condition_id": "dengue",
+      "condition_name": "Dengue",
+      "general_advice": [
+        "Maintain strict bed rest and avoid strenuous physical activity.",
+        "Drink abundant fluids (oral rehydration solution, coconut water, fresh clear broths) to counteract plasma leakage.",
+        "Use mosquito nets and repellents to prevent transmission to household members.",
+        "Use a cool, damp cloth on the forehead to provide comfort during fever spikes.",
+        "Seek timely medical care and regular platelet count monitoring from a qualified healthcare facility."
+      ],
+      "when_to_seek_care": [
+        "Severe abdominal pain or tenderness.",
+        "Persistent vomiting (at least 3 episodes in 24 hours).",
+        "Bleeding from gums or nose, blood in vomit or stools, or red spots on skin (petechiae).",
+        "Lethargy, restlessness, difficulty breathing, or cold, clammy skin."
+      ],
+      "monitoring_tips": [
+        "Watch for warning signs especially as fever begins to break (the critical phase, days 3 to 7).",
+        "Ensure regular hydration and record daily fluid intake and urination."
+      ]
+    },
+    {
+      "condition_id": "malaria",
+      "condition_name": "Malaria",
+      "general_advice": [
+        "Seek immediate clinical evaluation and blood smear or rapid diagnostic testing.",
+        "Rest quietly in bed during shivering chills and high fever cycles.",
+        "Drink ample fluids including oral rehydration solutions to prevent dehydration from heavy sweating.",
+        "Sponge with lukewarm water during fever spikes to promote comfort.",
+        "Sleep under insecticide-treated bed nets to protect family and community members."
+      ],
+      "when_to_seek_care": [
+        "Severe drowsiness, confusion, convulsions, or inability to stay awake.",
+        "Rapid or labored breathing.",
+        "Yellowing of the eyes or skin (jaundice).",
+        "Dark or tea-colored urine."
+      ],
+      "monitoring_tips": [
+        "Record the timing and cycle of fever spikes and chills.",
+        "Note any international or regional travel to malaria-endemic regions."
+      ]
+    },
+    {
+      "condition_id": "typhoid",
+      "condition_name": "Typhoid fever",
+      "general_advice": [
+        "Seek formal clinical evaluation for blood culture, Widal test, or appropriate diagnostic confirmation.",
+        "Drink only boiled, filtered, or commercially bottled water.",
+        "Consume freshly cooked, soft, easily digestible foods like porridge, boiled potatoes, and clear broths.",
+        "Wash hands thoroughly with soap before eating and after using the restroom.",
+        "Ensure complete bed rest while body temperature fluctuates."
+      ],
+      "when_to_seek_care": [
+        "Severe, persistent abdominal pain or abdominal distension.",
+        "Bleeding from the rectum, black stools, or severe diarrhea.",
+        "High sustained fever unresponsive to cooling measures.",
+        "Confusion, apathy, extreme weakness, or hallucinations."
+      ],
+      "monitoring_tips": [
+        "Log temperature daily at morning and evening.",
+        "Track bowel movement frequency and stool appearance."
+      ]
+    },
+    {
+      "condition_id": "chikungunya",
+      "condition_name": "Chikungunya",
+      "general_advice": [
+        "Prioritize rest and avoid heavy load-bearing on swollen or painful joints.",
+        "Apply cold packs wrapped in a cloth to painful, swollen joints for 15-minute intervals.",
+        "Drink plenty of water and electrolyte solutions to prevent dehydration.",
+        "Perform gentle passive range-of-motion exercises once acute joint swelling eases.",
+        "Use mosquito protection measures like netting and screens to prevent spread."
+      ],
+      "when_to_seek_care": [
+        "Extreme joint pain preventing any weight-bearing or self-care.",
+        "Persistent high fever lasting more than 5 days.",
+        "Drowsiness, confusion, or neck stiffness.",
+        "Severe vomiting or decreased urine output."
+      ],
+      "monitoring_tips": [
+        "Track which joints are affected and whether swelling is symmetrical.",
+        "Note morning joint stiffness duration."
+      ]
+    },
+    {
+      "condition_id": "tuberculosis",
+      "condition_name": "Tuberculosis (lungs)",
+      "general_advice": [
+        "Seek prompt clinical evaluation at a specialized healthcare center for sputum and chest imaging.",
+        "Rest in well-ventilated rooms with open windows to facilitate fresh air circulation.",
+        "Cover mouth and nose with a tissue when coughing or sneezing, and dispose of tissues safely.",
+        "Maintain a nutrient-dense, high-protein diet to support immune recovery.",
+        "Follow licensed physician directions diligently and attend all scheduled clinical follow-ups."
+      ],
+      "when_to_seek_care": [
+        "Coughing up blood or blood-streaked sputum (hemoptysis).",
+        "Sudden chest pain or severe breathlessness.",
+        "Rapid, unexplained weight loss and drenching night sweats.",
+        "High persistent fever."
+      ],
+      "monitoring_tips": [
+        "Track weight changes weekly.",
+        "Note the duration of cough (especially if exceeding 2 to 3 weeks)."
+      ]
+    },
+    {
+      "condition_id": "viral_hepatitis",
+      "condition_name": "Viral hepatitis (A or E)",
+      "general_advice": [
+        "Ensure complete physical bed rest, particularly during the acute fatigue phase.",
+        "Eat small, frequent, light meals high in complex carbohydrates to combat nausea.",
+        "Drink plenty of clean, safe water and fruit juices to remain hydrated.",
+        "Strictly avoid alcohol and unapproved herbal concoctions to protect liver function.",
+        "Practice diligent hand hygiene after restroom use and before handling food."
+      ],
+      "when_to_seek_care": [
+        "Progressive yellowing of skin or eyes (deepening jaundice).",
+        "Severe, intractable vomiting preventing any fluid retention.",
+        "Unusual bruising, bleeding from gums, or confusion and disorientation.",
+        "Extreme abdominal swelling or severe right upper quadrant pain."
+      ],
+      "monitoring_tips": [
+        "Observe changes in urine color (dark tea-colored) and stool color (pale or clay-colored).",
+        "Record daily energy levels and appetite."
+      ]
+    },
+    {
+      "condition_id": "atopic_dermatitis",
+      "condition_name": "Eczema (atopic dermatitis)",
+      "general_advice": [
+        "Apply fragrance-free moisturizers or emollients immediately after bathing to lock in moisture.",
+        "Take short lukewarm showers or baths (under 10 minutes) using gentle, soap-free cleansers.",
+        "Wear loose, breathable cotton clothing and avoid scratchy wool or synthetic fabrics.",
+        "Keep fingernails short and clean to minimize skin damage from involuntary scratching.",
+        "Apply cool compresses over intensely itchy patches to provide soothing relief."
+      ],
+      "when_to_seek_care": [
+        "Signs of secondary bacterial skin infection: honey-colored crusting, pus, warmth, or red streaks.",
+        "Widespread, intensely painful rash or rash accompanied by fever.",
+        "Eczema flare-up that severely disrupts sleep or daily activities.",
+        "Symptoms that do not improve with regular moisturizing."
+      ],
+      "monitoring_tips": [
+        "Identify common flare triggers like harsh detergents, sweat, dry weather, or emotional stress.",
+        "Assess skin barrier hydration morning and night."
+      ]
+    },
+    {
+      "condition_id": "fungal_skin_infection",
+      "condition_name": "Fungal skin infection (ringworm)",
+      "general_advice": [
+        "Keep the affected skin area clean, cool, and thoroughly dry.",
+        "Wear loose-fitting, breathable cotton clothing and change clothes daily.",
+        "Avoid sharing towels, combs, bedding, or personal grooming items with others.",
+        "Wash hands thoroughly after touching affected areas to prevent spreading.",
+        "Disinfect surfaces and shower areas regularly."
+      ],
+      "when_to_seek_care": [
+        "Rash that spreads rapidly, becomes increasingly red, warm, or swollen.",
+        "Pus-filled blisters or open sores developing within the rash.",
+        "Infection affecting the scalp, beard, or extensive body areas.",
+        "No noticeable improvement after two weeks of good hygiene."
+      ],
+      "monitoring_tips": [
+        "Observe the outer expanding border of the rash.",
+        "Ensure skin folds and webbed areas between toes are patted completely dry after washing."
+      ]
+    },
+    {
+      "condition_id": "urticaria",
+      "condition_name": "Hives (urticaria)",
+      "general_advice": [
+        "Apply cool, damp washcloths to itchy areas to soothe burning or stinging sensations.",
+        "Wear loose, lightweight cotton clothing to avoid friction and skin irritation.",
+        "Take cool or lukewarm baths; avoid hot showers, which can trigger histamine release.",
+        "Avoid scratching the welts, which can worsen swelling and trigger new hives.",
+        "Identify and avoid suspected acute triggers like sudden temperature shifts, stress, or specific foods."
+      ],
+      "when_to_seek_care": [
+        "Swelling of the lips, tongue, throat, or face (angioedema — seek emergency care immediately).",
+        "Difficulty breathing, throat tightness, or wheezing.",
+        "Dizziness, lightheadedness, or feeling faint.",
+        "Hives lasting continuously for longer than 6 weeks."
+      ],
+      "monitoring_tips": [
+        "Keep a log of exposures prior to hive outbreaks (foods, cosmetics, heat, pressure).",
+        "Note how long individual welts last (typical acute hives fade in under 24 hours in one spot)."
+      ]
+    },
+    {
+      "condition_id": "scabies",
+      "condition_name": "Scabies",
+      "general_advice": [
+        "Seek formal clinical evaluation for accurate microscopic examination and appropriate medical treatment.",
+        "Wash all bedding, towels, and recently worn clothes in hot water and dry on high heat.",
+        "Items that cannot be washed should be sealed in an airtight plastic bag for at least 3 to 7 days.",
+        "Clip fingernails short to prevent skin excoriation from intense nighttime itching.",
+        "Household members and close contacts should be evaluated simultaneously to prevent re-infestation."
+      ],
+      "when_to_seek_care": [
+        "Signs of secondary bacterial skin infection (oozing sores, expanding redness, pustules).",
+        "Severe crusted lesions or involvement of large skin surface areas.",
+        "Severe itching unresponsive to initial medical care.",
+        "Infants, elderly, or immunocompromised individuals presenting with widespread rash."
+      ],
+      "monitoring_tips": [
+        "Look for classic burrows in skin folds (between fingers, wrists, armpits, waistline).",
+        "Note that post-treatment itching can persist for several weeks as the skin heals."
+      ]
+    },
+    {
+      "condition_id": "acne",
+      "condition_name": "Acne",
+      "general_advice": [
+        "Wash face gently twice daily with a mild, non-drying cleanser and lukewarm water.",
+        "Avoid picking, squeezing, or popping pimples, which increases inflammation and scarring risk.",
+        "Choose non-comedogenic (oil-free) moisturizers, sunscreen, and skincare products.",
+        "Wash hair regularly and keep hair away from touching the face.",
+        "Rinse face after exercising or sweating heavily."
+      ],
+      "when_to_seek_care": [
+        "Deep, painful cysts or nodules beneath the skin.",
+        "Acne resulting in noticeable scarring or dark hyperpigmentation.",
+        "Acne accompanied by sudden excessive facial hair growth or irregular menstrual cycles.",
+        "Persistent breakout unresponsive to consistent gentle skincare over 8 to 12 weeks."
+      ],
+      "monitoring_tips": [
+        "Allow 4 to 8 weeks to evaluate whether a gentle skincare routine shows effect.",
+        "Notice whether dietary patterns or cosmetic products correlate with breakouts."
+      ]
+    },
+    {
+      "condition_id": "chickenpox",
+      "condition_name": "Chickenpox",
+      "general_advice": [
+        "Rest comfortably at home and isolate from others until all blisters have fully crusted over.",
+        "Apply cool, wet compresses or take lukewarm baths with colloidal oatmeal to relieve itching.",
+        "Wear loose, smooth cotton clothing to minimize friction against healing blisters.",
+        "Keep fingernails trimmed short and clean, or wear soft cotton gloves at night to prevent scratching.",
+        "Drink plenty of cool fluids and eat soft, non-acidic foods if mouth sores are present."
+      ],
+      "when_to_seek_care": [
+        "Rash spreading into the eyes or surrounding eye skin.",
+        "Blisters that become unusually red, warm, tender, or leak thick yellow pus.",
+        "Extreme drowsiness, confusion, unsteady walking, or persistent high fever.",
+        "Difficulty breathing, persistent cough, or severe chest pain."
+      ],
+      "monitoring_tips": [
+        "Count days until all lesions have scabbed over (usually 5 to 7 days after first spots appear).",
+        "Check temperature regularly and monitor for skin infections."
+      ]
+    },
+    {
+      "condition_id": "cellulitis",
+      "condition_name": "Cellulitis (skin infection)",
+      "general_advice": [
+        "Seek prompt clinical medical evaluation for appropriate clinical assessment and care.",
+        "Elevate the affected limb above the level of the heart to help reduce swelling.",
+        "Rest the affected area and avoid strenuous physical movement.",
+        "Gently outline the visible red border on the skin with a clean pen to monitor if spreading.",
+        "Keep the skin clean and dry, protecting any underlying cuts with a clean dressing."
+      ],
+      "when_to_seek_care": [
+        "Rapidly expanding redness, warmth, or swelling beyond marked borders.",
+        "Fever, chills, shivering, nausea, or rapid heartbeat.",
+        "Blistering, purple discoloration, or skin breakdown in the affected area.",
+        "Cellulitis near the eyes, face, or in individuals with diabetes or poor circulation."
+      ],
+      "monitoring_tips": [
+        "Check the drawn pen border every 4 to 6 hours for signs of expansion.",
+        "Monitor body temperature for fever spikes."
+      ]
+    },
+    {
+      "condition_id": "heart_attack",
+      "condition_name": "Heart attack",
+      "general_advice": [
+        "Call emergency medical services (112 or local emergency number) immediately.",
+        "Rest in a comfortable, seated position while waiting for emergency responders; do not walk or exert yourself.",
+        "Loosen any tight clothing around the neck, chest, and waist.",
+        "Do not drive yourself to the hospital; await an ambulance equipped for cardiac care."
+      ],
+      "when_to_seek_care": [
+        "Seek emergency medical care immediately for any suspected cardiac event.",
+        "Chest pressure, squeezing, fullness, or pain radiating to jaw, neck, back, or arms.",
+        "Shortness of breath, cold sweat, lightheadedness, or sudden unexplained nausea."
+      ],
+      "monitoring_tips": [
+        "Do not wait to see if symptoms pass; early medical intervention is vital.",
+        "Have someone stay with the person until medical personnel arrive."
+      ]
+    },
+    {
+      "condition_id": "stroke",
+      "condition_name": "Stroke",
+      "general_advice": [
+        "Call emergency medical services (112 or local emergency number) immediately.",
+        "Remember the FAST test: Face drooping, Arm weakness, Speech difficulty, Time to call emergency.",
+        "Keep the person calm, lying down with head and shoulders slightly elevated.",
+        "Do not give the person anything to eat, drink, or swallow.",
+        "Record the exact time when symptoms were first noticed."
+      ],
+      "when_to_seek_care": [
+        "Seek emergency medical care immediately at the first sign of stroke.",
+        "Sudden numbness or weakness in the face, arm, or leg, especially on one side of the body.",
+        "Sudden confusion, difficulty speaking, or difficulty understanding speech.",
+        "Sudden vision trouble, loss of balance, or severe thunderclap headache."
+      ],
+      "monitoring_tips": [
+        "Note exact time of symptom onset for medical teams (critical for time-sensitive treatments).",
+        "Remain with the patient continuously."
+      ]
+    },
+    {
+      "condition_id": "appendicitis",
+      "condition_name": "Appendicitis",
+      "general_advice": [
+        "Seek emergency medical evaluation at a hospital emergency department immediately.",
+        "Do not eat or drink anything in case surgical evaluation is required.",
+        "Do not apply heat pads to the abdomen, which may exacerbate internal inflammation.",
+        "Do not take laxatives or enemas, which can increase risk of appendix rupture.",
+        "Rest quietly in a comfortable position with knees drawn up while traveling for medical care."
+      ],
+      "when_to_seek_care": [
+        "Seek immediate emergency hospital care for sharp or worsening lower right abdominal pain.",
+        "Pain that began around the navel and migrated to the right lower abdomen.",
+        "Abdominal pain accompanied by fever, vomiting, and inability to pass gas.",
+        "Sudden relief of pain followed by widespread severe abdominal tenderness (possible perforation)."
+      ],
+      "monitoring_tips": [
+        "Avoid taking food or water while en route to medical evaluation.",
+        "Note the progression of abdominal pain location and intensity."
+      ]
+    },
+    {
+      "condition_id": "anaphylaxis",
+      "condition_name": "Severe allergic reaction (anaphylaxis)",
+      "general_advice": [
+        "Call emergency medical services (112 or local emergency number) immediately.",
+        "If an epinephrine auto-injector is available and prescribed for the individual, use it without delay.",
+        "Help the person lie flat with legs elevated, unless breathing is difficult, in which case keep sitting.",
+        "Loosen tight clothing and keep the person warm with a blanket.",
+        "Do not give anything by mouth."
+      ],
+      "when_to_seek_care": [
+        "Seek emergency medical care immediately for all suspected anaphylactic events.",
+        "Swelling of the throat, lips, tongue, or difficulty breathing.",
+        "Sudden widespread hives accompanied by dizziness, fainting, or rapid pulse.",
+        "Nausea, abdominal cramping, or vomiting following exposure to an allergen."
+      ],
+      "monitoring_tips": [
+        "A second wave of symptoms (biphasic reaction) can occur hours later; hospital observation is essential.",
+        "Note the suspected allergen (food, insect sting, medication)."
+      ]
+    },
+    {
+      "condition_id": "meningitis",
+      "condition_name": "Meningitis",
+      "general_advice": [
+        "Seek emergency medical evaluation at the nearest hospital emergency department immediately.",
+        "Do not delay seeking clinical care for suspected meningitis.",
+        "Rest in a quiet, darkened room while awaiting emergency transport.",
+        "Keep the head and neck in a neutral, relaxed position."
+      ],
+      "when_to_seek_care": [
+        "Seek immediate emergency hospital care.",
+        "Sudden high fever combined with severe headache and stiff, painful neck.",
+        "Sensitivity to light (photophobia), confusion, altered mental state, or drowsiness.",
+        "New non-blanching dark purple or red skin rash (does not fade under a clear drinking glass)."
+      ],
+      "monitoring_tips": [
+        "Check if skin rash fades under gentle pressure with a clear glass.",
+        "Ensure continuous supervision while emergency medical care is arranged."
+      ]
+    },
+    {
+      "condition_id": "asthma",
+      "condition_name": "Asthma",
+      "general_advice": [
+        "Sit upright comfortably and try to take slow, steady breaths.",
+        "Move away from known environmental triggers such as smoke, cold air, dust, or pet dander.",
+        "Follow your personal written asthma action plan agreed upon with your healthcare provider.",
+        "Stay calm, as anxiety can heighten feelings of breathlessness.",
+        "Ensure your prescribed reliever inhaler is readily accessible."
+      ],
+      "when_to_seek_care": [
+        "Severe breathlessness, inability to speak full sentences without pausing for breath.",
+        "Chest and neck muscles pulling in tightly during breathing (retractions).",
+        "Reliever inhaler not providing relief or needing to be used more frequently than prescribed.",
+        "Bluish or gray discoloration of lips, face, or fingernails (emergency)."
+      ],
+      "monitoring_tips": [
+        "Track peak flow readings if using a home peak flow meter.",
+        "Record how often symptoms require daytime or nighttime reliever use."
+      ]
+    },
+    {
+      "condition_id": "pneumonia",
+      "condition_name": "Pneumonia",
+      "general_advice": [
+        "Seek comprehensive clinical medical evaluation for stethoscope examination, chest imaging, and care.",
+        "Get plenty of bed rest to allow your lungs and immune system to heal.",
+        "Drink ample warm fluids, teas, and broths to keep hydrated and thin chest mucus.",
+        "Use a cool-mist humidifier or sit in a steamy bathroom to ease breathing comfort.",
+        "Avoid tobacco smoke, secondhand smoke, and other lung irritants."
+      ],
+      "when_to_seek_care": [
+        "Difficulty breathing, shortness of breath at rest, or rapid shallow breathing.",
+        "Chest pain that sharpens when breathing in or coughing.",
+        "Coughing up blood or dark greenish/brownish phlegm.",
+        "Persistent high fever, confusion, or bluish lips or fingertips."
+      ],
+      "monitoring_tips": [
+        "Monitor body temperature and resting respiratory rate.",
+        "Check oxygen saturation with a home pulse oximeter if available."
+      ]
+    },
+    {
+      "condition_id": "heat_stroke",
+      "condition_name": "Heat stroke",
+      "general_advice": [
+        "Call emergency medical services (112 or local emergency number) immediately.",
+        "Move the person to a cool, shaded, or air-conditioned environment right away.",
+        "Cool the body rapidly: immerse in cool water, spray with cool water, or apply ice packs wrapped in towels to neck, armpits, and groin.",
+        "Fan the person while misting skin with cool water.",
+        "Do not give fluids if the person is confused, vomiting, or semi-conscious."
+      ],
+      "when_to_seek_care": [
+        "Seek emergency medical care immediately for heat stroke (a medical emergency).",
+        "High body temperature (40°C / 104°F or higher).",
+        "Altered mental state, confusion, slurred speech, delirium, seizures, or coma.",
+        "Hot, red, dry skin or heavy sweating that abruptly stops."
+      ],
+      "monitoring_tips": [
+        "Continue active cooling until emergency personnel arrive.",
+        "Check breathing and level of consciousness continuously."
+      ]
+    }
+  ]
+}

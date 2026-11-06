@@ -4,9 +4,11 @@ Responsibilities:
     - Define immutable data models for canonical symptoms and lay-term mappings.
     - Define normalization result structures for deterministic resolution.
     - Define curated symptom glossary entries for user-friendly definitions.
-    - Validate symptom structures at service boundaries.
+    - Define condition self-care guidance models for non-prescriptive advice.
+    - Validate symptom and guidance structures at service boundaries.
 
-Owner: Kavya (knowledge) · Task: S1-KAV-1, S1-KAV-3 · Requirements: FR-03, FR-18
+Owner: Kavya (knowledge) · Task: S1-KAV-1, S1-KAV-3, S2-KAV-1
+Requirements: FR-03, FR-18, idea §8, DR-05
 """
 
 from pydantic import BaseModel, ConfigDict, Field
@@ -137,4 +139,45 @@ class GlossaryEntry(BaseModel):
     lay_terms: tuple[str, ...] = Field(
         default_factory=tuple,
         description="Colloquial synonyms and lay terms for search lookup",
+    )
+
+
+class SelfCareGuidance(BaseModel):
+    """Immutable curated supportive self-care guidance for a candidate condition.
+
+    Provides general, non-prescriptive supportive suggestions, warning signs,
+    and monitoring tips per idea §8 and DR-05. Strictly avoids diagnostic claims,
+    specific medications, or dose instructions.
+
+    Attributes:
+        condition_id: Unique snake_case condition ID matching conditions.json.
+        condition_name: Human-readable condition display name.
+        general_advice: Bulleted list of safe, non-pharmacological supportive steps.
+        when_to_seek_care: Warning signs and symptoms requiring clinical evaluation.
+        monitoring_tips: Safe self-monitoring suggestions.
+    """
+
+    model_config = ConfigDict(frozen=True)
+
+    condition_id: str = Field(
+        min_length=1,
+        max_length=64,
+        description="Canonical snake_case condition identifier",
+    )
+    condition_name: str = Field(
+        min_length=1,
+        max_length=128,
+        description="Human-readable condition name",
+    )
+    general_advice: tuple[str, ...] = Field(
+        min_length=1,
+        description="Non-prescriptive, everyday supportive self-care steps",
+    )
+    when_to_seek_care: tuple[str, ...] = Field(
+        min_length=1,
+        description="Warning signs and symptoms requiring clinical consultation",
+    )
+    monitoring_tips: tuple[str, ...] = Field(
+        default_factory=tuple,
+        description="Safe self-monitoring suggestions",
     )
