@@ -15,17 +15,16 @@
 |---|---|---|---|---|
 | **Sprint 0: Setup & Contracts** | Sat 10 Oct → Tue 13 Oct | Everyone can run the project locally. Shared types, API contract, DB schema and mocks are merged, so nobody is blocked in Sprint 1. | 1 (Nisarg 2) | — |
 | **Sprint 1: Walking Skeleton** | Wed 14 Oct → Tue 27 Oct | End-to-end flow works for real: chat → extraction → clarification → confirmation → prediction → risk → result → restart. | 4 (Nisarg 6) | [WEEK_1.md](WEEK_1.md) |
-| **Sprint 2: Feature Complete** | Wed 28 Oct → Tue 10 Nov | Image upload, accounts and history, self-care guidance, map referral, privacy controls, uncertainty escalation, full test suites. | 4 (Nisarg 7) | [WEEK_2.md](WEEK_2.md) |
-| **Sprint 3: Hardening & Release** | Wed 11 Nov → Fri 20 Nov | No new features. Accuracy, safety, security, accessibility, performance, deployment, demo. | 3 (Nisarg 5) | [WEEK_3.md](WEEK_3.md) |
+| **Sprint 2: Feature Complete & Release** | Wed 28 Oct → Fri 20 Nov | Features first (§6): image upload, accounts and history, self-care guidance, map referral, privacy controls, uncertainty escalation, full test suites. Then hardening (§7): accuracy, safety, security, accessibility, performance, deployment, demo. | 7 (Nisarg 12, Darshil 8) | [WEEK_2.md](WEEK_2.md), [WEEK_3.md](WEEK_3.md) |
 
 **Key dates**
 - Staging deploys automatically on every merge to `develop`. Production deploys only after the leader merges to `main` **and approves the deployment**.
 - **Tue 27 Oct:** Sprint 1 review. Leader merges `develop → main` and tags `v0.1.0`.
-- **Tue 10 Nov:** Sprint 2 review. `develop → main`, tag `v0.2.0`. **Feature freeze.**
+- **Tue 10 Nov:** Mid-sprint review (demo on `develop`). `develop → main`, tag `v0.2.0`. Finish your feature tasks (§6) next, then move to your hardening tasks (§7).
 - **Tue 17 Nov:** Code freeze. Only bug fixes from this date.
 - **Fri 20 Nov:** Final release `v1.0.0` and demo.
 
-Every member gets **12 tasks** (1 + 4 + 4 + 3). Nisarg, as leader and AI/ML lead, takes **20** (2 + 6 + 7 + 5). Every task is **one issue, one branch and one PR**.
+Every member gets **12 tasks** (1 + 4 + 7). Nisarg, as leader and AI/ML lead, takes **20** (2 + 6 + 12). Every task is **one issue, one branch and one PR**.
 
 ---
 
@@ -160,7 +159,9 @@ Unit tests for a module are written by its owner in the same PR (`server/tests/u
 
 ---
 
-## 6. Sprint 2: Feature Complete (28 Oct – 10 Nov)
+> **Sprint change, 6 Nov 2026.** Sprint 3 is merged into Sprint 2, which now ends on Fri 20 Nov. The old Sprint 3 tasks are in §7 with new IDs that continue each member's Sprint 2 numbering (for example, S3-VIV-1 is now S2-VIV-5). All Sprint 2 issues are in the `Sprint 2` milestone. Open Sprint 1 tasks stay in `Sprint 1`; finish them first.
+
+## 6. Sprint 2, part 1: Feature Complete (28 Oct – 20 Nov)
 
 | ID | Owner | Task | Req. |
 |---|---|---|---|
@@ -218,57 +219,58 @@ Unit tests for a module are written by its owner in the same PR (`server/tests/u
 
 ---
 
-## 7. Sprint 3: Hardening & Release (11–20 Nov)
+## 7. Sprint 2, part 2: Hardening & Release (until 20 Nov)
 
 | ID | Owner | Task | Req. |
 |---|---|---|---|
 | **AI / ML** | | | |
-| S3-NIS-1 | Nisarg | Final model evaluation report: condition model (accuracy, confusion matrix, red-flag recall) and CV model (fairness across skin tones; irrelevant, blurry and edge images). | NFR-07 |
-| S3-NIS-2 | Nisarg | Risk-consistency verification (same input → same output, 1000 runs). | DR-02 |
-| S3-NIS-3 | Nisarg | Model cards for the condition and CV models (data, method, limits, intended use) in `docs/`. | NFR-08 |
-| S3-NIS-4 | Nisarg | CV inference performance on the production CPU (Render free tier or VPS): ≤ 1 s per image, total RAM < 512 MB. | NFR-01 |
-| S3-NIS-5 | Nisarg | Release `v1.0.0`: changelog, release notes, final README, demo script. | NFR-08 |
-| S3-NIT-1 | Nishith | Fallback provider (Gemini) + latency budget + AI documentation (prompts, limitations, failure modes). | NFR-05, NFR-08 |
-| S3-KAV-1 | Kavya | Full AI regression run (extraction, normalization, glossary) + fixes. | NFR-07 |
+| S2-NIS-8 | Nisarg | Final model evaluation report: condition model (accuracy, confusion matrix, red-flag recall) and CV model (fairness across skin tones; irrelevant, blurry and edge images). | NFR-07 |
+| S2-NIS-9 | Nisarg | Risk-consistency verification (same input → same output, 1000 runs). | DR-02 |
+| S2-NIS-10 | Nisarg | Model cards for the condition and CV models (data, method, limits, intended use) in `docs/`. | NFR-08 |
+| S2-NIS-11 | Nisarg | CV inference performance on the production CPU (Render free tier or VPS): ≤ 1 s per image, total RAM < 512 MB. | NFR-01 |
+| S2-NIS-12 | Nisarg | Release `v1.0.0`: changelog, release notes, final README, demo script. | NFR-08 |
+| S2-NIT-5 | Nishith | Fallback provider (Gemini) + latency budget + AI documentation (prompts, limitations, failure modes). | NFR-05, NFR-08 |
+| S2-KAV-5 | Kavya | Full AI regression run (extraction, normalization, glossary) + fixes. | NFR-07 |
 | **Database** | | | |
-| S3-NIT-2 | Nishith | Query performance review (`EXPLAIN ANALYZE`) + index fixes. | NFR-01 |
-| S3-NIT-3 | Nishith | Backup and restore procedure on Neon, tested once. | NFR-05 |
-| S3-KAV-2 | Kavya | Data-integrity tests + final database documentation. | NFR-08 |
-| S3-KAV-3 | Kavya | Migration safety review: every migration backward-compatible, rollback tested on staging. | NFR-05 |
+| S2-NIT-6 | Nishith | Query performance review (`EXPLAIN ANALYZE`) + index fixes. | NFR-01 |
+| S2-NIT-7 | Nishith | Backup and restore procedure on Neon, tested once. | NFR-05 |
+| S2-KAV-6 | Kavya | Data-integrity tests + final database documentation. | NFR-08 |
+| S2-KAV-7 | Kavya | Migration safety review: every migration backward-compatible, rollback tested on staging. | NFR-05 |
 | **Backend** | | | |
-| S3-DAR-1 | Darshil | API contract freeze + authorization audit (no cross-user access). | NFR-03 |
-| S3-DAR-2 | Darshil | Input validation audit on every endpoint. | NFR-03 |
-| S3-DAR-3 | Darshil | Performance: p95 result time ≤ 5 s on staging. | NFR-01 |
-| S3-VIV-1 | Vivek | OWASP Top 10 review + fixes. | NFR-03 |
-| S3-VIV-2 | Vivek | Graceful-degradation audit: AI, CV and DB failures return safe, typed errors. | NFR-05 |
-| S3-VIV-3 | Vivek | Final OpenAPI documentation: summaries, examples and error codes for every endpoint. | NFR-08 |
-| S3-HAR-1 | Harsh | Rate-limit tuning + security-header verification on staging. | NFR-03 |
-| S3-HAR-2 | Harsh | Retention and deletion verified end to end on staging + DPDP compliance document and final data inventory. | NFR-04, DR-06 |
-| S3-HAR-3 | Harsh | Logging and audit-log review: no personal data or message text in logs. | NFR-10 |
+| S2-DAR-6 | Darshil | API contract freeze + authorization audit (no cross-user access). | NFR-03 |
+| S2-DAR-7 | Darshil | Input validation audit on every endpoint. | NFR-03 |
+| S2-DAR-8 | Darshil | Performance: p95 result time ≤ 5 s on staging. | NFR-01 |
+| S2-VIV-5 | Vivek | OWASP Top 10 review + fixes. | NFR-03 |
+| S2-VIV-6 | Vivek | Graceful-degradation audit: AI, CV and DB failures return safe, typed errors. | NFR-05 |
+| S2-VIV-7 | Vivek | Final OpenAPI documentation: summaries, examples and error codes for every endpoint. | NFR-08 |
+| S2-HAR-5 | Harsh | Rate-limit tuning + security-header verification on staging. | NFR-03 |
+| S2-HAR-6 | Harsh | Retention and deletion verified end to end on staging + DPDP compliance document and final data inventory. | NFR-04, DR-06 |
+| S2-HAR-7 | Harsh | Logging and audit-log review: no personal data or message text in logs. | NFR-10 |
 | **Testing** | | | |
-| S3-MOH-1 | Mohit | Load test (Locust or Artillery) against staging. | NFR-02 |
-| S3-MOH-2 | Mohit | Authorization and abuse tests across all endpoints (cross-user access, oversized input). | NFR-03 |
-| S3-MOH-3 | Mohit | Bug triage + release QA sign-off report. | — |
+| S2-MOH-5 | Mohit | Load test (Locust or Artillery) against staging. | NFR-02 |
+| S2-MOH-6 | Mohit | Authorization and abuse tests across all endpoints (cross-user access, oversized input). | NFR-03 |
+| S2-MOH-7 | Mohit | Bug triage + release QA sign-off report. | — |
 | **Frontend + Deployment** | | | |
-| S3-RUT-1 | Rutva | First production release through CD (leader-approved), Sentry for the server, UptimeRobot on the health endpoint. | NFR-05 |
-| S3-RUT-2 | Rutva | Full regression + E2E matrix (browsers × devices, installed PWA). | NFR-09 |
-| S3-RUT-3 | Rutva | Lighthouse ≥ 90 for PWA, performance and accessibility; code splitting. | NFR-01, NFR-06 |
-| S3-MAN-1 | Mann | Responsive/mobile pass for all screens + final visual polish, tested as an installed PWA on Android and iOS. | NFR-09 |
-| S3-MAN-2 | Mann | i18n with react-i18next + Hindi translation of the UI. | NFR-06 |
-| S3-MAN-3 | Mann | Rollback drill on staging (backend target + Vercel) + demo-day plan (paid instance, VPS, or warm-up). | NFR-05 |
-| S3-DIM-1 | Dimple | WCAG 2.1 AA audit + usability test with 5 users + top fixes. | NFR-06 |
-| S3-DIM-2 | Dimple | Final safety and disclaimer audit of every user-facing string. | DR-01, DR-05 |
-| S3-DIM-3 | Dimple | Sentry for the client + Vercel production config check (headers, CSP, SPA fallback, `/api` rewrite). | NFR-03, NFR-05 |
+| S2-RUT-5 | Rutva | First production release through CD (leader-approved), Sentry for the server, UptimeRobot on the health endpoint. | NFR-05 |
+| S2-RUT-6 | Rutva | Full regression + E2E matrix (browsers × devices, installed PWA). | NFR-09 |
+| S2-RUT-7 | Rutva | Lighthouse ≥ 90 for PWA, performance and accessibility; code splitting. | NFR-01, NFR-06 |
+| S2-MAN-5 | Mann | Responsive/mobile pass for all screens + final visual polish, tested as an installed PWA on Android and iOS. | NFR-09 |
+| S2-MAN-6 | Mann | i18n with react-i18next + Hindi translation of the UI. | NFR-06 |
+| S2-MAN-7 | Mann | Rollback drill on staging (backend target + Vercel) + demo-day plan (paid instance, VPS, or warm-up). | NFR-05 |
+| S2-DIM-5 | Dimple | WCAG 2.1 AA audit + usability test with 5 users + top fixes. | NFR-06 |
+| S2-DIM-6 | Dimple | Final safety and disclaimer audit of every user-facing string. | DR-01, DR-05 |
+| S2-DIM-7 | Dimple | Sentry for the client + Vercel production config check (headers, CSP, SPA fallback, `/api` rewrite). | NFR-03, NFR-05 |
 
 ---
 
 ## 8. Workload and commit balance
 
-| Member | S0 | S1 | S2 | S3 | Total |
-|---|---|---|---|---|---|
-| Nisarg | 2 | 6 | 7 | 5 | **20** |
-| Nishith, Kavya | 1 | 4 | 4 | 3 | 12 each (≈ 7 AI/ML + 5 Database) |
-| Everyone else | 1 | 4 | 4 | 3 | 12 each |
+| Member | S0 | S1 | S2 | Total |
+|---|---|---|---|---|
+| Nisarg | 2 | 6 | 12 | **20** |
+| Darshil | 1 | 4 | 8 | 13 |
+| Nishith, Kavya | 1 | 4 | 7 | 12 each (≈ 7 AI/ML + 5 Database) |
+| Everyone else | 1 | 4 | 7 | 12 each |
 
 - **Load:** everyone has 12 tasks of similar size; the leader takes 20. AI/ML work splits roughly Nisarg 60%, Nishith 20%, Kavya 20%. If a task turns out much bigger, the leader splits it and moves part to the next sprint. Darshil has one extra Sprint 2 task (S2-DAR-5, 13 in total), because the Sprint 1 plan had no task that wired the analysis into the assessment flow.
 - **One task at a time:** you may have only **one open PR** (the "PR policy" check enforces this). Start the next task after the current PR is merged.
