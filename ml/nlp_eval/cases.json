@@ -1,595 +1,2086 @@
 {
   "schema_version": "1.0",
-  "description": "NLP extraction evaluation cases for the AI-Based Symptom Checker. Each case contains a realistic user input and the expected canonical symptoms, severity, duration and onset that the extraction pipeline should produce. Severity uses MILD / MODERATE / SEVERE or is omitted when not mentioned. Duration and onset are optional free-text fields that the extractor should normalize.",
-  "severities": ["MILD", "MODERATE", "SEVERE"],
+  "dataset_version": "2.0",
+  "description": "NLP extraction evaluation cases (v2, 100 benchmark cases including Hinglish, misspellings, multi-symptom presentations, and emergency red flags).",
+  "severities": [
+    "MILD",
+    "MODERATE",
+    "SEVERE"
+  ],
   "cases": [
     {
       "id": "case_001",
       "input": "I've had a really bad headache and feel like throwing up since yesterday",
       "expected": {
         "symptoms": [
-          { "id": "headache", "severity": "SEVERE" },
-          { "id": "nausea" }
+          {
+            "id": "headache",
+            "severity": "SEVERE"
+          },
+          {
+            "id": "nausea"
+          }
         ],
         "duration": "1 day"
       },
-      "notes": "Tests 'bad headache' → severity SEVERE, 'throwing up' → nausea, 'since yesterday' → 1 day"
+      "notes": "Tests 'bad headache' → severity SEVERE, 'throwing up' → nausea, 'since yesterday' → 1 day",
+      "tags": [
+        "standard"
+      ]
     },
     {
       "id": "case_002",
       "input": "my throat hurts and I have a runny nose, been sneezing all day",
       "expected": {
         "symptoms": [
-          { "id": "sore_throat" },
-          { "id": "runny_nose" },
-          { "id": "sneezing" }
+          {
+            "id": "sore_throat"
+          },
+          {
+            "id": "runny_nose"
+          },
+          {
+            "id": "sneezing"
+          }
         ],
         "duration": "1 day"
       },
-      "notes": "Tests multiple ENT symptoms from a common cold description"
+      "notes": "Tests multiple ENT symptoms from a common cold description",
+      "tags": [
+        "multi_symptom",
+        "standard"
+      ]
     },
     {
       "id": "case_003",
       "input": "I have fever with chills and my whole body is aching for the past 3 days",
       "expected": {
         "symptoms": [
-          { "id": "fever" },
-          { "id": "chills" },
-          { "id": "body_aches" }
+          {
+            "id": "fever"
+          },
+          {
+            "id": "chills"
+          },
+          {
+            "id": "body_aches"
+          }
         ],
         "duration": "3 days"
       },
-      "notes": "Tests typical flu/dengue presentation with duration"
+      "notes": "Tests typical flu/dengue presentation with duration",
+      "tags": [
+        "multi_symptom",
+        "standard"
+      ]
     },
     {
       "id": "case_004",
       "input": "mujhe bahut tez bukhar hai aur pet me dard ho raha hai",
       "expected": {
         "symptoms": [
-          { "id": "fever", "severity": "SEVERE" },
-          { "id": "abdominal_pain" }
+          {
+            "id": "fever",
+            "severity": "SEVERE"
+          },
+          {
+            "id": "abdominal_pain"
+          }
         ]
       },
-      "notes": "Tests Hinglish input: 'tez bukhar' → fever SEVERE, 'pet me dard' → abdominal_pain"
+      "notes": "Tests Hinglish input: 'tez bukhar' → fever SEVERE, 'pet me dard' → abdominal_pain",
+      "tags": [
+        "hinglish"
+      ]
     },
     {
       "id": "case_005",
       "input": "chest pain that goes to my left arm and I'm sweating a lot",
       "expected": {
         "symptoms": [
-          { "id": "chest_pain" },
-          { "id": "pain_spreading_to_arm_jaw_or_back" },
-          { "id": "sweating" }
+          {
+            "id": "chest_pain"
+          },
+          {
+            "id": "pain_spreading_to_arm_jaw_or_back"
+          },
+          {
+            "id": "sweating"
+          }
         ]
       },
-      "notes": "Tests cardiac emergency pattern — red flag combination"
+      "notes": "Tests cardiac emergency pattern — red flag combination",
+      "tags": [
+        "red_flag",
+        "multi_symptom",
+        "standard"
+      ]
     },
     {
       "id": "case_006",
       "input": "I have been coughing for about 2 weeks and noticed some blood in the mucus today",
       "expected": {
         "symptoms": [
-          { "id": "productive_cough" },
-          { "id": "coughing_blood" }
+          {
+            "id": "productive_cough"
+          },
+          {
+            "id": "coughing_blood"
+          }
         ],
         "duration": "2 weeks"
       },
-      "notes": "Tests TB-suspicious presentation; 'blood in the mucus' → coughing_blood"
+      "notes": "Tests TB-suspicious presentation; 'blood in the mucus' → coughing_blood",
+      "tags": [
+        "red_flag",
+        "standard"
+      ]
     },
     {
       "id": "case_007",
       "input": "My skin has been really itchy with a circular red patch on my arm, it looks like a ring",
       "expected": {
         "symptoms": [
-          { "id": "itchy_skin" },
-          { "id": "ring_shaped_rash" }
+          {
+            "id": "itchy_skin"
+          },
+          {
+            "id": "ring_shaped_rash"
+          }
         ]
       },
-      "notes": "Tests dermatological description of ringworm; 'ring' → ring_shaped_rash"
+      "notes": "Tests dermatological description of ringworm; 'ring' → ring_shaped_rash",
+      "tags": [
+        "standard"
+      ]
     },
     {
       "id": "case_008",
       "input": "feeling dizzy and tired all the time, also my skin looks pale lately",
       "expected": {
         "symptoms": [
-          { "id": "dizziness" },
-          { "id": "fatigue" },
-          { "id": "pale_skin" }
+          {
+            "id": "dizziness"
+          },
+          {
+            "id": "fatigue"
+          },
+          {
+            "id": "pale_skin"
+          }
         ]
       },
-      "notes": "Tests anaemia presentation with lay terms 'dizzy', 'tired', 'pale'"
+      "notes": "Tests anaemia presentation with lay terms 'dizzy', 'tired', 'pale'",
+      "tags": [
+        "multi_symptom",
+        "standard"
+      ]
     },
     {
       "id": "case_009",
       "input": "burns when I pee and I need to go to the bathroom every hour, lower belly also hurts",
       "expected": {
         "symptoms": [
-          { "id": "burning_urination" },
-          { "id": "frequent_urination" },
-          { "id": "lower_abdominal_pain" }
+          {
+            "id": "burning_urination"
+          },
+          {
+            "id": "frequent_urination"
+          },
+          {
+            "id": "lower_abdominal_pain"
+          }
         ]
       },
-      "notes": "Tests UTI presentation; 'burns when I pee' → burning_urination"
+      "notes": "Tests UTI presentation; 'burns when I pee' → burning_urination",
+      "tags": [
+        "multi_symptom",
+        "standard"
+      ]
     },
     {
       "id": "case_010",
       "input": "I have acidity and a sour taste keeps coming up in my mouth especially after eating",
       "expected": {
         "symptoms": [
-          { "id": "heartburn" },
-          { "id": "acid_regurgitation" }
+          {
+            "id": "heartburn"
+          },
+          {
+            "id": "acid_regurgitation"
+          }
         ]
       },
-      "notes": "Tests GERD; 'acidity' → heartburn, 'sour taste coming up' → acid_regurgitation"
+      "notes": "Tests GERD; 'acidity' → heartburn, 'sour taste coming up' → acid_regurgitation",
+      "tags": [
+        "standard"
+      ]
     },
     {
       "id": "case_011",
       "input": "severe stomach pain on the right side near my hip, I also feel nauseous",
       "expected": {
         "symptoms": [
-          { "id": "lower_right_abdominal_pain", "severity": "SEVERE" },
-          { "id": "nausea" }
+          {
+            "id": "lower_right_abdominal_pain",
+            "severity": "SEVERE"
+          },
+          {
+            "id": "nausea"
+          }
         ]
       },
-      "notes": "Tests appendicitis presentation; 'right side near my hip' → lower_right_abdominal_pain"
+      "notes": "Tests appendicitis presentation; 'right side near my hip' → lower_right_abdominal_pain",
+      "tags": [
+        "misspelling"
+      ]
     },
     {
       "id": "case_012",
       "input": "my eyes are red and sticky, there's yellowish gunk in the morning",
       "expected": {
         "symptoms": [
-          { "id": "red_eye" },
-          { "id": "eye_discharge" }
+          {
+            "id": "red_eye"
+          },
+          {
+            "id": "eye_discharge"
+          }
         ]
       },
-      "notes": "Tests conjunctivitis; 'sticky' + 'yellowish gunk' → eye_discharge"
+      "notes": "Tests conjunctivitis; 'sticky' + 'yellowish gunk' → eye_discharge",
+      "tags": [
+        "standard"
+      ]
     },
     {
       "id": "case_013",
       "input": "I can't breathe properly and there's a whistling sound when I exhale",
       "expected": {
         "symptoms": [
-          { "id": "shortness_of_breath" },
-          { "id": "wheezing" }
+          {
+            "id": "shortness_of_breath"
+          },
+          {
+            "id": "wheezing"
+          }
         ]
       },
-      "notes": "Tests asthma; 'can't breathe properly' → shortness_of_breath, 'whistling sound' → wheezing"
+      "notes": "Tests asthma; 'can't breathe properly' → shortness_of_breath, 'whistling sound' → wheezing",
+      "tags": [
+        "red_flag",
+        "standard"
+      ]
     },
     {
       "id": "case_014",
       "input": "I got lots of small itchy bumps between my fingers, they're worse at night",
       "expected": {
         "symptoms": [
-          { "id": "small_itchy_bumps" }
+          {
+            "id": "small_itchy_bumps"
+          }
         ]
       },
-      "notes": "Tests scabies description; 'small itchy bumps' as primary symptom. Night worsening is a temporal detail, not a separate symptom."
+      "notes": "Tests scabies description; 'small itchy bumps' as primary symptom. Night worsening is a temporal detail, not a separate symptom.",
+      "tags": [
+        "standard"
+      ]
     },
     {
       "id": "case_015",
       "input": "woke up with the worst headache of my life, it came on suddenly",
       "expected": {
         "symptoms": [
-          { "id": "sudden_severe_headache", "severity": "SEVERE" }
+          {
+            "id": "sudden_severe_headache",
+            "severity": "SEVERE"
+          }
         ]
       },
-      "notes": "Tests thunderclap headache red flag; 'worst headache of my life' + 'suddenly' → sudden_severe_headache"
+      "notes": "Tests thunderclap headache red flag; 'worst headache of my life' + 'suddenly' → sudden_severe_headache",
+      "tags": [
+        "red_flag",
+        "standard"
+      ]
     },
     {
       "id": "case_016",
       "input": "loose motions for 2 days, can't keep water down, feeling very weak",
       "expected": {
         "symptoms": [
-          { "id": "diarrhea" },
-          { "id": "unable_to_keep_fluids_down" },
-          { "id": "fatigue" }
+          {
+            "id": "diarrhea"
+          },
+          {
+            "id": "unable_to_keep_fluids_down"
+          },
+          {
+            "id": "fatigue"
+          }
         ],
         "duration": "2 days"
       },
-      "notes": "Tests gastroenteritis with dehydration risk; 'loose motions' → diarrhea, 'can't keep water down' → unable_to_keep_fluids_down"
+      "notes": "Tests gastroenteritis with dehydration risk; 'loose motions' → diarrhea, 'can't keep water down' → unable_to_keep_fluids_down",
+      "tags": [
+        "multi_symptom",
+        "standard"
+      ]
     },
     {
       "id": "case_017",
       "input": "high fever since 4 days with pain behind my eyes and joints are hurting badly",
       "expected": {
         "symptoms": [
-          { "id": "fever", "severity": "SEVERE" },
-          { "id": "pain_behind_eyes" },
-          { "id": "joint_pain", "severity": "SEVERE" }
+          {
+            "id": "fever",
+            "severity": "SEVERE"
+          },
+          {
+            "id": "pain_behind_eyes"
+          },
+          {
+            "id": "joint_pain",
+            "severity": "SEVERE"
+          }
         ],
         "duration": "4 days"
       },
-      "notes": "Tests dengue presentation; 'high fever' → SEVERE, 'hurting badly' → SEVERE"
+      "notes": "Tests dengue presentation; 'high fever' → SEVERE, 'hurting badly' → SEVERE",
+      "tags": [
+        "hinglish",
+        "multi_symptom"
+      ]
     },
     {
       "id": "case_018",
       "input": "my nose is completely blocked, face feels like pressure around cheeks and forehead, thick green mucus",
       "expected": {
         "symptoms": [
-          { "id": "nasal_congestion" },
-          { "id": "facial_pain_or_pressure" },
-          { "id": "thick_nasal_discharge" }
+          {
+            "id": "nasal_congestion"
+          },
+          {
+            "id": "facial_pain_or_pressure"
+          },
+          {
+            "id": "thick_nasal_discharge"
+          }
         ]
       },
-      "notes": "Tests sinusitis; 'blocked' → nasal_congestion, 'pressure around cheeks and forehead' → facial_pain_or_pressure"
+      "notes": "Tests sinusitis; 'blocked' → nasal_congestion, 'pressure around cheeks and forehead' → facial_pain_or_pressure",
+      "tags": [
+        "multi_symptom",
+        "standard"
+      ]
     },
     {
       "id": "case_019",
       "input": "I'm peeing a lot more than usual and always feel thirsty, also lost some weight recently",
       "expected": {
         "symptoms": [
-          { "id": "frequent_urination" },
-          { "id": "excessive_thirst" },
-          { "id": "weight_loss" }
+          {
+            "id": "frequent_urination"
+          },
+          {
+            "id": "excessive_thirst"
+          },
+          {
+            "id": "weight_loss"
+          }
         ]
       },
-      "notes": "Tests diabetes presentation; classic triad of polyuria, polydipsia, weight loss"
+      "notes": "Tests diabetes presentation; classic triad of polyuria, polydipsia, weight loss",
+      "tags": [
+        "multi_symptom",
+        "standard"
+      ]
     },
     {
       "id": "case_020",
       "input": "kamar me bahut dard hai, 1 hafte se chal raha hai, jhukne me dikkat hoti hai",
       "expected": {
         "symptoms": [
-          { "id": "lower_back_pain", "severity": "SEVERE" },
-          { "id": "muscle_stiffness" }
+          {
+            "id": "lower_back_pain",
+            "severity": "SEVERE"
+          },
+          {
+            "id": "muscle_stiffness"
+          }
         ],
         "duration": "1 week"
       },
-      "notes": "Tests Hinglish input: 'kamar me bahut dard' → lower_back_pain SEVERE, 'jhukne me dikkat' → muscle_stiffness"
+      "notes": "Tests Hinglish input: 'kamar me bahut dard' → lower_back_pain SEVERE, 'jhukne me dikkat' → muscle_stiffness",
+      "tags": [
+        "hinglish"
+      ]
     },
     {
       "id": "case_021",
       "input": "I feel extremely anxious all the time, my heart races and I can't sleep properly",
       "expected": {
         "symptoms": [
-          { "id": "palpitations" },
-          { "id": "fatigue" }
+          {
+            "id": "palpitations"
+          },
+          {
+            "id": "fatigue"
+          }
         ]
       },
-      "notes": "Tests anxiety presentation; 'heart races' → palpitations, sleep disruption → fatigue"
+      "notes": "Tests anxiety presentation; 'heart races' → palpitations, sleep disruption → fatigue",
+      "tags": [
+        "standard"
+      ]
     },
     {
       "id": "case_022",
       "input": "pet mein bahut gas ban rahi hai aur bloating ho rahi hai, khana khane ke baad aur bura lagta hai",
       "expected": {
         "symptoms": [
-          { "id": "bloating" },
-          { "id": "abdominal_pain" }
+          {
+            "id": "bloating"
+          },
+          {
+            "id": "abdominal_pain"
+          }
         ]
       },
-      "notes": "Tests Hinglish: 'gas ban rahi hai' → bloating, 'pet mein dard' → abdominal_pain"
+      "notes": "Tests Hinglish: 'gas ban rahi hai' → bloating, 'pet mein dard' → abdominal_pain",
+      "tags": [
+        "hinglish"
+      ]
     },
     {
       "id": "case_023",
       "input": "there are raised welts all over my skin, very itchy, appeared after eating prawns",
       "expected": {
         "symptoms": [
-          { "id": "hives" },
-          { "id": "itchy_skin" }
+          {
+            "id": "hives"
+          },
+          {
+            "id": "itchy_skin"
+          }
         ]
       },
-      "notes": "Tests allergic reaction; 'raised welts' → hives, 'very itchy' → itchy_skin"
+      "notes": "Tests allergic reaction; 'raised welts' → hives, 'very itchy' → itchy_skin",
+      "tags": [
+        "standard"
+      ]
     },
     {
       "id": "case_024",
       "input": "mujhe raat ko bahut pasina aata hai aur bhook bilkul nahi lagti, 3 hafte se yahi ho raha hai",
       "expected": {
         "symptoms": [
-          { "id": "night_sweats" },
-          { "id": "loss_of_appetite" }
+          {
+            "id": "night_sweats"
+          },
+          {
+            "id": "loss_of_appetite"
+          }
         ],
         "duration": "3 weeks"
       },
-      "notes": "Tests Hinglish TB-suspicion: 'raat ko pasina' → night_sweats, 'bhook nahi' → loss_of_appetite"
+      "notes": "Tests Hinglish TB-suspicion: 'raat ko pasina' → night_sweats, 'bhook nahi' → loss_of_appetite",
+      "tags": [
+        "hinglish"
+      ]
     },
     {
       "id": "case_025",
       "input": "I have joint pain and swelling in both knees that is mild but constant for a month",
       "expected": {
         "symptoms": [
-          { "id": "joint_pain", "severity": "MILD" },
-          { "id": "joint_swelling" }
+          {
+            "id": "joint_pain",
+            "severity": "MILD"
+          },
+          {
+            "id": "joint_swelling"
+          }
         ],
         "duration": "1 month"
       },
-      "notes": "Tests chikungunya / arthritis pattern; explicit MILD severity; joint_swelling as separate symptom"
+      "notes": "Tests chikungunya / arthritis pattern; explicit MILD severity; joint_swelling as separate symptom",
+      "tags": [
+        "standard"
+      ]
     },
     {
       "id": "case_026",
       "input": "skin pe bahut saari pimples aa gayi hain, chehra bahut oily rehta hai",
       "expected": {
         "symptoms": [
-          { "id": "pimples" },
-          { "id": "oily_skin" }
+          {
+            "id": "pimples"
+          },
+          {
+            "id": "oily_skin"
+          }
         ]
       },
-      "notes": "Tests Hinglish acne presentation: 'pimples' → pimples, 'oily' → oily_skin"
+      "notes": "Tests Hinglish acne presentation: 'pimples' → pimples, 'oily' → oily_skin",
+      "tags": [
+        "hinglish"
+      ]
     },
     {
       "id": "case_027",
       "input": "I notice my skin and eyes have turned yellowish, urine is very dark brown",
       "expected": {
         "symptoms": [
-          { "id": "yellow_skin_or_eyes" },
-          { "id": "dark_urine" }
+          {
+            "id": "yellow_skin_or_eyes"
+          },
+          {
+            "id": "dark_urine"
+          }
         ]
       },
-      "notes": "Tests hepatitis/jaundice triad; 'yellowish' → yellow_skin_or_eyes, 'dark brown urine' → dark_urine"
+      "notes": "Tests hepatitis/jaundice triad; 'yellowish' → yellow_skin_or_eyes, 'dark brown urine' → dark_urine",
+      "tags": [
+        "misspelling"
+      ]
     },
     {
       "id": "case_028",
       "input": "I feel very sad and hopeless every day, no energy to do anything, not interested in food",
       "expected": {
         "symptoms": [
-          { "id": "fatigue" },
-          { "id": "loss_of_appetite" }
+          {
+            "id": "fatigue"
+          },
+          {
+            "id": "loss_of_appetite"
+          }
         ]
       },
-      "notes": "Tests depression-associated somatic symptoms; mood words map to physical symptom IDs only"
+      "notes": "Tests depression-associated somatic symptoms; mood words map to physical symptom IDs only",
+      "tags": [
+        "misspelling"
+      ]
     },
     {
       "id": "case_029",
       "input": "sudden weakness on right side of my face, arm is also numb, speech is slurred",
       "expected": {
         "symptoms": [
-          { "id": "facial_droop" },
-          { "id": "one_sided_weakness" },
-          { "id": "slurred_speech" }
+          {
+            "id": "facial_droop"
+          },
+          {
+            "id": "one_sided_weakness"
+          },
+          {
+            "id": "slurred_speech"
+          }
         ]
       },
-      "notes": "Tests stroke red flags; FAST symptom combination"
+      "notes": "Tests stroke red flags; FAST symptom combination",
+      "tags": [
+        "red_flag",
+        "multi_symptom",
+        "standard"
+      ]
     },
     {
       "id": "case_030",
       "input": "I have a moderate headache with light bothering me and I feel sick",
       "expected": {
         "symptoms": [
-          { "id": "headache", "severity": "MODERATE" },
-          { "id": "light_sensitivity" },
-          { "id": "nausea" }
+          {
+            "id": "headache",
+            "severity": "MODERATE"
+          },
+          {
+            "id": "light_sensitivity"
+          },
+          {
+            "id": "nausea"
+          }
         ]
       },
-      "notes": "Tests migraine aura presentation; explicit MODERATE severity; 'light bothering' → light_sensitivity"
+      "notes": "Tests migraine aura presentation; explicit MODERATE severity; 'light bothering' → light_sensitivity",
+      "tags": [
+        "multi_symptom",
+        "standard"
+      ]
     },
     {
       "id": "case_031",
       "input": "mujhe bahut kamzori ho rahi hai, aankhein peeli lag rahi hain aur pet ke upar dahi taraf dard hai",
       "expected": {
         "symptoms": [
-          { "id": "fatigue" },
-          { "id": "yellow_skin_or_eyes" },
-          { "id": "upper_right_abdominal_pain" }
+          {
+            "id": "fatigue"
+          },
+          {
+            "id": "yellow_skin_or_eyes"
+          },
+          {
+            "id": "upper_right_abdominal_pain"
+          }
         ]
       },
-      "notes": "Tests Hinglish hepatitis: 'kamzori' → fatigue, 'aankhein peeli' → yellow_skin_or_eyes, 'upar dahi taraf dard' → upper_right_abdominal_pain"
+      "notes": "Tests Hinglish hepatitis: 'kamzori' → fatigue, 'aankhein peeli' → yellow_skin_or_eyes, 'upar dahi taraf dard' → upper_right_abdominal_pain",
+      "tags": [
+        "hinglish",
+        "multi_symptom"
+      ]
     },
     {
       "id": "case_032",
       "input": "my stomake is aching and i hav diarrhoea since morning, also some vomting",
       "expected": {
         "symptoms": [
-          { "id": "abdominal_pain" },
-          { "id": "diarrhea" },
-          { "id": "vomiting" }
+          {
+            "id": "abdominal_pain"
+          },
+          {
+            "id": "diarrhea"
+          },
+          {
+            "id": "vomiting"
+          }
         ],
         "duration": "1 day"
       },
-      "notes": "Tests misspelled input: 'stomake aching' → abdominal_pain, 'vomting' → vomiting, 'diarrhoea' is British spelling"
+      "notes": "Tests misspelled input: 'stomake aching' → abdominal_pain, 'vomting' → vomiting, 'diarrhoea' is British spelling",
+      "tags": [
+        "misspelling",
+        "multi_symptom"
+      ]
     },
     {
       "id": "case_033",
       "input": "skin is dry and flaky, especially around the elbows and scalp",
       "expected": {
         "symptoms": [
-          { "id": "dry_skin" },
-          { "id": "scaly_skin" }
+          {
+            "id": "dry_skin"
+          },
+          {
+            "id": "scaly_skin"
+          }
         ]
       },
-      "notes": "Tests psoriasis/eczema; 'dry' → dry_skin, 'flaky' → scaly_skin"
+      "notes": "Tests psoriasis/eczema; 'dry' → dry_skin, 'flaky' → scaly_skin",
+      "tags": [
+        "standard"
+      ]
     },
     {
       "id": "case_034",
       "input": "I have fever of 104, bleeding from the gums and a red rash on my body",
       "expected": {
         "symptoms": [
-          { "id": "fever", "severity": "SEVERE" },
-          { "id": "bleeding_gums_or_nose" },
-          { "id": "skin_rash" }
+          {
+            "id": "fever",
+            "severity": "SEVERE"
+          },
+          {
+            "id": "bleeding_gums_or_nose"
+          },
+          {
+            "id": "skin_rash"
+          }
         ]
       },
-      "notes": "Tests dengue haemorrhagic presentation; 'bleeding gums' → bleeding_gums_or_nose, 'rash on my body' → skin_rash"
+      "notes": "Tests dengue haemorrhagic presentation; 'bleeding gums' → bleeding_gums_or_nose, 'rash on my body' → skin_rash",
+      "tags": [
+        "multi_symptom",
+        "standard"
+      ]
     },
     {
       "id": "case_035",
       "input": "mujhe khansi aur saans lene me takleef ho rahi hai, thoda blood bhi aa raha hai khansi me, 3 hafton se",
       "expected": {
         "symptoms": [
-          { "id": "cough" },
-          { "id": "shortness_of_breath" },
-          { "id": "coughing_blood" }
+          {
+            "id": "cough"
+          },
+          {
+            "id": "shortness_of_breath"
+          },
+          {
+            "id": "coughing_blood"
+          }
         ],
         "duration": "3 weeks"
       },
-      "notes": "Tests Hinglish TB red flags: 'khansi' → cough, 'saans lene me takleef' → shortness_of_breath, 'blood in khansi' → coughing_blood"
+      "notes": "Tests Hinglish TB red flags: 'khansi' → cough, 'saans lene me takleef' → shortness_of_breath, 'blood in khansi' → coughing_blood",
+      "tags": [
+        "hinglish",
+        "red_flag",
+        "multi_symptom"
+      ]
     },
     {
       "id": "case_036",
       "input": "I've had a mild fever and a rash that looks like spots on my trunk, been itchy for 5 days",
       "expected": {
         "symptoms": [
-          { "id": "fever", "severity": "MILD" },
-          { "id": "skin_rash" },
-          { "id": "itchy_skin" }
+          {
+            "id": "fever",
+            "severity": "MILD"
+          },
+          {
+            "id": "skin_rash"
+          },
+          {
+            "id": "itchy_skin"
+          }
         ],
         "duration": "5 days"
       },
-      "notes": "Tests chickenpox / typhoid rash variant; explicit MILD fever + skin_rash + itchy_skin"
+      "notes": "Tests chickenpox / typhoid rash variant; explicit MILD fever + skin_rash + itchy_skin",
+      "tags": [
+        "multi_symptom",
+        "standard"
+      ]
     },
     {
       "id": "case_037",
       "input": "my heart is beating very fast and I feel like I'm going to pass out",
       "expected": {
         "symptoms": [
-          { "id": "palpitations" },
-          { "id": "fainting" }
+          {
+            "id": "palpitations"
+          },
+          {
+            "id": "fainting"
+          }
         ]
       },
-      "notes": "Tests cardiac arrhythmia pattern; 'beating very fast' → palpitations, 'pass out' → fainting"
+      "notes": "Tests cardiac arrhythmia pattern; 'beating very fast' → palpitations, 'pass out' → fainting",
+      "tags": [
+        "red_flag",
+        "standard"
+      ]
     },
     {
       "id": "case_038",
       "input": "there is pain in my side below the ribs and my urine has blood in it",
       "expected": {
         "symptoms": [
-          { "id": "flank_pain" },
-          { "id": "blood_in_urine" }
+          {
+            "id": "flank_pain"
+          },
+          {
+            "id": "blood_in_urine"
+          }
         ]
       },
-      "notes": "Tests kidney stone / pyelonephritis; 'side below the ribs' → flank_pain, 'blood in urine' → blood_in_urine"
+      "notes": "Tests kidney stone / pyelonephritis; 'side below the ribs' → flank_pain, 'blood in urine' → blood_in_urine",
+      "tags": [
+        "misspelling"
+      ]
     },
     {
       "id": "case_039",
       "input": "mujhe bahut thakaan ho rahi hai, wajan bhi kam ho raha hai bina kisi reason ke, 1 mahine se",
       "expected": {
         "symptoms": [
-          { "id": "fatigue" },
-          { "id": "weight_loss" }
+          {
+            "id": "fatigue"
+          },
+          {
+            "id": "weight_loss"
+          }
         ],
         "duration": "1 month"
       },
-      "notes": "Tests Hinglish constitutional symptoms: 'thakaan' → fatigue, 'wajan kam' → weight_loss"
+      "notes": "Tests Hinglish constitutional symptoms: 'thakaan' → fatigue, 'wajan kam' → weight_loss",
+      "tags": [
+        "hinglish"
+      ]
     },
     {
       "id": "case_040",
       "input": "I had a seizure this morning, I also had a stiff neck and fever yesterday",
       "expected": {
         "symptoms": [
-          { "id": "seizure" },
-          { "id": "stiff_neck" },
-          { "id": "fever" }
+          {
+            "id": "seizure"
+          },
+          {
+            "id": "stiff_neck"
+          },
+          {
+            "id": "fever"
+          }
         ]
       },
-      "notes": "Tests meningitis + seizure emergency combo; stiff_neck + fever + seizure is a red-flag triad"
+      "notes": "Tests meningitis + seizure emergency combo; stiff_neck + fever + seizure is a red-flag triad",
+      "tags": [
+        "red_flag",
+        "multi_symptom",
+        "standard"
+      ]
     },
     {
       "id": "case_041",
       "input": "headack and feeling nausius for 2 days, also cant smell anything",
       "expected": {
         "symptoms": [
-          { "id": "headache" },
-          { "id": "nausea" },
-          { "id": "loss_of_smell_or_taste" }
+          {
+            "id": "headache"
+          },
+          {
+            "id": "nausea"
+          },
+          {
+            "id": "loss_of_smell_or_taste"
+          }
         ],
         "duration": "2 days"
       },
-      "notes": "Tests misspellings: 'headack' → headache, 'nausius' → nausea, 'cant smell' → loss_of_smell_or_taste (post-viral)"
+      "notes": "Tests misspellings: 'headack' → headache, 'nausius' → nausea, 'cant smell' → loss_of_smell_or_taste (post-viral)",
+      "tags": [
+        "misspelling",
+        "multi_symptom"
+      ]
     },
     {
       "id": "case_042",
       "input": "mujhe aankh me dard hai aur sab kuch dhundla dikh raha hai, aankh laal bhi ho gayi hai",
       "expected": {
         "symptoms": [
-          { "id": "blurred_vision" },
-          { "id": "red_eye" }
+          {
+            "id": "blurred_vision"
+          },
+          {
+            "id": "red_eye"
+          }
         ]
       },
-      "notes": "Tests Hinglish eye complaint: 'dhundla' → blurred_vision, 'aankh laal' → red_eye"
+      "notes": "Tests Hinglish eye complaint: 'dhundla' → blurred_vision, 'aankh laal' → red_eye",
+      "tags": [
+        "hinglish"
+      ]
     },
     {
       "id": "case_043",
       "input": "I feel a tight sensation in my chest and shortness of breath, lips look slightly blue",
       "expected": {
         "symptoms": [
-          { "id": "chest_tightness" },
-          { "id": "shortness_of_breath" },
-          { "id": "bluish_lips_or_face" }
+          {
+            "id": "chest_tightness"
+          },
+          {
+            "id": "shortness_of_breath"
+          },
+          {
+            "id": "bluish_lips_or_face"
+          }
         ]
       },
-      "notes": "Tests severe respiratory emergency; 'bluish lips' → bluish_lips_or_face is a red flag"
+      "notes": "Tests severe respiratory emergency; 'bluish lips' → bluish_lips_or_face is a red flag",
+      "tags": [
+        "red_flag",
+        "multi_symptom",
+        "standard"
+      ]
     },
     {
       "id": "case_044",
       "input": "I can't swallow properly, my throat feels swollen and I can hardly breathe through my mouth",
       "expected": {
         "symptoms": [
-          { "id": "painful_swallowing" },
-          { "id": "throat_or_tongue_swelling" },
-          { "id": "shortness_of_breath" }
+          {
+            "id": "painful_swallowing"
+          },
+          {
+            "id": "throat_or_tongue_swelling"
+          },
+          {
+            "id": "shortness_of_breath"
+          }
         ]
       },
-      "notes": "Tests anaphylaxis / severe angioedema; 'throat swollen' → throat_or_tongue_swelling"
+      "notes": "Tests anaphylaxis / severe angioedema; 'throat swollen' → throat_or_tongue_swelling",
+      "tags": [
+        "red_flag",
+        "multi_symptom",
+        "standard"
+      ]
     },
     {
       "id": "case_045",
       "input": "gale me bahut dard hai, kuch bhi nahi nigal pa raha hoon, halka bukhar bhi hai",
       "expected": {
         "symptoms": [
-          { "id": "sore_throat" },
-          { "id": "painful_swallowing" },
-          { "id": "fever", "severity": "MILD" }
+          {
+            "id": "sore_throat"
+          },
+          {
+            "id": "painful_swallowing"
+          },
+          {
+            "id": "fever",
+            "severity": "MILD"
+          }
         ]
       },
-      "notes": "Tests Hinglish tonsillitis: 'gale me dard' → sore_throat, 'nahi nigal pa raha' → painful_swallowing, 'halka bukhar' → fever MILD"
+      "notes": "Tests Hinglish tonsillitis: 'gale me dard' → sore_throat, 'nahi nigal pa raha' → painful_swallowing, 'halka bukhar' → fever MILD",
+      "tags": [
+        "hinglish",
+        "multi_symptom"
+      ]
     },
     {
       "id": "case_046",
       "input": "I have fluid filled blisters on one side of my chest, it burns a lot and is very painful",
       "expected": {
         "symptoms": [
-          { "id": "fluid_filled_blisters" },
-          { "id": "warm_tender_skin" }
+          {
+            "id": "fluid_filled_blisters"
+          },
+          {
+            "id": "warm_tender_skin"
+          }
         ]
       },
-      "notes": "Tests shingles presentation; 'fluid filled blisters' → fluid_filled_blisters, 'burns and painful skin' → warm_tender_skin"
+      "notes": "Tests shingles presentation; 'fluid filled blisters' → fluid_filled_blisters, 'burns and painful skin' → warm_tender_skin",
+      "tags": [
+        "standard"
+      ]
     },
     {
       "id": "case_047",
       "input": "mujhe bar bar chhink aati hai, naak bahut beh rahi hai, aankhein bhi khujli kar rahi hain",
       "expected": {
         "symptoms": [
-          { "id": "sneezing" },
-          { "id": "runny_nose" },
-          { "id": "itchy_eyes" }
+          {
+            "id": "sneezing"
+          },
+          {
+            "id": "runny_nose"
+          },
+          {
+            "id": "itchy_eyes"
+          }
         ]
       },
-      "notes": "Tests Hinglish allergic rhinitis: 'chhink' → sneezing, 'naak beh rahi' → runny_nose, 'aankhein khujli' → itchy_eyes"
+      "notes": "Tests Hinglish allergic rhinitis: 'chhink' → sneezing, 'naak beh rahi' → runny_nose, 'aankhein khujli' → itchy_eyes",
+      "tags": [
+        "hinglish",
+        "multi_symptom"
+      ]
     },
     {
       "id": "case_048",
       "input": "my poo looks black and tarry, and I vomited something that looked like coffee grounds",
       "expected": {
         "symptoms": [
-          { "id": "black_or_bloody_stool" },
-          { "id": "vomiting_blood" }
+          {
+            "id": "black_or_bloody_stool"
+          },
+          {
+            "id": "vomiting_blood"
+          }
         ]
       },
-      "notes": "Tests GI bleed emergency; 'black and tarry' → black_or_bloody_stool, 'coffee grounds vomit' → vomiting_blood"
+      "notes": "Tests GI bleed emergency; 'black and tarry' → black_or_bloody_stool, 'coffee grounds vomit' → vomiting_blood",
+      "tags": [
+        "red_flag",
+        "standard"
+      ]
     },
     {
       "id": "case_049",
       "input": "I have moderate lower back pain for 3 days that gets worse when I sit, no other symptoms",
       "expected": {
         "symptoms": [
-          { "id": "lower_back_pain", "severity": "MODERATE" }
+          {
+            "id": "lower_back_pain",
+            "severity": "MODERATE"
+          }
         ],
         "duration": "3 days"
       },
-      "notes": "Tests isolated MODERATE severity extraction; postural back pain with explicit severity word"
+      "notes": "Tests isolated MODERATE severity extraction; postural back pain with explicit severity word",
+      "tags": [
+        "standard"
+      ]
     },
     {
       "id": "case_050",
       "input": "body me dard hai, bukhaar hai, thakaan hai, naak bhi beh rahi hai, khansi bhi hai, 2 din se",
       "expected": {
         "symptoms": [
-          { "id": "body_aches" },
-          { "id": "fever" },
-          { "id": "fatigue" },
-          { "id": "runny_nose" },
-          { "id": "cough" }
+          {
+            "id": "body_aches"
+          },
+          {
+            "id": "fever"
+          },
+          {
+            "id": "fatigue"
+          },
+          {
+            "id": "runny_nose"
+          },
+          {
+            "id": "cough"
+          }
         ],
         "duration": "2 days"
       },
-      "notes": "Tests Hinglish multi-symptom flu: 5 symptoms in one sentence — body_aches, fever, fatigue, runny_nose, cough"
+      "notes": "Tests Hinglish multi-symptom flu: 5 symptoms in one sentence — body_aches, fever, fatigue, runny_nose, cough",
+      "tags": [
+        "hinglish",
+        "multi_symptom"
+      ]
+    },
+    {
+      "id": "case_051",
+      "input": "I have greasy facial skin with lots of blackheads and whiteheads on my nose and chin",
+      "expected": {
+        "symptoms": [
+          {
+            "id": "oily_skin"
+          },
+          {
+            "id": "blackheads_or_whiteheads"
+          }
+        ]
+      },
+      "notes": "Tests acne comedonal presentation; 'blackheads and whiteheads' -> blackheads_or_whiteheads, 'greasy skin' -> oily_skin",
+      "tags": [
+        "standard"
+      ]
+    },
+    {
+      "id": "case_052",
+      "input": "peshab me se bohot gandi badbu aa rahi hai aur urine bilkul cloudy dikh raha hai, jalan bhi hai",
+      "expected": {
+        "symptoms": [
+          {
+            "id": "cloudy_or_smelly_urine"
+          },
+          {
+            "id": "burning_urination"
+          }
+        ]
+      },
+      "notes": "Tests Hinglish UTI presentation: 'badbu cloudy urine' -> cloudy_or_smelly_urine, 'jalan' -> burning_urination",
+      "tags": [
+        "hinglish",
+        "misspelling"
+      ]
+    },
+    {
+      "id": "case_053",
+      "input": "patient has sudden confusion, cannot remember where he is and has high fever",
+      "expected": {
+        "symptoms": [
+          {
+            "id": "confusion"
+          },
+          {
+            "id": "fever",
+            "severity": "SEVERE"
+          }
+        ]
+      },
+      "notes": "Tests encephalopathy / severe infection red flag; 'sudden confusion' -> confusion, 'high fever' -> fever SEVERE",
+      "tags": [
+        "red_flag",
+        "standard"
+      ]
+    },
+    {
+      "id": "case_054",
+      "input": "mujhe 4 din se pet saaf nahi hua hai, pet phoola hua lag raha hai aur dard hai",
+      "expected": {
+        "symptoms": [
+          {
+            "id": "constipation"
+          },
+          {
+            "id": "bloating"
+          },
+          {
+            "id": "abdominal_pain"
+          }
+        ],
+        "duration": "4 days"
+      },
+      "notes": "Tests Hinglish constipation: 'pet saaf nahi hua' -> constipation, 'pet phoola' -> bloating, 'dard' -> abdominal_pain",
+      "tags": [
+        "hinglish",
+        "multi_symptom"
+      ]
+    },
+    {
+      "id": "case_055",
+      "input": "skin is extremely hot and dry with zero sweating after collapse during a marathon",
+      "expected": {
+        "symptoms": [
+          {
+            "id": "hot_dry_skin"
+          },
+          {
+            "id": "fainting"
+          }
+        ]
+      },
+      "notes": "Tests heat stroke emergency presentation; 'hot and dry skin' -> hot_dry_skin, 'collapse' -> fainting",
+      "tags": [
+        "misspelling",
+        "red_flag"
+      ]
+    },
+    {
+      "id": "case_056",
+      "input": "I haven't passed any urine in the last 24 hours and have severe swelling in both legs",
+      "expected": {
+        "symptoms": [
+          {
+            "id": "little_or_no_urine"
+          },
+          {
+            "id": "skin_swelling",
+            "severity": "SEVERE"
+          }
+        ],
+        "duration": "1 day"
+      },
+      "notes": "Tests acute kidney injury / anuria red flag; 'haven't passed urine' -> little_or_no_urine, 'swelling' -> skin_swelling",
+      "tags": [
+        "misspelling",
+        "red_flag"
+      ]
+    },
+    {
+      "id": "case_057",
+      "input": "sudden loss of bladder control with severe back pain and numbness around my private area",
+      "expected": {
+        "symptoms": [
+          {
+            "id": "loss_of_bladder_or_bowel_control"
+          },
+          {
+            "id": "lower_back_pain",
+            "severity": "SEVERE"
+          },
+          {
+            "id": "saddle_numbness"
+          }
+        ]
+      },
+      "notes": "Tests cauda equina emergency triad: loss_of_bladder_or_bowel_control, lower_back_pain SEVERE, saddle_numbness",
+      "tags": [
+        "misspelling",
+        "red_flag",
+        "multi_symptom"
+      ]
+    },
+    {
+      "id": "case_058",
+      "input": "desk work causes bad neck and shoulder tension with a dull ache spreading to my head",
+      "expected": {
+        "symptoms": [
+          {
+            "id": "neck_or_shoulder_tension"
+          },
+          {
+            "id": "headache"
+          }
+        ]
+      },
+      "notes": "Tests musculoskeletal tension: 'neck and shoulder tension' -> neck_or_shoulder_tension, 'ache spreading to head' -> headache",
+      "tags": [
+        "standard"
+      ]
+    },
+    {
+      "id": "case_059",
+      "input": "child has dark purple rash that does not fade when pressed with a drinking glass and very high fever",
+      "expected": {
+        "symptoms": [
+          {
+            "id": "non_blanching_rash"
+          },
+          {
+            "id": "fever",
+            "severity": "SEVERE"
+          }
+        ]
+      },
+      "notes": "Tests meningococcal glass test: 'rash that does not fade when pressed' -> non_blanching_rash (red flag)",
+      "tags": [
+        "red_flag",
+        "standard"
+      ]
+    },
+    {
+      "id": "case_060",
+      "input": "my stool has turned very pale clay coloured and my eyes look distinctly yellow",
+      "expected": {
+        "symptoms": [
+          {
+            "id": "pale_stool"
+          },
+          {
+            "id": "yellow_skin_or_eyes"
+          }
+        ]
+      },
+      "notes": "Tests obstructive jaundice presentation: 'pale clay coloured stool' -> pale_stool, 'eyes yellow' -> yellow_skin_or_eyes",
+      "tags": [
+        "standard"
+      ]
+    },
+    {
+      "id": "case_061",
+      "input": "I have thin silvery wavy lines or burrows between my fingers that itch intensely at night",
+      "expected": {
+        "symptoms": [
+          {
+            "id": "skin_burrows"
+          },
+          {
+            "id": "itchy_skin",
+            "severity": "SEVERE"
+          }
+        ]
+      },
+      "notes": "Tests classic scabies burrows: 'burrows between fingers' -> skin_burrows, 'itch intensely' -> itchy_skin SEVERE",
+      "tags": [
+        "standard"
+      ]
+    },
+    {
+      "id": "case_062",
+      "input": "a small cut on my foot is not healing for over 3 weeks, and my feet feel constantly numb",
+      "expected": {
+        "symptoms": [
+          {
+            "id": "slow_healing_wounds"
+          }
+        ],
+        "duration": "3 weeks"
+      },
+      "notes": "Tests diabetic foot complication: 'not healing for 3 weeks' -> slow_healing_wounds",
+      "tags": [
+        "standard"
+      ]
+    },
+    {
+      "id": "case_063",
+      "input": "every loud noise makes my throbbing head hurt much worse, and bright sunlight is unbearable",
+      "expected": {
+        "symptoms": [
+          {
+            "id": "sound_sensitivity"
+          },
+          {
+            "id": "headache",
+            "severity": "SEVERE"
+          },
+          {
+            "id": "light_sensitivity",
+            "severity": "SEVERE"
+          }
+        ]
+      },
+      "notes": "Tests severe migraine phonophobia & photophobia: sound_sensitivity, headache SEVERE, light_sensitivity",
+      "tags": [
+        "multi_symptom",
+        "standard"
+      ]
+    },
+    {
+      "id": "case_064",
+      "input": "redness around my insect bite is rapidly spreading up my arm and feels hot and tender",
+      "expected": {
+        "symptoms": [
+          {
+            "id": "spreading_redness"
+          },
+          {
+            "id": "warm_tender_skin"
+          }
+        ]
+      },
+      "notes": "Tests cellulitis emergency progression: 'rapidly spreading redness' -> spreading_redness, 'hot and tender' -> warm_tender_skin",
+      "tags": [
+        "red_flag",
+        "standard"
+      ]
+    },
+    {
+      "id": "case_065",
+      "input": "I suddenly lost all vision in my left eye about an hour ago, like a black curtain fell",
+      "expected": {
+        "symptoms": [
+          {
+            "id": "sudden_vision_loss"
+          }
+        ],
+        "duration": "1 hour"
+      },
+      "notes": "Tests retinal detachment / stroke vision loss red flag: 'suddenly lost all vision' -> sudden_vision_loss",
+      "tags": [
+        "red_flag",
+        "standard"
+      ]
+    },
+    {
+      "id": "case_066",
+      "input": "I have swollen glands in my neck that are tender, along with a painful throat when swallowing",
+      "expected": {
+        "symptoms": [
+          {
+            "id": "swollen_neck_glands"
+          },
+          {
+            "id": "painful_swallowing"
+          },
+          {
+            "id": "sore_throat"
+          }
+        ]
+      },
+      "notes": "Tests pharyngitis / glandular lymphadenopathy: swollen_neck_glands, painful_swallowing, sore_throat",
+      "tags": [
+        "multi_symptom",
+        "standard"
+      ]
+    },
+    {
+      "id": "case_067",
+      "input": "I have persistent thoughts of self harm, severe despair and can't sleep or eat",
+      "expected": {
+        "symptoms": [
+          {
+            "id": "thoughts_of_self_harm"
+          },
+          {
+            "id": "loss_of_appetite"
+          }
+        ]
+      },
+      "notes": "Tests psychiatric red flag presentation: 'thoughts of self harm' -> thoughts_of_self_harm (critical red flag)",
+      "tags": [
+        "hinglish",
+        "misspelling",
+        "red_flag"
+      ]
+    },
+    {
+      "id": "case_068",
+      "input": "I saw flashing zigzag lights and visual aura before my one sided headache started",
+      "expected": {
+        "symptoms": [
+          {
+            "id": "visual_aura"
+          },
+          {
+            "id": "headache"
+          }
+        ]
+      },
+      "notes": "Tests migraine aura: 'flashing zigzag lights / visual aura' -> visual_aura, 'one sided headache' -> headache",
+      "tags": [
+        "standard"
+      ]
+    },
+    {
+      "id": "case_069",
+      "input": "both my eyes are watery and streaming with constant sneezing and a runny nose",
+      "expected": {
+        "symptoms": [
+          {
+            "id": "watery_eyes"
+          },
+          {
+            "id": "sneezing"
+          },
+          {
+            "id": "runny_nose"
+          }
+        ]
+      },
+      "notes": "Tests allergic / viral rhinoconjunctivitis: watery_eyes, sneezing, runny_nose",
+      "tags": [
+        "multi_symptom",
+        "standard"
+      ]
+    },
+    {
+      "id": "case_070",
+      "input": "I have swelling in my lower leg with pitting edema and warmth",
+      "expected": {
+        "symptoms": [
+          {
+            "id": "skin_swelling"
+          },
+          {
+            "id": "warm_tender_skin"
+          }
+        ]
+      },
+      "notes": "Tests peripheral swelling / DVT signs: 'swelling in lower leg' -> skin_swelling, 'warmth' -> warm_tender_skin",
+      "tags": [
+        "standard"
+      ]
+    },
+    {
+      "id": "case_071",
+      "input": "feever and extreem headach with shivring for past 3 days",
+      "expected": {
+        "symptoms": [
+          {
+            "id": "fever"
+          },
+          {
+            "id": "headache",
+            "severity": "SEVERE"
+          },
+          {
+            "id": "chills"
+          }
+        ],
+        "duration": "3 days"
+      },
+      "notes": "Tests misspelling: 'feever' -> fever, 'extreem headach' -> headache SEVERE, 'shivring' -> chills",
+      "tags": [
+        "misspelling",
+        "multi_symptom"
+      ]
+    },
+    {
+      "id": "case_072",
+      "input": "loose mottions and stomache crams for 2 days, feeling nausious",
+      "expected": {
+        "symptoms": [
+          {
+            "id": "diarrhea"
+          },
+          {
+            "id": "abdominal_pain"
+          },
+          {
+            "id": "nausea"
+          }
+        ],
+        "duration": "2 days"
+      },
+      "notes": "Tests misspelling: 'loose mottions' -> diarrhea, 'stomache crams' -> abdominal_pain, 'nausious' -> nausea",
+      "tags": [
+        "misspelling",
+        "multi_symptom"
+      ]
+    },
+    {
+      "id": "case_073",
+      "input": "naucea, dizzynes and blured vission since yesterday evening",
+      "expected": {
+        "symptoms": [
+          {
+            "id": "nausea"
+          },
+          {
+            "id": "dizziness"
+          },
+          {
+            "id": "blurred_vision"
+          }
+        ],
+        "duration": "1 day"
+      },
+      "notes": "Tests misspelling: 'naucea' -> nausea, 'dizzynes' -> dizziness, 'blured vission' -> blurred_vision",
+      "tags": [
+        "misspelling",
+        "multi_symptom"
+      ]
+    },
+    {
+      "id": "case_074",
+      "input": "diffculty breathin and wheesing sound in chest when lying down",
+      "expected": {
+        "symptoms": [
+          {
+            "id": "shortness_of_breath"
+          },
+          {
+            "id": "wheezing"
+          }
+        ]
+      },
+      "notes": "Tests misspelling: 'diffculty breathin' -> shortness_of_breath, 'wheesing' -> wheezing",
+      "tags": [
+        "misspelling",
+        "red_flag"
+      ]
+    },
+    {
+      "id": "case_075",
+      "input": "itchy bumpz on my chest and redish rash spreading fast",
+      "expected": {
+        "symptoms": [
+          {
+            "id": "small_itchy_bumps"
+          },
+          {
+            "id": "skin_rash"
+          }
+        ]
+      },
+      "notes": "Tests misspelling: 'itchy bumpz' -> small_itchy_bumps, 'redish rash' -> skin_rash",
+      "tags": [
+        "misspelling"
+      ]
+    },
+    {
+      "id": "case_076",
+      "input": "unberable pain in lowr back and saddel numbness in groin",
+      "expected": {
+        "symptoms": [
+          {
+            "id": "lower_back_pain",
+            "severity": "SEVERE"
+          },
+          {
+            "id": "saddle_numbness"
+          }
+        ]
+      },
+      "notes": "Tests misspelling: 'unberable pain in lowr back' -> lower_back_pain SEVERE, 'saddel numbness' -> saddle_numbness",
+      "tags": [
+        "misspelling",
+        "red_flag"
+      ]
+    },
+    {
+      "id": "case_077",
+      "input": "sudden confution, slured speach and droopin face on right side",
+      "expected": {
+        "symptoms": [
+          {
+            "id": "confusion"
+          },
+          {
+            "id": "slurred_speech"
+          },
+          {
+            "id": "facial_droop"
+          }
+        ]
+      },
+      "notes": "Tests misspelling + FAST stroke triad: 'confution' -> confusion, 'slured speach' -> slurred_speech, 'droopin face' -> facial_droop",
+      "tags": [
+        "misspelling",
+        "red_flag",
+        "multi_symptom"
+      ]
+    },
+    {
+      "id": "case_078",
+      "input": "constipasion and bloatting for 1 week with mild stomack aking",
+      "expected": {
+        "symptoms": [
+          {
+            "id": "constipation"
+          },
+          {
+            "id": "bloating"
+          },
+          {
+            "id": "abdominal_pain",
+            "severity": "MILD"
+          }
+        ],
+        "duration": "1 week"
+      },
+      "notes": "Tests misspelling: 'constipasion' -> constipation, 'bloatting' -> bloating, 'stomack aking' -> abdominal_pain MILD",
+      "tags": [
+        "misspelling",
+        "multi_symptom"
+      ]
+    },
+    {
+      "id": "case_079",
+      "input": "non-blanchin purplish rash on child legs with feever of 103",
+      "expected": {
+        "symptoms": [
+          {
+            "id": "non_blanching_rash"
+          },
+          {
+            "id": "fever",
+            "severity": "SEVERE"
+          }
+        ]
+      },
+      "notes": "Tests misspelling + emergency: 'non-blanchin' -> non_blanching_rash, 'feever 103' -> fever SEVERE",
+      "tags": [
+        "misspelling",
+        "red_flag"
+      ]
+    },
+    {
+      "id": "case_080",
+      "input": "swolen glanz on my nek with soar throte and pain when swallwing",
+      "expected": {
+        "symptoms": [
+          {
+            "id": "swollen_neck_glands"
+          },
+          {
+            "id": "sore_throat"
+          },
+          {
+            "id": "painful_swallowing"
+          }
+        ]
+      },
+      "notes": "Tests misspelling: 'swolen glanz on nek' -> swollen_neck_glands, 'soar throte' -> sore_throat, 'swallwing' -> painful_swallowing",
+      "tags": [
+        "misspelling",
+        "multi_symptom"
+      ]
+    },
+    {
+      "id": "case_081",
+      "input": "sudden vison loss in right eye and bad hedache since morning",
+      "expected": {
+        "symptoms": [
+          {
+            "id": "sudden_vision_loss"
+          },
+          {
+            "id": "headache",
+            "severity": "SEVERE"
+          }
+        ],
+        "duration": "1 day"
+      },
+      "notes": "Tests misspelling + emergency: 'sudden vison loss' -> sudden_vision_loss, 'bad hedache' -> headache SEVERE",
+      "tags": [
+        "misspelling",
+        "red_flag"
+      ]
+    },
+    {
+      "id": "case_082",
+      "input": "extream thoughts of self harm and feeling completly hopeles and tired",
+      "expected": {
+        "symptoms": [
+          {
+            "id": "thoughts_of_self_harm"
+          },
+          {
+            "id": "fatigue"
+          }
+        ]
+      },
+      "notes": "Tests misspelling + mental health emergency: 'extream thoughts of self harm' -> thoughts_of_self_harm, 'tired' -> fatigue",
+      "tags": [
+        "misspelling",
+        "red_flag"
+      ]
+    },
+    {
+      "id": "case_083",
+      "input": "hot dry skinn with no swetting after workin in blazing sun",
+      "expected": {
+        "symptoms": [
+          {
+            "id": "hot_dry_skin"
+          }
+        ]
+      },
+      "notes": "Tests misspelling + hyperthermia red flag: 'hot dry skinn no swetting' -> hot_dry_skin",
+      "tags": [
+        "misspelling",
+        "red_flag"
+      ]
+    },
+    {
+      "id": "case_084",
+      "input": "cant control my bladeder and feel numbnes in groyn area",
+      "expected": {
+        "symptoms": [
+          {
+            "id": "loss_of_bladder_or_bowel_control"
+          },
+          {
+            "id": "saddle_numbness"
+          }
+        ]
+      },
+      "notes": "Tests misspelling + neuro red flag: 'cant control bladeder' -> loss_of_bladder_or_bowel_control, 'numbnes in groyn' -> saddle_numbness",
+      "tags": [
+        "misspelling",
+        "red_flag"
+      ]
+    },
+    {
+      "id": "case_085",
+      "input": "clay colord or pail stool and yellow eyes for 5 days",
+      "expected": {
+        "symptoms": [
+          {
+            "id": "pale_stool"
+          },
+          {
+            "id": "yellow_skin_or_eyes"
+          }
+        ],
+        "duration": "5 days"
+      },
+      "notes": "Tests misspelling: 'pail stool' -> pale_stool, 'yellow eyes' -> yellow_skin_or_eyes",
+      "tags": [
+        "misspelling"
+      ]
+    },
+    {
+      "id": "case_086",
+      "input": "litlle or no urin output since 24 hours with bad abdomin pain",
+      "expected": {
+        "symptoms": [
+          {
+            "id": "little_or_no_urine"
+          },
+          {
+            "id": "abdominal_pain",
+            "severity": "SEVERE"
+          }
+        ],
+        "duration": "1 day"
+      },
+      "notes": "Tests misspelling + renal failure: 'litlle or no urin' -> little_or_no_urine, 'bad abdomin pain' -> abdominal_pain SEVERE",
+      "tags": [
+        "misspelling",
+        "red_flag"
+      ]
+    },
+    {
+      "id": "case_087",
+      "input": "itchy burrows between my fingres with sever itch at nite",
+      "expected": {
+        "symptoms": [
+          {
+            "id": "skin_burrows"
+          },
+          {
+            "id": "itchy_skin",
+            "severity": "SEVERE"
+          }
+        ]
+      },
+      "notes": "Tests misspelling: 'itchy burrows fingres' -> skin_burrows, 'sever itch' -> itchy_skin SEVERE",
+      "tags": [
+        "misspelling"
+      ]
+    },
+    {
+      "id": "case_088",
+      "input": "flank pain on rihgt side and blud in my urine for 2 days",
+      "expected": {
+        "symptoms": [
+          {
+            "id": "flank_pain"
+          },
+          {
+            "id": "blood_in_urine"
+          }
+        ],
+        "duration": "2 days"
+      },
+      "notes": "Tests misspelling: 'flank pain on rihgt side' -> flank_pain, 'blud in urine' -> blood_in_urine",
+      "tags": [
+        "misspelling"
+      ]
+    },
+    {
+      "id": "case_089",
+      "input": "sir me bohot tez dard hai, chakkar aa rahe hain aur achanak ulti jaisa lag raha hai",
+      "expected": {
+        "symptoms": [
+          {
+            "id": "headache",
+            "severity": "SEVERE"
+          },
+          {
+            "id": "dizziness"
+          },
+          {
+            "id": "nausea"
+          }
+        ]
+      },
+      "notes": "Tests Hinglish multi-symptom migraine/neuro: 'sir me tez dard' -> headache SEVERE, 'chakkar' -> dizziness, 'ulti jaisa' -> nausea",
+      "tags": [
+        "hinglish",
+        "multi_symptom"
+      ]
+    },
+    {
+      "id": "case_090",
+      "input": "sans phool rahi hai, seene me jakdan mehsoos ho rahi hai aur seeti jaisi aawaz aati hai",
+      "expected": {
+        "symptoms": [
+          {
+            "id": "shortness_of_breath"
+          },
+          {
+            "id": "chest_tightness"
+          },
+          {
+            "id": "wheezing"
+          }
+        ]
+      },
+      "notes": "Tests Hinglish asthma triad: 'sans phool rahi' -> shortness_of_breath, 'seene me jakdan' -> chest_tightness, 'seeti jaisi aawaz' -> wheezing",
+      "tags": [
+        "hinglish",
+        "red_flag",
+        "multi_symptom"
+      ]
+    },
+    {
+      "id": "case_091",
+      "input": "gardan me gathaan jaisi lag rahi hai, gale me kharash hai aur nigalne me dard hai",
+      "expected": {
+        "symptoms": [
+          {
+            "id": "swollen_neck_glands"
+          },
+          {
+            "id": "sore_throat"
+          },
+          {
+            "id": "painful_swallowing"
+          }
+        ]
+      },
+      "notes": "Tests Hinglish tonsillitis: 'gardan me gathaan' -> swollen_neck_glands, 'gale me kharash' -> sore_throat, 'nigalne me dard' -> painful_swallowing",
+      "tags": [
+        "hinglish",
+        "multi_symptom"
+      ]
+    },
+    {
+      "id": "case_092",
+      "input": "aankhon se paani beh raha hai, aankhein laal ho gayi hain aur bahut khujli chal rahi hai",
+      "expected": {
+        "symptoms": [
+          {
+            "id": "watery_eyes"
+          },
+          {
+            "id": "red_eye"
+          },
+          {
+            "id": "itchy_eyes",
+            "severity": "SEVERE"
+          }
+        ]
+      },
+      "notes": "Tests Hinglish conjunctivitis: 'aankhon se paani' -> watery_eyes, 'aankhein laal' -> red_eye, 'khujli' -> itchy_eyes",
+      "tags": [
+        "hinglish",
+        "multi_symptom"
+      ]
+    },
+    {
+      "id": "case_093",
+      "input": "pair me chot theek nahi ho rahi hai 1 mahine se, thakaan rehti hai aur bohot pyas lagti hai",
+      "expected": {
+        "symptoms": [
+          {
+            "id": "slow_healing_wounds"
+          },
+          {
+            "id": "fatigue"
+          },
+          {
+            "id": "excessive_thirst"
+          }
+        ],
+        "duration": "1 month"
+      },
+      "notes": "Tests Hinglish diabetic signs: 'chot theek nahi ho rahi' -> slow_healing_wounds, 'thakaan' -> fatigue, 'bohot pyas' -> excessive_thirst",
+      "tags": [
+        "hinglish",
+        "multi_symptom"
+      ]
+    },
+    {
+      "id": "case_094",
+      "input": "aawaaz sunne se sir me dard badh jata hai, tez roshni se takleef hoti hai aur aage chamak dikhti hai",
+      "expected": {
+        "symptoms": [
+          {
+            "id": "sound_sensitivity"
+          },
+          {
+            "id": "headache"
+          },
+          {
+            "id": "light_sensitivity"
+          },
+          {
+            "id": "visual_aura"
+          }
+        ]
+      },
+      "notes": "Tests Hinglish 4-symptom migraine aura: sound_sensitivity, headache, light_sensitivity, visual_aura",
+      "tags": [
+        "hinglish",
+        "multi_symptom"
+      ]
+    },
+    {
+      "id": "case_095",
+      "input": "tavacha pe laal dhabbe fail rahe hain, chamdi garam lag rahi hai aur sujan aa gayi hai",
+      "expected": {
+        "symptoms": [
+          {
+            "id": "spreading_redness"
+          },
+          {
+            "id": "warm_tender_skin"
+          },
+          {
+            "id": "skin_swelling"
+          }
+        ]
+      },
+      "notes": "Tests Hinglish cellulitis: 'laal dhabbe fail rahe' -> spreading_redness, 'chamdi garam' -> warm_tender_skin, 'sujan' -> skin_swelling",
+      "tags": [
+        "hinglish",
+        "multi_symptom"
+      ]
+    },
+    {
+      "id": "case_096",
+      "input": "dast lag gaye hain aur subah se paani bhi hazam nahi ho raha, lagatar ulti aa rahi hai",
+      "expected": {
+        "symptoms": [
+          {
+            "id": "diarrhea"
+          },
+          {
+            "id": "unable_to_keep_fluids_down"
+          },
+          {
+            "id": "vomiting"
+          }
+        ],
+        "duration": "1 day"
+      },
+      "notes": "Tests Hinglish severe gastroenteritis: 'dast' -> diarrhea, 'paani bhi hazam nahi ho raha' -> unable_to_keep_fluids_down, 'ulti' -> vomiting",
+      "tags": [
+        "hinglish",
+        "multi_symptom"
+      ]
+    },
+    {
+      "id": "case_097",
+      "input": "achanak behosh ho gaya aur uthne ke baad kuch samajh nahi aa raha tha, sir ghoom raha hai",
+      "expected": {
+        "symptoms": [
+          {
+            "id": "fainting"
+          },
+          {
+            "id": "confusion"
+          },
+          {
+            "id": "dizziness"
+          }
+        ]
+      },
+      "notes": "Tests Hinglish post-ictal / syncope: 'achanak behosh' -> fainting, 'kuch samajh nahi aa raha' -> confusion, 'sir ghoom raha' -> dizziness",
+      "tags": [
+        "hinglish",
+        "red_flag",
+        "multi_symptom"
+      ]
+    },
+    {
+      "id": "case_098",
+      "input": "khansi me balgam aa raha hai, halka bukhar hai aur seene me dard ho raha hai 3 din se",
+      "expected": {
+        "symptoms": [
+          {
+            "id": "productive_cough"
+          },
+          {
+            "id": "fever",
+            "severity": "MILD"
+          },
+          {
+            "id": "chest_pain"
+          }
+        ],
+        "duration": "3 days"
+      },
+      "notes": "Tests Hinglish productive cough bronchitis/pneumonia: productive_cough, fever MILD, chest_pain",
+      "tags": [
+        "hinglish",
+        "red_flag",
+        "multi_symptom"
+      ]
+    },
+    {
+      "id": "case_099",
+      "input": "chehre pe pimples ho gaye hain, kali keel aur safed dane nikal rahe hain, tavacha oily hai",
+      "expected": {
+        "symptoms": [
+          {
+            "id": "pimples"
+          },
+          {
+            "id": "blackheads_or_whiteheads"
+          },
+          {
+            "id": "oily_skin"
+          }
+        ]
+      },
+      "notes": "Tests Hinglish acne: 'pimples' -> pimples, 'kali keel aur safed dane' -> blackheads_or_whiteheads, 'oily' -> oily_skin",
+      "tags": [
+        "hinglish",
+        "multi_symptom"
+      ]
+    },
+    {
+      "id": "case_100",
+      "input": "peshab me jalan hai, baar baar peshab aati hai, bohot badbudaar urine hai aur halka bukhar hai",
+      "expected": {
+        "symptoms": [
+          {
+            "id": "burning_urination"
+          },
+          {
+            "id": "frequent_urination"
+          },
+          {
+            "id": "cloudy_or_smelly_urine"
+          },
+          {
+            "id": "fever",
+            "severity": "MILD"
+          }
+        ]
+      },
+      "notes": "Tests Hinglish complex 4-symptom UTI: burning_urination, frequent_urination, cloudy_or_smelly_urine, fever MILD",
+      "tags": [
+        "hinglish",
+        "misspelling",
+        "multi_symptom"
+      ]
     }
   ]
 }
