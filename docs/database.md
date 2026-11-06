@@ -1,10 +1,11 @@
 # Database foundation
 
-Owner: Harsh · Task: S0-HAR-1 · Issue: #9 · Requirement: FR-01
+Owner: Harsh, Dimple, Kavya · Tasks: S0-HAR-1, S1-DIM-4, S1-KAV-4 · Issues: #9, #38, #37 · Requirements: FR-01, NFR-01, idea § 10
 
 This change supplies PostgreSQL-oriented SQLAlchemy 2 models, session factories,
-Alembic's initial revision, fictional seed data, and isolated tests. It does not
-create the API, authenticate users, authorize guest access, or compute results.
+Alembic migrations (initial revision `0001_database_foundation`, hot-query indexes
+revision `0002_hot_query_indexes`, and guest session revision `0003_guest_sessions`),
+guest session repository, fictional seed data, and isolated unit tests.
 
 ## Current status and team handoff
 
@@ -12,7 +13,7 @@ Local code is ready to exercise against PostgreSQL 16. Neon staging/main have
 not been provisioned or verified by this change. Complete these items before
 claiming issue #9 is done:
 
-- **Harsh:** run the PostgreSQL test mode below and verify the five local tables.
+- **Harsh:** run the PostgreSQL test mode below and verify the local tables.
 - **Rutva (S0-RUT-1):** merge the pinned dependencies from
   `server/app/db/requirements-local.txt` and `requirements-test.txt` into the
   shared server dependency files. Add the normal `app/__init__.py` in the
@@ -46,6 +47,8 @@ replace this bootstrap workflow with the agreed application configuration.
 ```mermaid
 erDiagram
     USERS o|--o{ ASSESSMENTS : owns
+    USERS o|--o{ GUEST_SESSIONS : claims
+    GUEST_SESSIONS o|--o{ ASSESSMENTS : tracks
     CONSENTS ||--o| ASSESSMENTS : authorizes
     ASSESSMENTS ||--o{ MESSAGES : contains
     ASSESSMENTS ||--o{ SYMPTOMS : contains
@@ -59,38 +62,50 @@ provide the UUID. The only server state default is `START`.
 | --- | --- | --- |
 | `users` | `email`, nullable `password_hash` | Unique, nonblank lowercase/trimmed email. Non-null hash cannot be blank. |
 | `consents` | `policy_version` | Nonblank version; existence represents affirmative acceptance. |
-| `assessments` | nullable `user_id`, `consent_id`, `state` | Valid FKs; required unique consent; allowed state check. |
+| `guest_sessions` | `token_hash`, `expires_at`, nullable `claimed_at`, nullable `claimed_by_user_id` | Unique 64-char hash; expires after created; nullable FK to `users` with `SET NULL`. |
+| `assessments` | nullable `user_id`, nullable `guest_session_id`, `consent_id`, `state` | Valid FKs (`user_id` RESTRICT, `guest_session_id` SET NULL); required unique consent; allowed state check. |
 | `messages` | `assessment_id`, `position`, `role`, `content` | Valid FK; unique position per assessment; nonnegative position; user/assistant role; nonblank text. |
 | `symptoms` | `assessment_id`, `name` | Valid FK; unique normalized nonblank name per assessment. |
 
 State values follow the sprint plan: `START`, `SYMPTOM_COLLECTION`, `CLARIFYING`,
 `CONFIRMING`, `READY`, `ANALYZING`, `COMPLETED`. The database checks membership;
-Kavya's service will enforce legal transitions. Message ordering is supplied by
+the service layer enforces legal transitions. Message ordering is supplied by
 the writer and checked for duplicates by the database. Concurrent/retry handling
 belongs to later repository and orchestration tasks.
 
-An assessment without `user_id` supports the future guest flow; a missing user
-ID is **not authorization**. Guest token ownership arrives in S1-HAR-3.
-Consent records carry no health text and may be created before the assessment.
-This is a proposed persistence interface, not the completed consent UX.
+## Guest sessions and anonymous ownership (S1-KAV-4, idea § 10)
 
-All foreign keys use `ON DELETE RESTRICT`, with matching ORM passive-deletion
-behavior, to prevent accidental orphaning/removal. The explicit account deletion
-workflow is S2-HAR-4. That workflow must also remove associated consent records
-when appropriate; no purge or retention policy is implemented in this task.
+Per idea § 10, guest mode enables immediate triage without requiring sign-up:
+- **Bearer Token Security:** When an anonymous session begins, `create_guest_session`
+  generates a 32-byte URL-safe cryptographic token (`secrets.token_urlsafe(32)`).
+  Raw tokens are returned directly to the client and **never** stored in the database.
+  Only the 64-character SHA-256 hex digest is persisted in `guest_sessions.token_hash`.
+- **Expiration:** Guest sessions expire after a configurable TTL (default 24 hours).
+  The database enforces `expires_at > created_at`.
+- **Assessment Ownership:** Assessments link to guest sessions via `guest_session_id`.
+  An unauthenticated assessment possesses a `guest_session_id` and `consent_id`,
+  with `user_id` set to `None`.
+- **Account Claiming & History Transfer:** When an anonymous guest signs up or logs
+  in after triage, `claim_guest_session(session, guest_session_id, user_id)`:
+  1. Sets `guest_sessions.claimed_at` and `guest_sessions.claimed_by_user_id`.
+  2. Reassigns ownership of all assessments in that guest session to the user (`assessment.user_id = user_id`).
+  3. Prevents re-claiming an already-claimed guest session.
+- **Deletions:** Foreign keys for `guest_sessions.claimed_by_user_id` and
+  `assessments.guest_session_id` use `ON DELETE SET NULL`. If a user account is deleted,
+  the session claim pointer clears; if an expired guest session is purged, assessments
+  retain their historical consent integrity without hard cascades.
 
 Password hashes are opaque and nullable. Auth must reject password login for a
 NULL hash; seed accounts deliberately have no login credential. Hashing and
 validation belong to the auth module. Never store plaintext passwords.
 
 No image column, doctor directory, profile fields, prediction scores, or medical
-recommendations are introduced. Structured symptom JSONB is S1-HAR-2. Hot-query
-indexes beyond primary/unique indexes and realistic demo content are S1-HAR-4.
+recommendations are introduced. Structured symptom JSONB is S1-HAR-2.
 
 ## Windows local setup (existing Docker database)
 
-Start from the repository root on `harsh/9-database-foundation`. These commands
-use the Python 3.12 `.venv` already created there; activation is unnecessary.
+Start from the repository root. These commands
+use the Python 3.12/3.13 `.venv` already created there; activation is unnecessary.
 
 ```powershell
 .\.venv\Scripts\python.exe -m pip install -r .\server\app\db\requirements-test.txt
@@ -109,11 +124,10 @@ Verify the migration and seed using Docker (works from any directory):
 
 ```powershell
 docker exec harsh-symptom-db psql -U symptom_dev -d symptom_checker -c "SELECT version_num FROM alembic_version;"
-docker exec harsh-symptom-db psql -U symptom_dev -d symptom_checker -c "SELECT 'users' AS table_name, count(*) FROM users UNION ALL SELECT 'consents', count(*) FROM consents UNION ALL SELECT 'assessments', count(*) FROM assessments UNION ALL SELECT 'messages', count(*) FROM messages UNION ALL SELECT 'symptoms', count(*) FROM symptoms;"
+docker exec harsh-symptom-db psql -U symptom_dev -d symptom_checker -c "SELECT 'users' AS table_name, count(*) FROM users UNION ALL SELECT 'consents', count(*) FROM consents UNION ALL SELECT 'guest_sessions', count(*) FROM guest_sessions UNION ALL SELECT 'assessments', count(*) FROM assessments UNION ALL SELECT 'messages', count(*) FROM messages UNION ALL SELECT 'symptoms', count(*) FROM symptoms;"
 ```
 
-Expect revision `0001_database_foundation` and one row in each table on a fresh
-seeded database. Running seed again adds nothing and never overwrites records.
+Expect revision `0003_guest_sessions`. Running seed again adds nothing and never overwrites records.
 If an identity conflicts, the transaction fails and rolls back instead of
 modifying existing data. The seed uses reserved `.invalid` email addresses,
 fixed UUIDs, and text explicitly marked fictional. Use it only for local testing.
@@ -123,16 +137,12 @@ fixed UUIDs, and text explicitly marked fictional. Use it only for local testing
 Run these from `server/`:
 
 ```powershell
-..\.venv\Scripts\python.exe -m ruff check .
-..\.venv\Scripts\python.exe -m ruff format --check .
-..\.venv\Scripts\python.exe -m mypy --explicit-package-bases app
-..\.venv\Scripts\python.exe -m pytest tests/unit/db -q
-..\.venv\Scripts\python.exe -m pytest tests/unit/db --db-postgres -s -q
+python -m ruff check .
+python -m ruff format --check .
+python -m mypy app
+python -m pytest tests/unit/db -q
+python -m pytest tests/unit/db --db-postgres -s -q
 ```
-
-The explicit mypy flag is temporary until the shared scaffold defines the app
-package or mypy configuration. Bare `mypy app` currently reports duplicate
-module paths in this unscaffolded namespace layout.
 
 The default tests use SQLite with foreign keys enabled. They verify migration
 round trips, metadata parity, constraints, relationships, rollback, repeatable
@@ -156,31 +166,13 @@ code owns shutdown disposal. Repositories can use:
 factory = create_session_factory(engine)
 with factory.begin() as session:
     # Repository operations: commit on success, rollback on failure, always close.
-    seed_fictional_data(session)  # Local maintenance example only.
+    guest_session, raw_token = create_guest_session(session)
 ```
 
 `upgrade_database(engine)` passes a live connection to Alembic using
 `Config.attributes["connection"]`. These patterns follow the official
 [SQLAlchemy transaction documentation](https://docs.sqlalchemy.org/en/20/orm/session_basics.html)
 and [Alembic connection-sharing cookbook](https://alembic.sqlalchemy.org/en/latest/cookbook.html).
-
-## Suggested local commits after review
-
-From the repository root, create meaningful commits with your own Git identity:
-
-```powershell
-git add server/app/models server/app/db server/app/repositories
-git commit -m "feat(db): add database models and session foundation"
-git add server/alembic server/alembic.ini
-git commit -m "feat(db): add initial database migration"
-git add server/tests/unit/db docs/database.md
-git commit -m "test(db): verify constraints and document local setup"
-```
-
-Do not claim CI, Neon, assignment, or deployment completion before verifying it.
-Push this feature branch and target `develop` when the integration dependencies
-are resolved. The leader reviews and merges; the PR must reference `Closes #9`
-and truthfully complete the repository PR template.
 
 ## Hot-query indexes and demo seed data (S1-DIM-4)
 

@@ -1,6 +1,6 @@
 """Optional registered user storage.
 
-Owner: Harsh · Task: S0-HAR-1 · Requirements: FR-01
+Owner: Harsh, Kavya · Task: S0-HAR-1, S1-KAV-4 · Requirements: FR-01, idea § 10
 """
 
 from typing import TYPE_CHECKING
@@ -12,6 +12,7 @@ from app.models.base import Base, RecordMixin
 
 if TYPE_CHECKING:
     from app.models.assessment import Assessment
+    from app.models.guest_session import GuestSession
 
 
 class User(RecordMixin, Base):
@@ -32,4 +33,7 @@ class User(RecordMixin, Base):
     password_hash: Mapped[str | None] = mapped_column(Text)
     assessments: Mapped[list["Assessment"]] = relationship(
         back_populates="user", passive_deletes="all"
+    )
+    claimed_guest_sessions: Mapped[list["GuestSession"]] = relationship(
+        back_populates="claimed_by_user", passive_deletes="all"
     )

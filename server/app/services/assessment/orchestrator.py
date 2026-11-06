@@ -4,15 +4,17 @@ Responsibilities:
     - Ingest user messages and record dialogue entries sequentially.
     - Coordinate with AI Gateway for symptom extraction and clarifying questions.
     - Cap clarification turns at MAX_CLARIFICATION_TURNS (3) per FR-04/FR-19.
-    - Transition to CONFIRMING and flag low confidence when the turn budget is reached.
+    - Transition to CONFIRMING and flag low confidence when turn budget is reached.
     - Merge newly extracted symptoms into current assessment state deterministically.
+    - Support symptom confirmation, additions, deletions, edits, and bulk updates.
+    - Provide restart_assessment() to cleanly reset an assessment session (FR-25).
+    - Step back to chat from CONFIRMING or READY for conversational edits.
     - Enforce state machine transitions (SYMPTOM_COLLECTION, CLARIFYING, CONFIRMING).
     - Handle AI timeouts and failures gracefully without crashing or changing state.
-
     - Run real analysis in generate_result() via condition predictor, risk engine,
       and result composer with safety-wording validation (FR-05, FR-06, FR-07, DR-05).
 
-Owner: Darshil (assessment) · Task: S2-DAR-5 · Requirements: FR-05, FR-06, FR-07, DR-05
+Owner: Darshil (assessment) · Task: S1-DAR-4 · Requirements: FR-16, FR-21, FR-25
 """
 
 from dataclasses import dataclass, field
@@ -37,7 +39,13 @@ from app.schemas.enums import (
     SymptomSource,
 )
 from app.schemas.message import MessageRead
-from app.schemas.symptom import Duration, Symptom, SymptomRead
+from app.schemas.symptom import (
+    Duration,
+    Symptom,
+    SymptomCreate,
+    SymptomRead,
+    SymptomUpdate,
+)
 from app.services.ai.factory import get_ai_gateway
 from app.services.ai.gateway import AiError, AiGateway, AiTimeoutError
 from collections.abc import Sequence
@@ -670,20 +678,130 @@ class AssessmentOrchestrator:
             is_low_confidence=session.is_low_confidence,
         )
 
+    def _apply_symptoms_payload(
+        self,
+        session: AssessmentSession,
+        symptoms: Sequence[Symptom | SymptomUpdate | SymptomRead],
+    ) -> None:
+        """Apply incoming symptoms collection to the runtime session."""
+        if not symptoms:
+            session.symptoms = []
+            session.state_machine.context.symptoms = []
+            return
+
+        if all(
+            isinstance(s, (Symptom, SymptomRead)) and not isinstance(s, SymptomUpdate)
+            for s in symptoms
+        ):
+            new_list: list[SymptomRead] = []
+            for s in symptoms:
+                dump = s.model_dump()
+                new_list.append(SymptomRead.model_validate(dump))
+            session.symptoms = new_list
+            session.state_machine.context.symptoms = [
+                s.model_dump() for s in session.symptoms
+            ]
+            return
+
+        symptom_map = {s.id: s for s in session.symptoms}
+        name_map = {s.name.lower(): s for s in session.symptoms}
+
+        for item in symptoms:
+            if isinstance(item, SymptomUpdate):
+                target = None
+                if item.id and item.id in symptom_map:
+                    target = symptom_map[item.id]
+                elif item.name and item.name.lower() in name_map:
+                    target = name_map[item.name.lower()]
+
+                if target is not None:
+                    if item.name is not None:
+                        target.name = item.name
+                    if item.severity is not None:
+                        target.severity = item.severity
+                    if item.duration is not None:
+                        target.duration = item.duration
+                    if item.body_location is not None:
+                        target.body_location = item.body_location
+                    target.source = item.source or SymptomSource.USER_CORRECTED
+                elif item.name:
+                    new_sym = SymptomRead(
+                        id=item.id or uuid4(),
+                        name=item.name,
+                        severity=item.severity or Severity.UNKNOWN,
+                        duration=item.duration,
+                        body_location=item.body_location,
+                        source=item.source or SymptomSource.USER,
+                    )
+                    session.symptoms.append(new_sym)
+                    symptom_map[new_sym.id] = new_sym
+                    name_map[new_sym.name.lower()] = new_sym
+            elif isinstance(item, (Symptom, SymptomRead)):
+                dump = item.model_dump()
+                read_item = SymptomRead.model_validate(dump)
+                if read_item.id in symptom_map:
+                    idx = session.symptoms.index(symptom_map[read_item.id])
+                    session.symptoms[idx] = read_item
+                elif read_item.name.lower() in name_map:
+                    idx = session.symptoms.index(name_map[read_item.name.lower()])
+                    session.symptoms[idx] = read_item
+                else:
+                    session.symptoms.append(read_item)
+                symptom_map[read_item.id] = read_item
+                name_map[read_item.name.lower()] = read_item
+
+        session.state_machine.context.symptoms = [
+            s.model_dump() for s in session.symptoms
+        ]
+
+    def _ensure_editable_state(self, session: AssessmentSession) -> None:
+        """Validate and prepare state machine for symptom modification.
+
+        Raises:
+            InvalidStateTransitionError: If session state blocks modifications.
+        """
+        sm = session.state_machine
+        if sm.current_state in (
+            AssessmentState.COMPLETED,
+            AssessmentState.ANALYZING,
+            AssessmentState.ERROR,
+            AssessmentState.START,
+        ):
+            raise InvalidStateTransitionError(
+                current_state=sm.current_state,
+                target_state=AssessmentState.CONFIRMING,
+                reason=(
+                    f"Symptom modification is not permitted in "
+                    f"'{sm.current_state.value}' state."
+                ),
+            )
+        if sm.current_state == AssessmentState.READY:
+            sm.transition_to(AssessmentState.CONFIRMING)
+        elif sm.current_state == AssessmentState.CONFIRMING:
+            sm.transition_to(AssessmentState.CONFIRMING)
+
     async def confirm_symptoms(
         self,
         assessment_id: UUID,
-        symptoms: list[Symptom] | None = None,
-    ) -> None:
+        symptoms: Sequence[Symptom | SymptomUpdate | SymptomRead] | None = None,
+    ) -> list[SymptomRead]:
         """Confirm the list of recognized symptoms and transition session to READY.
+
+        Validates that at least one symptom exists, updates symptoms if provided,
+        ensures source provenance is marked as confirmed, and advances the
+        state machine from CONFIRMING (or SYMPTOM_COLLECTION/CLARIFYING) to READY.
 
         Args:
             assessment_id: Unique assessment identifier.
             symptoms: Optional updated or confirmed symptoms list.
 
+        Returns:
+            list[SymptomRead]: The confirmed symptoms list.
+
         Raises:
-            AssessmentServiceError: If assessment missing or symptoms list empty.
-            InvalidStateTransitionError: If session state blocks confirmation.
+            AssessmentServiceError: If assessment is missing (404) or symptoms list
+                is empty (400).
+            InvalidStateTransitionError: If session state blocks confirmation (409).
         """
         session = self._sessions.get(assessment_id)
         if session is None:
@@ -693,13 +811,34 @@ class AssessmentOrchestrator:
                 status_code=status.HTTP_404_NOT_FOUND,
             )
 
+        sm = session.state_machine
+        if sm.current_state in (
+            AssessmentState.SYMPTOM_COLLECTION,
+            AssessmentState.CLARIFYING,
+        ):
+            if not session.symptoms and not symptoms:
+                raise AssessmentServiceError(
+                    message="Cannot confirm an empty symptom list.",
+                    code="EMPTY_SYMPTOMS",
+                    status_code=status.HTTP_400_BAD_REQUEST,
+                )
+            if symptoms:
+                self._apply_symptoms_payload(session, symptoms)
+            sm.proceed_to_confirmation()
+        elif sm.current_state == AssessmentState.READY:
+            sm.transition_to(AssessmentState.CONFIRMING)
+        elif sm.current_state != AssessmentState.CONFIRMING:
+            raise InvalidStateTransitionError(
+                current_state=sm.current_state,
+                target_state=AssessmentState.READY,
+                reason=(
+                    "Confirmation only permitted from CONFIRMING "
+                    "or active collection states."
+                ),
+            )
+
         if symptoms is not None:
-            session.symptoms = [
-                SymptomRead.model_validate(s.model_dump()) for s in symptoms
-            ]
-            session.state_machine.context.symptoms = [
-                s.model_dump() for s in session.symptoms
-            ]
+            self._apply_symptoms_payload(session, symptoms)
 
         if not session.symptoms:
             raise AssessmentServiceError(
@@ -708,9 +847,350 @@ class AssessmentOrchestrator:
                 status_code=status.HTTP_400_BAD_REQUEST,
             )
 
+        for s in session.symptoms:
+            if s.source in (SymptomSource.AI_EXTRACTED, SymptomSource.USER):
+                s.source = SymptomSource.USER_CONFIRMED
+
+        session.state_machine.context.symptoms = [
+            s.model_dump() for s in session.symptoms
+        ]
         session.state_machine.confirm_symptoms()
         session.updated_at = datetime.now(UTC)
-        logger.info("symptoms_confirmed", assessment_id=str(assessment_id))
+        logger.info(
+            "symptoms_confirmed",
+            assessment_id=str(assessment_id),
+            count=len(session.symptoms),
+        )
+        return list(session.symptoms)
+
+    async def update_symptoms(
+        self,
+        assessment_id: UUID,
+        symptoms: Sequence[SymptomUpdate | Symptom | SymptomRead],
+    ) -> list[SymptomRead]:
+        """Update, edit, add, or replace symptoms in an active assessment session.
+
+        Allows users to modify symptoms before final confirmation. If the session is
+        in READY, steps back to CONFIRMING. If in CONFIRMING, performs self-transition.
+
+        Args:
+            assessment_id: Unique assessment identifier.
+            symptoms: Sequence of symptom models or updates to apply.
+
+        Returns:
+            list[SymptomRead]: Current updated symptoms list.
+
+        Raises:
+            AssessmentServiceError: If assessment is missing (404).
+            InvalidStateTransitionError: If session state blocks editing (409).
+        """
+        session = self._sessions.get(assessment_id)
+        if session is None:
+            raise AssessmentServiceError(
+                message=f"Assessment '{assessment_id}' was not found.",
+                code="ASSESSMENT_NOT_FOUND",
+                status_code=status.HTTP_404_NOT_FOUND,
+            )
+
+        self._ensure_editable_state(session)
+        self._apply_symptoms_payload(session, symptoms)
+        session.updated_at = datetime.now(UTC)
+        logger.info(
+            "symptoms_updated",
+            assessment_id=str(assessment_id),
+            symptom_count=len(session.symptoms),
+        )
+        return list(session.symptoms)
+
+    async def add_symptom(
+        self,
+        assessment_id: UUID,
+        symptom: Symptom | SymptomCreate | SymptomRead,
+    ) -> SymptomRead:
+        """Add a single symptom to the assessment session.
+
+        If a symptom with the same canonical name already exists, updates its
+        severity, duration, and body location, marking source as USER_CORRECTED.
+        Otherwise creates a new SymptomRead record.
+
+        Args:
+            assessment_id: Unique assessment identifier.
+            symptom: Symptom record to add.
+
+        Returns:
+            SymptomRead: The added or updated symptom record.
+
+        Raises:
+            AssessmentServiceError: If assessment is missing (404).
+            InvalidStateTransitionError: If session state blocks modifications (409).
+        """
+        session = self._sessions.get(assessment_id)
+        if session is None:
+            raise AssessmentServiceError(
+                message=f"Assessment '{assessment_id}' was not found.",
+                code="ASSESSMENT_NOT_FOUND",
+                status_code=status.HTTP_404_NOT_FOUND,
+            )
+
+        self._ensure_editable_state(session)
+
+        cleaned_name = symptom.name.strip().lower()
+        existing = next(
+            (s for s in session.symptoms if s.name.lower() == cleaned_name), None
+        )
+        if existing is not None:
+            if symptom.severity != Severity.UNKNOWN:
+                existing.severity = symptom.severity
+            if symptom.duration is not None:
+                existing.duration = symptom.duration
+            if symptom.body_location is not None:
+                existing.body_location = symptom.body_location
+            existing.source = SymptomSource.USER_CORRECTED
+            target = existing
+        else:
+            sym_id = getattr(symptom, "id", None) or uuid4()
+            sym_source = getattr(symptom, "source", SymptomSource.USER)
+            target = SymptomRead(
+                id=sym_id,
+                name=cleaned_name,
+                severity=symptom.severity,
+                duration=symptom.duration,
+                body_location=symptom.body_location,
+                source=sym_source,
+            )
+            session.symptoms.append(target)
+
+        session.state_machine.context.symptoms = [
+            s.model_dump() for s in session.symptoms
+        ]
+        session.updated_at = datetime.now(UTC)
+        logger.info(
+            "symptom_added",
+            assessment_id=str(assessment_id),
+            symptom_name=target.name,
+        )
+        return target
+
+    async def remove_symptom(
+        self,
+        assessment_id: UUID,
+        symptom_id: UUID | str,
+    ) -> list[SymptomRead]:
+        """Remove a symptom from the assessment session by UUID or symptom name.
+
+        Args:
+            assessment_id: Unique assessment identifier.
+            symptom_id: UUID identifier or string name of the symptom to remove.
+
+        Returns:
+            list[SymptomRead]: Remaining symptoms after removal.
+
+        Raises:
+            AssessmentServiceError: If assessment is missing (404) or symptom
+                not found (404).
+            InvalidStateTransitionError: If session state blocks modifications (409).
+        """
+        session = self._sessions.get(assessment_id)
+        if session is None:
+            raise AssessmentServiceError(
+                message=f"Assessment '{assessment_id}' was not found.",
+                code="ASSESSMENT_NOT_FOUND",
+                status_code=status.HTTP_404_NOT_FOUND,
+            )
+
+        self._ensure_editable_state(session)
+
+        target_idx = None
+        for idx, s in enumerate(session.symptoms):
+            if isinstance(symptom_id, UUID):
+                if s.id == symptom_id:
+                    target_idx = idx
+                    break
+            else:
+                if (
+                    str(s.id) == symptom_id
+                    or s.name.lower() == symptom_id.strip().lower()
+                ):
+                    target_idx = idx
+                    break
+
+        if target_idx is None:
+            raise AssessmentServiceError(
+                message=(
+                    f"Symptom '{symptom_id}' was not found in assessment "
+                    f"'{assessment_id}'."
+                ),
+                code="SYMPTOM_NOT_FOUND",
+                status_code=status.HTTP_404_NOT_FOUND,
+            )
+
+        removed = session.symptoms.pop(target_idx)
+        session.state_machine.context.symptoms = [
+            s.model_dump() for s in session.symptoms
+        ]
+        session.updated_at = datetime.now(UTC)
+        logger.info(
+            "symptom_removed",
+            assessment_id=str(assessment_id),
+            symptom_name=removed.name,
+        )
+        return list(session.symptoms)
+
+    async def edit_symptom(
+        self,
+        assessment_id: UUID,
+        symptom_update: SymptomUpdate,
+    ) -> SymptomRead:
+        """Edit attributes (severity, duration, body location) of an existing symptom.
+
+        Args:
+            assessment_id: Unique assessment identifier.
+            symptom_update: Field updates to apply. Must specify either id or name.
+
+        Returns:
+            SymptomRead: The updated symptom record.
+
+        Raises:
+            AssessmentServiceError: If assessment is missing (404), payload
+                invalid (400), or symptom not found (404).
+            InvalidStateTransitionError: If session state blocks modifications (409).
+        """
+        session = self._sessions.get(assessment_id)
+        if session is None:
+            raise AssessmentServiceError(
+                message=f"Assessment '{assessment_id}' was not found.",
+                code="ASSESSMENT_NOT_FOUND",
+                status_code=status.HTTP_404_NOT_FOUND,
+            )
+
+        self._ensure_editable_state(session)
+
+        if symptom_update.id is None and not symptom_update.name:
+            raise AssessmentServiceError(
+                message="Symptom edit payload must specify an id or name.",
+                code="INVALID_SYMPTOM_UPDATE",
+                status_code=status.HTTP_400_BAD_REQUEST,
+            )
+
+        target = None
+        if symptom_update.id is not None:
+            target = next(
+                (s for s in session.symptoms if s.id == symptom_update.id), None
+            )
+        if target is None and symptom_update.name:
+            cleaned = symptom_update.name.strip().lower()
+            target = next(
+                (s for s in session.symptoms if s.name.lower() == cleaned), None
+            )
+
+        if target is None:
+            raise AssessmentServiceError(
+                message="Symptom was not found in assessment.",
+                code="SYMPTOM_NOT_FOUND",
+                status_code=status.HTTP_404_NOT_FOUND,
+            )
+
+        if symptom_update.name is not None:
+            target.name = symptom_update.name.strip().lower()
+        if symptom_update.severity is not None:
+            target.severity = symptom_update.severity
+        if symptom_update.duration is not None:
+            target.duration = symptom_update.duration
+        if symptom_update.body_location is not None:
+            target.body_location = symptom_update.body_location
+        target.source = symptom_update.source or SymptomSource.USER_CORRECTED
+
+        session.state_machine.context.symptoms = [
+            s.model_dump() for s in session.symptoms
+        ]
+        session.updated_at = datetime.now(UTC)
+        logger.info(
+            "symptom_edited",
+            assessment_id=str(assessment_id),
+            symptom_name=target.name,
+        )
+        return target
+
+    async def restart_assessment(
+        self,
+        assessment_id: UUID,
+        to_state: AssessmentState = AssessmentState.START,
+    ) -> AssessmentStateResponse:
+        """Reset an assessment session back to START or SYMPTOM_COLLECTION.
+
+        Clears dialogue messages, recorded symptoms, and clarification loop
+        counters, allowing the patient to start a new assessment session cleanly
+        per FR-25.
+
+        Args:
+            assessment_id: Unique assessment identifier.
+            to_state: Target state to reset to (default: AssessmentState.START).
+
+        Returns:
+            AssessmentStateResponse: State snapshot after reset.
+
+        Raises:
+            AssessmentServiceError: If assessment is not found (404).
+            InvalidStateTransitionError: If target state is invalid for restart (409).
+        """
+        session = self._sessions.get(assessment_id)
+        if session is None:
+            raise AssessmentServiceError(
+                message=f"Assessment '{assessment_id}' was not found.",
+                code="ASSESSMENT_NOT_FOUND",
+                status_code=status.HTTP_404_NOT_FOUND,
+            )
+
+        session.state_machine.restart(to_state=to_state)
+        session.symptoms.clear()
+        session.messages.clear()
+        session.is_low_confidence = False
+        session.state_machine.context.symptoms = []
+        session.updated_at = datetime.now(UTC)
+
+        logger.info(
+            "assessment_restarted",
+            assessment_id=str(assessment_id),
+            to_state=to_state.value,
+        )
+        return self.get_state(assessment_id)
+
+    async def step_back_to_chat(
+        self,
+        assessment_id: UUID,
+    ) -> AssessmentStateResponse:
+        """Step back from CONFIRMING or READY to SYMPTOM_COLLECTION.
+
+        Allows conversational symptom edits.
+
+        Args:
+            assessment_id: Unique assessment identifier.
+
+        Returns:
+            AssessmentStateResponse: Updated state snapshot.
+
+        Raises:
+            AssessmentServiceError: If assessment is missing (404).
+            InvalidStateTransitionError: If session state blocks transition (409).
+        """
+        session = self._sessions.get(assessment_id)
+        if session is None:
+            raise AssessmentServiceError(
+                message=f"Assessment '{assessment_id}' was not found.",
+                code="ASSESSMENT_NOT_FOUND",
+                status_code=status.HTTP_404_NOT_FOUND,
+            )
+
+        sm = session.state_machine
+        if sm.current_state == AssessmentState.READY:
+            sm.transition_to(AssessmentState.CONFIRMING)
+        sm.edit_symptoms()
+        session.updated_at = datetime.now(UTC)
+        logger.info(
+            "assessment_stepped_back_to_chat",
+            assessment_id=str(assessment_id),
+        )
+        return self.get_state(assessment_id)
 
     async def generate_result(
         self,

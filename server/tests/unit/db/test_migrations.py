@@ -1,6 +1,6 @@
 """Migration fidelity, offline PostgreSQL SQL, and local settings tests.
 
-Owner: Harsh · Task: S0-HAR-1 · Requirements: FR-01
+Owner: Harsh, Kavya · Task: S0-HAR-1, S1-KAV-4 · Requirements: FR-01, idea § 10
 """
 
 from io import StringIO
@@ -32,6 +32,7 @@ def test_migration_matches_models_and_repeated_upgrade(engine: Engine) -> None:
             "users",
             "consents",
             "assessments",
+            "guest_sessions",
             "messages",
             "symptoms",
             "alembic_version",
@@ -47,6 +48,7 @@ def test_downgrade_and_upgrade_disposable_schema(engine: Engine) -> None:
         assert set(inspect(connection).get_table_names()) == {"alembic_version"}
         command.upgrade(config, "head")
         assert "assessments" in inspect(connection).get_table_names()
+        assert "guest_sessions" in inspect(connection).get_table_names()
 
 
 def test_postgres_offline_sql_contains_all_tables() -> None:

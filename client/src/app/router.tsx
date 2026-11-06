@@ -5,6 +5,7 @@
 import { createBrowserRouter } from "react-router-dom";
 import App from "../App";
 import LandingPage from "../pages/LandingPage";
+import ProfilePage from "../pages/ProfilePage";
 
 /** Defines the application's browser routes. */
 export const router = createBrowserRouter([
@@ -15,5 +16,9 @@ export const router = createBrowserRouter([
   {
     path: "/chat",
     element: <App />,
+  },
+  {
+    path: "/profile",
+    element: <ProfilePage />,
   },
 ]);
