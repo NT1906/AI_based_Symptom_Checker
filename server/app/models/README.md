@@ -1,10 +1,12 @@
 # Models
 
-Owner: Harsh · Task: S0-HAR-1 · Issue: #9 · Requirement: FR-01
+Owner: Harsh, Kavya · Tasks: S0-HAR-1, S1-KAV-4 · Issues: #9, #37 · Requirements: FR-01, idea § 10
 
-The five SQLAlchemy models and shared metadata.
+The SQLAlchemy models and shared metadata.
 
-Import `Base`, `User`, `Consent`, `Assessment`, `Message`, and `Symptom` from `app.models`.
+Import `Base`, `User`, `Consent`, `Assessment`, `Message`, `Symptom`, and `GuestSession` from `app.models`.
+
+`GuestSession` stores cryptographic token hashes (SHA-256, 64 hex characters) with expiration timestamps for frictionless anonymous triage (idea § 10). It supports ownership linking to `Assessment` and account transfer (`claimed_by_user_id`).
 
 Configuration is injected; these modules never read environment variables.
 See [database setup and design](../../../docs/database.md) for integration,
