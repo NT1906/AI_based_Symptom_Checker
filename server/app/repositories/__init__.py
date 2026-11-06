@@ -1,6 +1,7 @@
-"""Database repository package providing typed CRUD persistence.
+"""Database repository package.
 
-Owner: Nishith · Task: S1-NIT-4 · Requirements: FR-01, FR-17
+Owner: Harsh, Kavya, Nishith
+Tasks: S0-HAR-1, S1-KAV-4, S1-NIT-4 · Requirements: FR-01, FR-17, idea § 10
 """
 
 from app.repositories.assessment_repository import (
@@ -11,6 +12,16 @@ from app.repositories.assessment_repository import (
     list_assessments_by_user,
     update_assessment_state,
 )
+from app.repositories.guest_session_repository import (
+    DEFAULT_SESSION_TTL_HOURS,
+    claim_guest_session,
+    create_guest_session,
+    generate_session_token,
+    get_guest_session_by_id,
+    get_guest_session_by_token,
+    hash_session_token,
+    link_assessment_to_session,
+)
 from app.repositories.message_repository import (
     count_messages,
     create_message,
@@ -18,6 +29,7 @@ from app.repositories.message_repository import (
     get_message_by_id,
     list_messages_by_assessment,
 )
+from app.repositories.seed_repository import seed_fictional_data
 from app.repositories.symptom_repository import (
     create_symptom,
     delete_symptom,
@@ -29,22 +41,31 @@ from app.repositories.symptom_repository import (
 )
 
 __all__ = [
+    "DEFAULT_SESSION_TTL_HOURS",
+    "claim_guest_session",
     "count_messages",
     "create_assessment",
+    "create_guest_session",
     "create_message",
     "create_symptom",
     "delete_assessment",
     "delete_messages_by_assessment",
     "delete_symptom",
     "delete_symptoms_by_assessment",
+    "generate_session_token",
     "get_assessment_by_id",
     "get_assessment_with_details",
+    "get_guest_session_by_id",
+    "get_guest_session_by_token",
     "get_message_by_id",
     "get_symptom",
+    "hash_session_token",
+    "link_assessment_to_session",
     "list_assessments_by_user",
     "list_messages_by_assessment",
     "list_symptoms_by_assessment",
     "replace_symptoms_for_assessment",
+    "seed_fictional_data",
     "update_assessment_state",
     "upsert_symptom",
 ]
