@@ -1,4 +1,4 @@
-"""Train the baseline skin-image model (run on a Kaggle or Colab GPU).
+"""Train the baseline skin-image model (Kaggle/Colab GPU or an Apple-silicon Mac).
 
 Responsibilities:
     - Parse the command line and load a validated config (``train_config``).
@@ -6,6 +6,7 @@ Responsibilities:
     - Train: seed, load the cleaned manifest, freeze the backbone for the
       first epochs, then fine-tune with AdamW + cosine schedule, class-weighted
       label-smoothed loss and mixed precision (docs/cv-plan.md §5).
+    - Pick the device: CUDA, then Apple-silicon MPS, then CPU (``--device``).
     - Keep the checkpoint with the best validation macro-F1, then evaluate it
       on val and the frozen test split; write ``metrics.json`` + ``report.md``.
     - Log metrics and the config to W&B with ``--wandb`` (never images).
@@ -43,6 +44,8 @@ ML_DIR = Path(__file__).resolve().parents[1]
 DEFAULT_IMAGES = ML_DIR / "data" / "images"
 DEFAULT_OUTPUT = ML_DIR / "checkpoints"
 
+DEVICES = ("auto", "cuda", "mps", "cpu")
+
 TRAINING_STEPS = (
     "seed every random generator from config.seed",
     "load the cleaned split manifest (clean_v1.csv) from S1-NIS-5",
@@ -77,12 +80,41 @@ def parse_args(argv: Sequence[str] | None = None) -> argparse.Namespace:
     parser.add_argument("--epochs", type=int, help="override config (smoke runs)")
     parser.add_argument("--limit", type=int, help="max images per split (smoke runs)")
     parser.add_argument("--workers", type=int, default=2, help="DataLoader workers")
+    parser.add_argument(
+        "--device", choices=DEVICES, default="auto", help="auto: cuda > mps > cpu"
+    )
     parser.add_argument("--no-pretrained", action="store_true", help="random init")
     parser.add_argument("--wandb", action="store_true", help="log to W&B")
     parser.add_argument(
         "--dry-run", action="store_true", help="validate the config, then exit"
     )
     return parser.parse_args(argv)
+
+
+def pick_device(requested: str, cuda: bool, mps: bool) -> str:
+    """Choose the torch device type for training.
+
+    Args:
+        requested: ``auto`` or a device type from ``DEVICES``.
+        cuda: Whether CUDA is available.
+        mps: Whether Apple-silicon MPS is available.
+
+    Returns:
+        ``cuda``, ``mps`` or ``cpu``.
+
+    Raises:
+        ValueError: A device was requested explicitly but is not available.
+
+    Example:
+        >>> pick_device("auto", cuda=False, mps=True)
+        'mps'
+    """
+    available = {"cuda": cuda, "mps": mps, "cpu": True}
+    if requested == "auto":
+        return next(d for d in ("cuda", "mps", "cpu") if available[d])
+    if not available[requested]:
+        raise ValueError(f"device {requested!r} is not available")
+    return requested
 
 
 def describe_plan(config: TrainConfig) -> list[str]:
@@ -124,7 +156,12 @@ def run_training(config: TrainConfig, args: argparse.Namespace) -> dict[str, Any
     seed_everything(config.seed)
     started = time.monotonic()
     args.output_dir.mkdir(parents=True, exist_ok=True)
-    device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
+    device = torch.device(
+        pick_device(
+            args.device, torch.cuda.is_available(), torch.backends.mps.is_available()
+        )
+    )
+    log.info("device: %s", device.type)
     splits = read_splits(args.manifest, args.images, config, args.limit)
     loaders = _loaders(config, args, splits)
     backbone = args.backbone or config.model.backbone

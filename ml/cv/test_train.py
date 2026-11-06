@@ -24,6 +24,7 @@ from train import (
     describe_plan,
     main,
     parse_args,
+    pick_device,
 )
 from train_config import DEFAULT_CONFIG_PATH, load_config
 
@@ -34,6 +35,27 @@ def test_parse_args_defaults_to_baseline_config() -> None:
     assert args.config == DEFAULT_CONFIG_PATH
     assert args.dry_run is False
     assert args.wandb is False
+
+
+def test_pick_device_auto_prefers_cuda_then_mps_then_cpu() -> None:
+    assert pick_device("auto", cuda=True, mps=True) == "cuda"
+    assert pick_device("auto", cuda=False, mps=True) == "mps"
+    assert pick_device("auto", cuda=False, mps=False) == "cpu"
+
+
+def test_pick_device_keeps_an_available_explicit_choice() -> None:
+    assert pick_device("cpu", cuda=True, mps=True) == "cpu"
+    assert pick_device("mps", cuda=False, mps=True) == "mps"
+
+
+def test_pick_device_rejects_an_unavailable_device() -> None:
+    with pytest.raises(ValueError, match="'cuda' is not available"):
+        pick_device("cuda", cuda=False, mps=True)
+
+
+def test_parse_args_rejects_an_unknown_device() -> None:
+    with pytest.raises(SystemExit):
+        parse_args(["--device", "tpu"])
 
 
 def test_dry_run_validates_config_and_logs_plan(
