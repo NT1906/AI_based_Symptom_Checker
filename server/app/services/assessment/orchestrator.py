@@ -860,7 +860,11 @@ class AssessmentOrchestrator:
             )
 
         for s in session.symptoms:
-            if s.source in (SymptomSource.AI_EXTRACTED, SymptomSource.USER):
+            if s.source in (
+                SymptomSource.AI_EXTRACTED,
+                SymptomSource.USER,
+                SymptomSource.IMAGE_FINDING,
+            ):
                 s.source = SymptomSource.USER_CONFIRMED
 
         session.state_machine.context.symptoms = [
@@ -1310,7 +1314,24 @@ class AssessmentOrchestrator:
                 status_code=status.HTTP_404_NOT_FOUND,
             )
 
-        self._ensure_editable_state(session)
+        sm = session.state_machine
+        if sm.current_state in (
+            AssessmentState.COMPLETED,
+            AssessmentState.ANALYZING,
+            AssessmentState.ERROR,
+        ):
+            raise InvalidStateTransitionError(
+                current_state=sm.current_state,
+                target_state=AssessmentState.CONFIRMING,
+                reason=(
+                    f"Image findings cannot be merged in "
+                    f"'{sm.current_state.value}' state."
+                ),
+            )
+        if sm.current_state == AssessmentState.START:
+            sm.transition_to(AssessmentState.SYMPTOM_COLLECTION)
+        elif sm.current_state == AssessmentState.READY:
+            sm.transition_to(AssessmentState.CONFIRMING)
 
         extracted: list[ExtractedSymptom]
         if isinstance(findings, ImageAnalysis):
@@ -1379,7 +1400,20 @@ class AssessmentOrchestrator:
                 status_code=status.HTTP_404_NOT_FOUND,
             )
 
-        self._ensure_editable_state(session)
+        sm = session.state_machine
+        if sm.current_state in (
+            AssessmentState.COMPLETED,
+            AssessmentState.ANALYZING,
+            AssessmentState.ERROR,
+        ):
+            raise InvalidStateTransitionError(
+                current_state=sm.current_state,
+                target_state=AssessmentState.CONFIRMING,
+                reason=(
+                    f"Image findings cannot be merged in "
+                    f"'{sm.current_state.value}' state."
+                ),
+            )
 
         try:
             analysis = await self._image_analyzer.analyze(image_bytes)
