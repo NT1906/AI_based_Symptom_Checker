@@ -1,7 +1,8 @@
 """Database repository package.
 
 Owner: Harsh, Kavya, Nishith
-Tasks: S0-HAR-1, S1-KAV-4, S1-NIT-4 · Requirements: FR-01, FR-17, idea § 10
+Tasks: S0-HAR-1, S1-KAV-4, S1-NIT-4, S2-KAV-3
+Requirements: FR-01, FR-02, FR-17, idea § 10
 """
 
 from app.repositories.assessment_repository import (
@@ -29,6 +30,12 @@ from app.repositories.message_repository import (
     get_message_by_id,
     list_messages_by_assessment,
 )
+from app.repositories.profile_repository import (
+    clear_profile_by_user_id,
+    delete_profile_by_user_id,
+    get_profile_by_user_id,
+    upsert_profile,
+)
 from app.repositories.seed_repository import seed_fictional_data
 from app.repositories.symptom_repository import (
     create_symptom,
@@ -43,6 +50,7 @@ from app.repositories.symptom_repository import (
 __all__ = [
     "DEFAULT_SESSION_TTL_HOURS",
     "claim_guest_session",
+    "clear_profile_by_user_id",
     "count_messages",
     "create_assessment",
     "create_guest_session",
@@ -50,6 +58,7 @@ __all__ = [
     "create_symptom",
     "delete_assessment",
     "delete_messages_by_assessment",
+    "delete_profile_by_user_id",
     "delete_symptom",
     "delete_symptoms_by_assessment",
     "generate_session_token",
@@ -58,6 +67,7 @@ __all__ = [
     "get_guest_session_by_id",
     "get_guest_session_by_token",
     "get_message_by_id",
+    "get_profile_by_user_id",
     "get_symptom",
     "hash_session_token",
     "link_assessment_to_session",
@@ -67,5 +77,6 @@ __all__ = [
     "replace_symptoms_for_assessment",
     "seed_fictional_data",
     "update_assessment_state",
+    "upsert_profile",
     "upsert_symptom",
 ]
