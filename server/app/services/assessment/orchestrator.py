@@ -6,6 +6,7 @@ Responsibilities:
     - Cap clarification turns at MAX_CLARIFICATION_TURNS (3) per FR-04/FR-19.
     - Transition to CONFIRMING and flag low confidence when turn budget is reached.
     - Merge newly extracted symptoms into current assessment state deterministically.
+    - Merge image analysis findings into assessment state (idea §3, S2-DAR-2).
     - Support symptom confirmation, additions, deletions, edits, and bulk updates.
     - Provide restart_assessment() to cleanly reset an assessment session (FR-25).
     - Step back to chat from CONFIRMING or READY for conversational edits.
@@ -14,7 +15,7 @@ Responsibilities:
     - Run real analysis in generate_result() via condition predictor, risk engine,
       and result composer with safety-wording validation (FR-05, FR-06, FR-07, DR-05).
 
-Owner: Darshil (assessment) · Task: S1-DAR-4 · Requirements: FR-16, FR-21, FR-25
+Owner: Darshil (assessment) · Task: S2-DAR-2 · Requirements: idea §3, FR-16, FR-21
 """
 
 from dataclasses import dataclass, field
@@ -50,6 +51,10 @@ from app.services.ai.factory import get_ai_gateway
 from app.services.ai.gateway import AiError, AiGateway, AiTimeoutError
 from collections.abc import Sequence
 from app.services.ai.schemas import ExtractedSymptom
+from app.services.image.analyzer import ImageAnalysisError, ImageAnalyzer
+from app.services.image.factory import build_image_analyzer
+from app.services.image.findings import to_extracted_symptoms
+from app.services.image.schemas import ImageAnalysis, ImageLabel
 from app.services.prediction.condition_predictor import (
     BaselineConditionModel,
     ConditionModel,
@@ -76,6 +81,7 @@ logger = get_logger(__name__)
 def merge_symptoms(
     existing: list[Symptom],
     extracted_symptoms: list[ExtractedSymptom],
+    default_source: SymptomSource = SymptomSource.AI_EXTRACTED,
 ) -> list[Symptom]:
     """Merge newly extracted symptoms into existing assessment symptoms.
 
@@ -85,7 +91,9 @@ def merge_symptoms(
 
     Args:
         existing: Currently recorded symptoms for the assessment session.
-        extracted_symptoms: Structured symptoms extracted from the latest user message.
+        extracted_symptoms: Structured symptoms extracted from AI or image analysis.
+        default_source: Origin source for newly appended symptoms. Defaults to
+            SymptomSource.AI_EXTRACTED (or SymptomSource.IMAGE_FINDING for images).
 
     Returns:
         Updated list of Symptom models with new or merged clinical attributes.
@@ -129,7 +137,7 @@ def merge_symptoms(
                 source=(
                     prev.source
                     if prev.source == SymptomSource.USER_CONFIRMED
-                    else SymptomSource.AI_EXTRACTED
+                    else default_source
                 ),
                 extraction_confidence=1.0,
             )
@@ -140,7 +148,7 @@ def merge_symptoms(
                 severity=severity,
                 duration=duration,
                 body_location=ext.body_location,
-                source=SymptomSource.AI_EXTRACTED,
+                source=default_source,
                 extraction_confidence=1.0,
             )
 
@@ -186,6 +194,7 @@ class AssessmentOrchestrator:
         ai_gateway: AiGateway | None = None,
         result_composer: ResultComposer | None = None,
         condition_model: ConditionModel | None = None,
+        image_analyzer: ImageAnalyzer | None = None,
     ) -> None:
         """Initialize the AssessmentOrchestrator.
 
@@ -197,6 +206,8 @@ class AssessmentOrchestrator:
                 assert_safe_wording.
             condition_model: Optional model conforming to ConditionModel protocol.
                 Defaults to BaselineConditionModel.
+            image_analyzer: Optional provider conforming to ImageAnalyzer protocol.
+                Defaults to mock image analyzer.
         """
         self._ai_gateway = ai_gateway or get_ai_gateway()
         self._result_composer = result_composer or ResultComposer(
@@ -205,6 +216,7 @@ class AssessmentOrchestrator:
         self._condition_model: ConditionModel = (
             condition_model or BaselineConditionModel()
         )
+        self._image_analyzer = image_analyzer or build_image_analyzer("mock")
         self._sessions: dict[UUID, AssessmentSession] = {}
 
     def create_assessment(
@@ -848,7 +860,11 @@ class AssessmentOrchestrator:
             )
 
         for s in session.symptoms:
-            if s.source in (SymptomSource.AI_EXTRACTED, SymptomSource.USER):
+            if s.source in (
+                SymptomSource.AI_EXTRACTED,
+                SymptomSource.USER,
+                SymptomSource.IMAGE_FINDING,
+            ):
                 s.source = SymptomSource.USER_CONFIRMED
 
         session.state_machine.context.symptoms = [
@@ -1259,6 +1275,157 @@ class AssessmentOrchestrator:
         sm.complete_analysis()
         session.updated_at = datetime.now(UTC)
         return result
+
+    async def merge_image_findings(
+        self,
+        assessment_id: UUID,
+        findings: ImageAnalysis | list[ExtractedSymptom],
+    ) -> list[SymptomRead]:
+        """Merge visual findings from an image analysis into assessment symptoms.
+
+        Accepts either an ImageAnalysis or an already-converted list of
+        ExtractedSymptom objects. If the image analysis is unclear or produces no
+        symptoms, the assessment carries on with existing symptoms untouched
+        (idea §3, docs/cv-plan.md §1).
+
+        Visual findings are merged with severity UNKNOWN (since photos cannot
+        indicate perceived severity) and source set to IMAGE_FINDING.
+        The user subsequently reviews and confirms every symptom during the
+        confirmation step (FR-16, FR-21).
+
+        Args:
+            assessment_id: Unique assessment identifier.
+            findings: ImageAnalysis result from an ImageAnalyzer or list of
+                extracted symptoms.
+
+        Returns:
+            Updated list of SymptomRead models including any visual symptoms.
+
+        Raises:
+            AssessmentServiceError: If assessment does not exist (404).
+            InvalidStateTransitionError: If assessment is in a terminal or
+                non-editable state (COMPLETED, ANALYZING, ERROR).
+        """
+        session = self._sessions.get(assessment_id)
+        if session is None:
+            raise AssessmentServiceError(
+                message=f"Assessment '{assessment_id}' was not found.",
+                code="ASSESSMENT_NOT_FOUND",
+                status_code=status.HTTP_404_NOT_FOUND,
+            )
+
+        sm = session.state_machine
+        if sm.current_state in (
+            AssessmentState.COMPLETED,
+            AssessmentState.ANALYZING,
+            AssessmentState.ERROR,
+        ):
+            raise InvalidStateTransitionError(
+                current_state=sm.current_state,
+                target_state=AssessmentState.CONFIRMING,
+                reason=(
+                    f"Image findings cannot be merged in "
+                    f"'{sm.current_state.value}' state."
+                ),
+            )
+        if sm.current_state == AssessmentState.START:
+            sm.transition_to(AssessmentState.SYMPTOM_COLLECTION)
+        elif sm.current_state == AssessmentState.READY:
+            sm.transition_to(AssessmentState.CONFIRMING)
+
+        extracted: list[ExtractedSymptom]
+        if isinstance(findings, ImageAnalysis):
+            if findings.label == ImageLabel.UNCLEAR:
+                logger.info(
+                    "image_findings_unclear_ignored",
+                    assessment_id=str(assessment_id),
+                    reason=findings.reason.value if findings.reason else None,
+                )
+                return session.symptoms
+            extracted = to_extracted_symptoms(findings)
+        else:
+            extracted = list(findings)
+
+        if not extracted:
+            return session.symptoms
+
+        merged = merge_symptoms(
+            existing=[Symptom.model_validate(s.model_dump()) for s in session.symptoms],
+            extracted_symptoms=extracted,
+            default_source=SymptomSource.IMAGE_FINDING,
+        )
+
+        session.symptoms = [SymptomRead.model_validate(s.model_dump()) for s in merged]
+        session.state_machine.context.symptoms = [
+            s.model_dump() for s in session.symptoms
+        ]
+        session.updated_at = datetime.now(UTC)
+
+        logger.info(
+            "image_findings_merged",
+            assessment_id=str(assessment_id),
+            symptom_count=len(session.symptoms),
+            added_count=len(extracted),
+        )
+
+        return session.symptoms
+
+    async def process_image(
+        self,
+        assessment_id: UUID,
+        image_bytes: bytes,
+    ) -> list[SymptomRead]:
+        """Analyse image bytes and merge visual findings into assessment state.
+
+        Coordinates image analyzer execution and symptom state merging. If the
+        analyzer encounters an ImageAnalysisError, it safely carries on with
+        existing symptoms without interrupting the assessment (idea §3).
+
+        Args:
+            assessment_id: Unique assessment identifier.
+            image_bytes: Validated, sanitized image byte payload in memory.
+
+        Returns:
+            Updated list of SymptomRead models.
+
+        Raises:
+            AssessmentServiceError: If assessment is not found (404).
+            InvalidStateTransitionError: If session state blocks modifications (409).
+        """
+        session = self._sessions.get(assessment_id)
+        if session is None:
+            raise AssessmentServiceError(
+                message=f"Assessment '{assessment_id}' was not found.",
+                code="ASSESSMENT_NOT_FOUND",
+                status_code=status.HTTP_404_NOT_FOUND,
+            )
+
+        sm = session.state_machine
+        if sm.current_state in (
+            AssessmentState.COMPLETED,
+            AssessmentState.ANALYZING,
+            AssessmentState.ERROR,
+        ):
+            raise InvalidStateTransitionError(
+                current_state=sm.current_state,
+                target_state=AssessmentState.CONFIRMING,
+                reason=(
+                    f"Image findings cannot be merged in "
+                    f"'{sm.current_state.value}' state."
+                ),
+            )
+
+        try:
+            analysis = await self._image_analyzer.analyze(image_bytes)
+        except ImageAnalysisError as exc:
+            logger.warning(
+                "image_analysis_failed_continuing_text",
+                assessment_id=str(assessment_id),
+                error_code=exc.code,
+            )
+            return session.symptoms
+
+        return await self.merge_image_findings(assessment_id, analysis)
 
 
 __all__ = [
