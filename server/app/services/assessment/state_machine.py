@@ -8,7 +8,7 @@ Responsibilities:
       (e.g., blocking analysis if state != READY, capping clarifications).
     - Prevent invalid transitions and raise typed InvalidStateTransitionError.
 
-Owner: Darshil (assessment) · Task: S1-DAR-1 · Requirements: N/A
+Owner: Darshil (assessment) · Task: S1-DAR-1, S2-DAR-1 · Requirements: idea §10
 """
 
 from collections.abc import Callable
@@ -37,6 +37,7 @@ class AssessmentContext:
         assessment_id: Unique assessment session identifier.
         consent_id: Validated consent record identifier.
         user_id: Optional registered user identifier.
+        guest_session_id: Optional anonymous guest session identifier.
         symptoms: List of extracted or confirmed symptoms.
         clarification_count: Number of clarification turns asked so far.
         max_clarifications: Hard limit on clarification questions (default 3).
@@ -48,6 +49,7 @@ class AssessmentContext:
     assessment_id: UUID | None = None
     consent_id: UUID | None = None
     user_id: UUID | None = None
+    guest_session_id: UUID | None = None
     symptoms: list[Any] = field(default_factory=list)
     clarification_count: int = 0
     max_clarifications: int = MAX_CLARIFICATION_TURNS
