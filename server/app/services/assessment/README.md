@@ -1,6 +1,6 @@
 # Assessment Service Module
 
-**Owner:** Darshil (Assessment Orchestration) · **Task:** S1-DAR-2, S1-DAR-3, S1-DAR-4, S2-DAR-5 · **Requirements:** FR-03, FR-04, FR-05, FR-06, FR-07, FR-16, FR-17, FR-19, FR-20, FR-21, FR-25, DR-05
+**Owner:** Darshil (Assessment Orchestration) · **Task:** S1-DAR-2, S1-DAR-3, S1-DAR-4, S2-DAR-1, S2-DAR-5 · **Requirements:** idea §10, FR-03, FR-04, FR-05, FR-06, FR-07, FR-16, FR-17, FR-19, FR-20, FR-21, FR-25, DR-05
 
 The Assessment Service orchestrates the conversational symptom assessment lifecycle. It provides:
 1. **Assessment State Machine**: Strictly governs valid states and enforces medical-safety guards throughout the user experience.
@@ -8,6 +8,7 @@ The Assessment Service orchestrates the conversational symptom assessment lifecy
 3. **Clarification Turn Limiting & Low-Confidence Flagging**: Strictly enforces a maximum of 3 clarification questions (FR-04, FR-19). If ambiguity remains after 3 turns, forces transition to CONFIRMING and marks the session with `is_low_confidence=True` (FR-20).
 4. **Clinical Analysis & Triage Results**: Executes the clinical prediction and risk evaluation pipeline upon symptom confirmation (`generate_result()`), applying the safety-wording guard before user delivery (FR-05, FR-06, FR-07, DR-05).
 5. **Symptom Confirmation, Editing & Session Restart**: Enables user review and modification (add, remove, edit severity/duration, bulk update) of recognized symptoms before analysis (`confirm_symptoms()`, `update_symptoms()`), stepping back to chat (`step_back_to_chat()`), and cleanly starting over (`restart_assessment()`) per FR-16, FR-21, and FR-25.
+6. **Guest Assessment Claiming**: Allows anonymous guests to transfer assessment history into a registered user account upon sign-up (`claim_assessment()`, `claim_guest_session()`) per idea §10.
 
 ---
 
@@ -134,7 +135,19 @@ Before triage analysis, the application reflects back extracted symptoms for use
 
 ---
 
-## 7. Running Unit Tests
+---
+
+## 7. Guest Assessment Claiming (S2-DAR-1)
+
+Per **idea §10** and `docs/database.md`:
+The application allows anonymous guests to start and complete assessments with zero registration friction (`user_id = None`, optionally bound to a `guest_session_id`). When the user registers or logs in:
+
+- **`claim_assessment(assessment_id, user_id, guest_session_id=None, db_session=None)`**: Transfers ownership of an individual assessment to the new account (`assessment.user_id = user_id`). Verifies the assessment was not already claimed (HTTP 409 `ALREADY_CLAIMED`) and optionally verifies matching `guest_session_id` (HTTP 403 `GUEST_SESSION_MISMATCH`). Synchronizes with SQLAlchemy database session when provided.
+- **`claim_guest_session(guest_session_id, user_id, db_session=None)`**: Bulk transfers all assessments associated with an anonymous guest session to the newly registered account, updating `guest_sessions.claimed_at` and `guest_sessions.claimed_by_user_id`. Prevents double-claiming already claimed sessions.
+
+---
+
+## 8. Running Unit Tests
 
 From `server/`:
 
