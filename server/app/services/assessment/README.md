@@ -1,6 +1,6 @@
 # Assessment Service Module
 
-**Owner:** Darshil (Assessment Orchestration) · **Task:** S1-DAR-2, S1-DAR-3, S1-DAR-4, S2-DAR-1, S2-DAR-5 · **Requirements:** idea §10, FR-03, FR-04, FR-05, FR-06, FR-07, FR-16, FR-17, FR-19, FR-20, FR-21, FR-25, DR-05
+**Owner:** Darshil (Assessment Orchestration) · **Task:** S1-DAR-2, S1-DAR-3, S1-DAR-4, S2-DAR-1, S2-DAR-2 · **Requirements:** idea §3, idea §10, FR-03, FR-04, FR-05, FR-06, FR-07, FR-16, FR-17, FR-19, FR-20, FR-21, FR-25, DR-05
 
 The Assessment Service orchestrates the conversational symptom assessment lifecycle. It provides:
 1. **Assessment State Machine**: Strictly governs valid states and enforces medical-safety guards throughout the user experience.
@@ -147,7 +147,21 @@ The application allows anonymous guests to start and complete assessments with z
 
 ---
 
-## 8. Running Unit Tests
+## 8. Image Findings Integration (S2-DAR-2)
+
+Per **idea §3**:
+For visibly assessable conditions (e.g. eczema, hives, rashes), optional photos are analyzed into canonical visual symptoms via Nisarg's `ImageAnalyzer` (S1-NIS-4). Visual findings join the assessment state seamlessly:
+
+- **`merge_image_findings(assessment_id, findings)`**: Ingests an `ImageAnalysis` or list of `ExtractedSymptom` records.
+  - Clear analyses map to recognized visual symptoms with `Severity.UNKNOWN` and provenance `SymptomSource.IMAGE_FINDING`.
+  - Unclear photos (`ImageLabel.UNCLEAR`) are gracefully ignored, and the assessment continues with text symptoms only.
+  - Image findings are deduplicated with pre-existing text symptoms; confirmed symptoms retain their confirmed status and specific severity.
+- **`process_image(assessment_id, image_bytes)`**: Ingests validated, sanitized in-memory image bytes, executes the configured `ImageAnalyzer`, and merges visual findings into the assessment session. Analyzer errors (`ImageAnalysisError`) are caught gracefully to carry on with text without interrupting the assessment.
+- **Safety**: Photos are analyzed in memory only (never written to disk or logged). Triage risk is always computed deterministically from combined confirmed symptoms (AI_RULES.md §2).
+
+---
+
+## 9. Running Unit Tests
 
 From `server/`:
 
