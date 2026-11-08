@@ -8,6 +8,7 @@ Responsibilities:
     - Merge newly extracted symptoms into current assessment state deterministically.
     - Merge image analysis findings into assessment state (idea §3, S2-DAR-2).
     - Support symptom confirmation, additions, deletions, edits, and bulk updates.
+    - Pass profile context (age, chronic conditions) into analysis (FR-02, S2-DAR-3).
     - Provide restart_assessment() to cleanly reset an assessment session (FR-25).
     - Claim anonymous guest assessments into registered accounts (idea §10).
     - Step back to chat from CONFIRMING or READY for conversational edits.
@@ -16,7 +17,7 @@ Responsibilities:
     - Run real analysis in generate_result() via condition predictor, risk engine,
       and result composer with safety-wording validation (FR-05, FR-06, FR-07, DR-05).
 
-Owner: Darshil (assessment) · Task: S2-DAR-2 · Requirements: idea §3, FR-16, FR-21
+Owner: Darshil (assessment) · Task: S2-DAR-3 · Requirements: FR-02, idea §3, idea §10
 """
 
 from dataclasses import dataclass, field
@@ -42,6 +43,7 @@ from app.schemas.enums import (
     SymptomSource,
 )
 from app.schemas.message import MessageRead
+from app.schemas.profile import ProfileContext
 from app.schemas.symptom import (
     Duration,
     Symptom,
@@ -170,6 +172,7 @@ class AssessmentSession:
         symptoms: Accumulated canonical recognized symptoms.
         is_low_confidence: Flag set when clarification loop cap was reached.
         guest_session_id: Optional anonymous guest session identifier.
+        profile: Optional user clinical profile context (age, chronic conditions).
         created_at: Session creation timestamp in UTC.
         updated_at: Last activity timestamp in UTC.
     """
@@ -182,6 +185,7 @@ class AssessmentSession:
     symptoms: list[SymptomRead] = field(default_factory=list)
     is_low_confidence: bool = False
     guest_session_id: UUID | None = None
+    profile: ProfileContext | None = None
     created_at: datetime = field(default_factory=lambda: datetime.now(UTC))
     updated_at: datetime = field(default_factory=lambda: datetime.now(UTC))
 
@@ -229,6 +233,7 @@ class AssessmentOrchestrator:
         user_id: UUID | None = None,
         assessment_id: UUID | None = None,
         guest_session_id: UUID | None = None,
+        profile: ProfileContext | None = None,
     ) -> AssessmentRead:
         """Initialize a new assessment session bound to verified consent.
 
@@ -237,6 +242,7 @@ class AssessmentOrchestrator:
             user_id: Optional registered user identifier.
             assessment_id: Optional explicit UUID (generated if None).
             guest_session_id: Optional anonymous guest session identifier.
+            profile: Optional user clinical profile context (age, chronic conditions).
 
         Returns:
             AssessmentRead model representing the initialized assessment.
@@ -247,6 +253,7 @@ class AssessmentOrchestrator:
             consent_id=consent_id,
             user_id=user_id,
             guest_session_id=guest_session_id,
+            profile=profile,
         )
         sm = AssessmentStateMachine(
             initial_state=AssessmentState.START,
@@ -258,6 +265,7 @@ class AssessmentOrchestrator:
             consent_id=consent_id,
             user_id=user_id,
             guest_session_id=guest_session_id,
+            profile=profile,
             state_machine=sm,
             messages=[],
             symptoms=[],
@@ -290,6 +298,7 @@ class AssessmentOrchestrator:
         consent_id: UUID | None = None,
         user_id: UUID | None = None,
         guest_session_id: UUID | None = None,
+        profile: ProfileContext | None = None,
     ) -> AssessmentSession:
         """Register an active assessment state machine session.
 
@@ -301,6 +310,7 @@ class AssessmentOrchestrator:
             consent_id: Optional consent identifier (falls back to context).
             user_id: Optional user identifier (falls back to context).
             guest_session_id: Optional anonymous guest session identifier.
+            profile: Optional user clinical profile context.
 
         Returns:
             The registered AssessmentSession.
@@ -313,12 +323,14 @@ class AssessmentOrchestrator:
         cid = consent_id or state_machine.context.consent_id or uuid4()
         uid = user_id or state_machine.context.user_id
         gid = guest_session_id or state_machine.context.guest_session_id
+        prof = profile or state_machine.context.profile
         now = datetime.now(UTC)
         session = AssessmentSession(
             id=assessment_id,
             consent_id=cid,
             user_id=uid,
             guest_session_id=gid,
+            profile=prof,
             state_machine=state_machine,
             messages=list(messages or []),
             symptoms=list(symptoms or []),
@@ -422,6 +434,61 @@ class AssessmentOrchestrator:
             max_clarifications=sm.context.max_clarifications,
             is_low_confidence=session.is_low_confidence,
         )
+
+    def set_profile_context(
+        self,
+        assessment_id: UUID,
+        profile: ProfileContext,
+    ) -> None:
+        """Attach or update the user clinical profile context for an assessment.
+
+        Args:
+            assessment_id: Unique assessment identifier.
+            profile: ProfileContext containing age band, sex, and chronic conditions.
+
+        Raises:
+            AssessmentServiceError: If assessment does not exist (404).
+        """
+        session = self._sessions.get(assessment_id)
+        if session is None:
+            raise AssessmentServiceError(
+                message=f"Assessment '{assessment_id}' was not found.",
+                code="ASSESSMENT_NOT_FOUND",
+                status_code=status.HTTP_404_NOT_FOUND,
+            )
+        session.profile = profile
+        session.state_machine.context.profile = profile
+        session.updated_at = datetime.now(UTC)
+        logger.info(
+            "assessment_profile_context_updated",
+            assessment_id=str(assessment_id),
+            age_band=profile.age_band.value if profile.age_band else None,
+            chronic_conditions_count=len(profile.chronic_conditions),
+        )
+
+    def get_profile_context(
+        self,
+        assessment_id: UUID,
+    ) -> ProfileContext | None:
+        """Retrieve the clinical profile context linked to an assessment.
+
+        Args:
+            assessment_id: Unique assessment identifier.
+
+        Returns:
+            ProfileContext if set, else None.
+
+        Raises:
+            AssessmentServiceError: If assessment does not exist (404).
+        """
+        session = self._sessions.get(assessment_id)
+        if session is None:
+            raise AssessmentServiceError(
+                message=f"Assessment '{assessment_id}' was not found.",
+                code="ASSESSMENT_NOT_FOUND",
+                status_code=status.HTTP_404_NOT_FOUND,
+            )
+        return session.profile
 
     async def process_message(
         self,
@@ -1513,22 +1580,27 @@ class AssessmentOrchestrator:
         self,
         assessment_id: UUID,
         self_care_guidance: Sequence[str] = (),
+        profile: ProfileContext | None = None,
     ) -> AssessmentResult:
         """Trigger analysis and transition session through ANALYZING to COMPLETED.
 
         Executes the clinical evaluation pipeline:
         1. Transitions state machine from READY to ANALYZING.
-        2. Maps confirmed symptoms to ReportedSymptom domain representations.
-        3. Predicts ranked conditions via the configured condition model.
-        4. Evaluates clinical risk level deterministically via the risk engine.
-        5. Composes AssessmentResult with safety-wording guard validation.
-        6. On UnsafeWordingError, transitions state machine to ERROR and re-raises.
-        7. On success, transitions state machine from ANALYZING to COMPLETED.
+        2. Incorporates optional user profile context (age band, chronic conditions)
+           into the analysis pipeline (FR-02, S2-DAR-3).
+        3. Maps confirmed symptoms to ReportedSymptom domain representations.
+        4. Predicts ranked conditions via the configured condition model.
+        5. Evaluates clinical risk level deterministically via the risk engine.
+        6. Composes AssessmentResult with safety-wording guard validation.
+        7. On UnsafeWordingError, transitions state machine to ERROR and re-raises.
+        8. On success, transitions state machine from ANALYZING to COMPLETED.
 
         Args:
             assessment_id: Unique assessment identifier.
             self_care_guidance: Optional additional general self-care advice for
                 low-risk results.
+            profile: Optional user clinical profile context (age, chronic conditions).
+                If omitted, falls back to profile context attached to the session.
 
         Returns:
             AssessmentResult with triage risk tier, conditions, and safety disclaimer.
@@ -1545,6 +1617,11 @@ class AssessmentOrchestrator:
                 code="ASSESSMENT_NOT_FOUND",
                 status_code=status.HTTP_404_NOT_FOUND,
             )
+
+        prof = profile or session.profile
+        if prof is not None:
+            session.profile = prof
+            session.state_machine.context.profile = prof
 
         sm = session.state_machine
         sm.start_analysis()
