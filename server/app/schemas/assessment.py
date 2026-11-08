@@ -2,13 +2,14 @@
 
 Responsibilities:
     - Validate assessment creation requests with mandatory consent linkage.
+    - Support guest assessment claiming and ownership transfer into user accounts.
     - Provide read and state snapshot schemas for assessment lifecycle endpoints.
     - Export AssessmentState and AssessmentResult for cross-module consumption.
 
-Owner: Darshil (orchestration) · Task: S0-DAR-1 · Requirements: N/A
+Owner: Darshil (orchestration) · Task: S2-DAR-1 · Requirements: idea §10
 """
 
-from datetime import datetime, UTC
+from datetime import UTC, datetime
 from uuid import UUID
 
 from pydantic import Field
@@ -28,6 +29,10 @@ class AssessmentCreate(SchemaBase):
         default=None,
         description="Optional registered user ID",
     )
+    guest_session_id: UUID | None = Field(
+        default=None,
+        description="Optional anonymous guest session ID",
+    )
 
 
 class AssessmentRead(SchemaBase):
@@ -37,6 +42,10 @@ class AssessmentRead(SchemaBase):
     state: AssessmentState = Field(..., description="Current lifecycle state")
     consent_id: UUID = Field(..., description="Associated consent identifier")
     user_id: UUID | None = Field(default=None, description="Registered user identifier")
+    guest_session_id: UUID | None = Field(
+        default=None,
+        description="Optional associated guest session identifier",
+    )
     created_at: datetime = Field(
         default_factory=lambda: datetime.now(UTC),
         description="Timestamp in UTC",
@@ -68,6 +77,30 @@ class AssessmentStateResponse(SchemaBase):
         description=(
             "Whether low confidence was flagged due to capped clarification loop"
         ),
+    )
+
+
+class ClaimAssessmentRequest(SchemaBase):
+    """Payload to claim a guest assessment into a registered user account."""
+
+    user_id: UUID = Field(
+        ...,
+        description="Registered user account ID claiming the assessment",
+    )
+    guest_session_id: UUID | None = Field(
+        default=None,
+        description="Optional guest session ID for ownership verification",
+    )
+
+
+class ClaimAssessmentResponse(SchemaBase):
+    """Result of claiming a guest assessment into a user account."""
+
+    assessment_id: UUID = Field(..., description="Claimed assessment ID")
+    user_id: UUID = Field(..., description="Owner user ID")
+    claimed_at: datetime = Field(
+        default_factory=lambda: datetime.now(UTC),
+        description="UTC timestamp when claim completed",
     )
 
 
@@ -129,5 +162,7 @@ __all__ = [
     "AssessmentResult",
     "AssessmentState",
     "AssessmentStateResponse",
+    "ClaimAssessmentRequest",
+    "ClaimAssessmentResponse",
     "ProcessResult",
 ]

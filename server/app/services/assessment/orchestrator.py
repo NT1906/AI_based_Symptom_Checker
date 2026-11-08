@@ -9,6 +9,7 @@ Responsibilities:
     - Merge image analysis findings into assessment state (idea §3, S2-DAR-2).
     - Support symptom confirmation, additions, deletions, edits, and bulk updates.
     - Provide restart_assessment() to cleanly reset an assessment session (FR-25).
+    - Claim anonymous guest assessments into registered accounts (idea §10).
     - Step back to chat from CONFIRMING or READY for conversational edits.
     - Enforce state machine transitions (SYMPTOM_COLLECTION, CLARIFYING, CONFIRMING).
     - Handle AI timeouts and failures gracefully without crashing or changing state.
@@ -20,6 +21,7 @@ Owner: Darshil (assessment) · Task: S2-DAR-2 · Requirements: idea §3, FR-16, 
 
 from dataclasses import dataclass, field
 from datetime import UTC, datetime
+from typing import Any
 from uuid import UUID, uuid4
 
 from fastapi import status
@@ -167,6 +169,7 @@ class AssessmentSession:
         messages: Sequential dialogue message history.
         symptoms: Accumulated canonical recognized symptoms.
         is_low_confidence: Flag set when clarification loop cap was reached.
+        guest_session_id: Optional anonymous guest session identifier.
         created_at: Session creation timestamp in UTC.
         updated_at: Last activity timestamp in UTC.
     """
@@ -178,6 +181,7 @@ class AssessmentSession:
     messages: list[MessageRead] = field(default_factory=list)
     symptoms: list[SymptomRead] = field(default_factory=list)
     is_low_confidence: bool = False
+    guest_session_id: UUID | None = None
     created_at: datetime = field(default_factory=lambda: datetime.now(UTC))
     updated_at: datetime = field(default_factory=lambda: datetime.now(UTC))
 
@@ -224,6 +228,7 @@ class AssessmentOrchestrator:
         consent_id: UUID,
         user_id: UUID | None = None,
         assessment_id: UUID | None = None,
+        guest_session_id: UUID | None = None,
     ) -> AssessmentRead:
         """Initialize a new assessment session bound to verified consent.
 
@@ -231,6 +236,7 @@ class AssessmentOrchestrator:
             consent_id: Identifier of the verified consent record.
             user_id: Optional registered user identifier.
             assessment_id: Optional explicit UUID (generated if None).
+            guest_session_id: Optional anonymous guest session identifier.
 
         Returns:
             AssessmentRead model representing the initialized assessment.
@@ -240,6 +246,7 @@ class AssessmentOrchestrator:
             assessment_id=aid,
             consent_id=consent_id,
             user_id=user_id,
+            guest_session_id=guest_session_id,
         )
         sm = AssessmentStateMachine(
             initial_state=AssessmentState.START,
@@ -250,6 +257,7 @@ class AssessmentOrchestrator:
             id=aid,
             consent_id=consent_id,
             user_id=user_id,
+            guest_session_id=guest_session_id,
             state_machine=sm,
             messages=[],
             symptoms=[],
@@ -258,45 +266,59 @@ class AssessmentOrchestrator:
             updated_at=now,
         )
         self._sessions[aid] = session
-        logger.info("assessment_created", assessment_id=str(aid))
+        logger.info(
+            "assessment_created",
+            assessment_id=str(aid),
+            guest_session_id=str(guest_session_id) if guest_session_id else None,
+        )
         return AssessmentRead(
             id=aid,
             state=sm.current_state,
             consent_id=consent_id,
             user_id=user_id,
+            guest_session_id=guest_session_id,
             created_at=now,
             updated_at=now,
         )
 
     def register_session(
         self,
-        assessment_id: UUID,
-        state_machine: AssessmentStateMachine,
+        assessment_id: UUID | AssessmentSession,
+        state_machine: AssessmentStateMachine | None = None,
         messages: list[MessageRead] | None = None,
         symptoms: list[SymptomRead] | None = None,
         consent_id: UUID | None = None,
         user_id: UUID | None = None,
+        guest_session_id: UUID | None = None,
     ) -> AssessmentSession:
         """Register an active assessment state machine session.
 
         Args:
-            assessment_id: Unique assessment identifier.
+            assessment_id: Unique UUID or pre-built AssessmentSession instance.
             state_machine: Configured AssessmentStateMachine instance.
             messages: Optional existing message dialogue list.
             symptoms: Optional pre-existing symptoms list.
             consent_id: Optional consent identifier (falls back to context).
             user_id: Optional user identifier (falls back to context).
+            guest_session_id: Optional anonymous guest session identifier.
 
         Returns:
             The registered AssessmentSession.
         """
+        if isinstance(assessment_id, AssessmentSession):
+            self._sessions[assessment_id.id] = assessment_id
+            return assessment_id
+
+        assert state_machine is not None, "state_machine required when id is UUID"
         cid = consent_id or state_machine.context.consent_id or uuid4()
         uid = user_id or state_machine.context.user_id
+        gid = guest_session_id or state_machine.context.guest_session_id
         now = datetime.now(UTC)
         session = AssessmentSession(
             id=assessment_id,
             consent_id=cid,
             user_id=uid,
+            guest_session_id=gid,
             state_machine=state_machine,
             messages=list(messages or []),
             symptoms=list(symptoms or []),
@@ -324,6 +346,7 @@ class AssessmentOrchestrator:
             state=session.state_machine.current_state,
             consent_id=session.consent_id,
             user_id=session.user_id,
+            guest_session_id=session.guest_session_id,
             created_at=session.created_at,
             updated_at=session.updated_at,
         )
@@ -1207,6 +1230,284 @@ class AssessmentOrchestrator:
             assessment_id=str(assessment_id),
         )
         return self.get_state(assessment_id)
+
+    async def claim_assessment(
+        self,
+        assessment_id: UUID,
+        user_id: UUID,
+        guest_session_id: UUID | None = None,
+        db_session: Any | None = None,
+    ) -> AssessmentRead:
+        """Claim an anonymous guest assessment into a newly registered user account.
+
+        Per idea §10, allows an anonymous guest who completed or started an assessment
+        to transfer ownership of the assessment to their newly created user account.
+
+        Args:
+            assessment_id: Unique identifier of the assessment to claim.
+            user_id: UUID of the registered user account receiving ownership.
+            guest_session_id: Optional guest session UUID for ownership verification.
+            db_session: Optional active SQLAlchemy session for database persistence.
+
+        Returns:
+            AssessmentRead: Updated assessment representation with assigned user_id.
+
+        Raises:
+            AssessmentServiceError: If assessment is missing (404),
+                already claimed (409), guest session mismatches (403),
+                or DB entities not found (404).
+        """
+        session = self._sessions.get(assessment_id)
+        db_assessment = None
+
+        if db_session is not None:
+            from app.models.assessment import Assessment as DbAssessment
+            from app.models.guest_session import GuestSession as DbGuestSession
+            from app.models.user import User as DbUser
+
+            db_assessment = db_session.get(DbAssessment, assessment_id)
+            if db_assessment is None and session is None:
+                raise AssessmentServiceError(
+                    message=f"Assessment '{assessment_id}' was not found.",
+                    code="ASSESSMENT_NOT_FOUND",
+                    status_code=status.HTTP_404_NOT_FOUND,
+                )
+
+            if db_assessment is not None:
+                if db_assessment.user_id is not None:
+                    raise AssessmentServiceError(
+                        message="Assessment is already claimed by a user account.",
+                        code="ALREADY_CLAIMED",
+                        status_code=status.HTTP_409_CONFLICT,
+                    )
+                db_user = db_session.get(DbUser, user_id)
+                if db_user is None:
+                    raise AssessmentServiceError(
+                        message=f"User '{user_id}' was not found.",
+                        code="USER_NOT_FOUND",
+                        status_code=status.HTTP_404_NOT_FOUND,
+                    )
+                if (
+                    guest_session_id is not None
+                    and db_assessment.guest_session_id is not None
+                    and db_assessment.guest_session_id != guest_session_id
+                ):
+                    raise AssessmentServiceError(
+                        message=(
+                            "Assessment does not match provided guest session "
+                            "identifier."
+                        ),
+                        code="GUEST_SESSION_MISMATCH",
+                        status_code=status.HTTP_403_FORBIDDEN,
+                    )
+
+                db_assessment.user_id = user_id
+                if db_assessment.guest_session_id is not None:
+                    db_guest = db_session.get(
+                        DbGuestSession, db_assessment.guest_session_id
+                    )
+                    if db_guest is not None and not db_guest.is_claimed:
+                        db_guest.claimed_at = datetime.now(UTC)
+                        db_guest.claimed_by_user_id = user_id
+                db_session.flush()
+
+        if session is None and db_assessment is None:
+            raise AssessmentServiceError(
+                message=f"Assessment '{assessment_id}' was not found.",
+                code="ASSESSMENT_NOT_FOUND",
+                status_code=status.HTTP_404_NOT_FOUND,
+            )
+
+        if session is not None:
+            if session.user_id is not None:
+                raise AssessmentServiceError(
+                    message="Assessment is already claimed by a user account.",
+                    code="ALREADY_CLAIMED",
+                    status_code=status.HTTP_409_CONFLICT,
+                )
+
+            if (
+                guest_session_id is not None
+                and session.guest_session_id is not None
+                and session.guest_session_id != guest_session_id
+            ):
+                raise AssessmentServiceError(
+                    message=(
+                        "Assessment does not match provided guest session identifier."
+                    ),
+                    code="GUEST_SESSION_MISMATCH",
+                    status_code=status.HTTP_403_FORBIDDEN,
+                )
+
+            session.user_id = user_id
+            session.state_machine.context.user_id = user_id
+            if guest_session_id is not None and session.guest_session_id is None:
+                session.guest_session_id = guest_session_id
+            session.updated_at = datetime.now(UTC)
+
+        logger.info(
+            "guest_assessment_claimed",
+            assessment_id=str(assessment_id),
+            user_id=str(user_id),
+        )
+
+        if session is not None:
+            return AssessmentRead(
+                id=session.id,
+                state=session.state_machine.current_state,
+                consent_id=session.consent_id,
+                user_id=session.user_id,
+                guest_session_id=session.guest_session_id,
+                created_at=session.created_at,
+                updated_at=session.updated_at,
+            )
+
+        assert db_assessment is not None
+        db_created = db_assessment.created_at or datetime.now(UTC)
+        db_updated = getattr(db_assessment, "updated_at", None) or db_created
+        return AssessmentRead(
+            id=db_assessment.id,
+            state=AssessmentState(db_assessment.state),
+            consent_id=db_assessment.consent_id,
+            user_id=db_assessment.user_id,
+            guest_session_id=db_assessment.guest_session_id,
+            created_at=db_created,
+            updated_at=db_updated,
+        )
+
+    async def claim_guest_session(
+        self,
+        guest_session_id: UUID,
+        user_id: UUID,
+        db_session: Any | None = None,
+    ) -> list[AssessmentRead]:
+        """Transfer guest session assessments to a newly registered user account.
+
+        Per idea §10 and database.md, transfers ownership of all assessments
+        associated with the specified guest session to the newly registered user.
+
+        Args:
+            guest_session_id: UUID of the anonymous guest session.
+            user_id: UUID of the registered user account receiving ownership.
+            db_session: Optional active SQLAlchemy database session.
+
+        Returns:
+            list[AssessmentRead]: All claimed assessment representations.
+
+        Raises:
+            AssessmentServiceError: If session is already claimed (409)
+                or not found (404).
+        """
+        in_memory_matches = [
+            s for s in self._sessions.values() if s.guest_session_id == guest_session_id
+        ]
+
+        if any(s.user_id is not None for s in in_memory_matches):
+            raise AssessmentServiceError(
+                message=(f"Guest session '{guest_session_id}' is already claimed."),
+                code="ALREADY_CLAIMED",
+                status_code=status.HTTP_409_CONFLICT,
+            )
+
+        db_claimed_ids: list[UUID] = []
+        if db_session is not None:
+            from app.models.guest_session import GuestSession as DbGuestSession
+            from app.models.user import User as DbUser
+            from app.repositories.guest_session_repository import (
+                claim_guest_session as db_claim_session,
+            )
+
+            db_guest = db_session.get(DbGuestSession, guest_session_id)
+            if db_guest is None and not in_memory_matches:
+                raise AssessmentServiceError(
+                    message=f"Guest session '{guest_session_id}' was not found.",
+                    code="GUEST_SESSION_NOT_FOUND",
+                    status_code=status.HTTP_404_NOT_FOUND,
+                )
+            if db_guest is not None:
+                if db_guest.is_claimed:
+                    raise AssessmentServiceError(
+                        message=(
+                            f"Guest session '{guest_session_id}' is already claimed."
+                        ),
+                        code="ALREADY_CLAIMED",
+                        status_code=status.HTTP_409_CONFLICT,
+                    )
+                db_user = db_session.get(DbUser, user_id)
+                if db_user is None:
+                    raise AssessmentServiceError(
+                        message=f"User '{user_id}' was not found.",
+                        code="USER_NOT_FOUND",
+                        status_code=status.HTTP_404_NOT_FOUND,
+                    )
+                try:
+                    updated_guest = db_claim_session(
+                        session=db_session,
+                        guest_session_id=guest_session_id,
+                        user_id=user_id,
+                    )
+                    db_claimed_ids = [a.id for a in updated_guest.assessments]
+                except ValueError as exc:
+                    raise AssessmentServiceError(
+                        message=str(exc),
+                        code="CLAIM_FAILED",
+                        status_code=status.HTTP_400_BAD_REQUEST,
+                    ) from exc
+
+        if not in_memory_matches and not db_claimed_ids:
+            raise AssessmentServiceError(
+                message=f"No assessments found for guest session '{guest_session_id}'.",
+                code="GUEST_SESSION_NOT_FOUND",
+                status_code=status.HTTP_404_NOT_FOUND,
+            )
+
+        now = datetime.now(UTC)
+        results: list[AssessmentRead] = []
+        for session in in_memory_matches:
+            session.user_id = user_id
+            session.state_machine.context.user_id = user_id
+            session.updated_at = now
+            results.append(
+                AssessmentRead(
+                    id=session.id,
+                    state=session.state_machine.current_state,
+                    consent_id=session.consent_id,
+                    user_id=session.user_id,
+                    guest_session_id=session.guest_session_id,
+                    created_at=session.created_at,
+                    updated_at=session.updated_at,
+                )
+            )
+
+        if db_session is not None and db_claimed_ids:
+            from app.models.assessment import Assessment as DbAssessment
+
+            in_mem_ids = {s.id for s in in_memory_matches}
+            for aid in db_claimed_ids:
+                if aid not in in_mem_ids:
+                    db_a = db_session.get(DbAssessment, aid)
+                    if db_a is not None:
+                        db_a_created = db_a.created_at or now
+                        db_a_updated = getattr(db_a, "updated_at", None) or now
+                        results.append(
+                            AssessmentRead(
+                                id=db_a.id,
+                                state=AssessmentState(db_a.state),
+                                consent_id=db_a.consent_id,
+                                user_id=db_a.user_id,
+                                guest_session_id=db_a.guest_session_id,
+                                created_at=db_a_created,
+                                updated_at=db_a_updated,
+                            )
+                        )
+
+        logger.info(
+            "guest_session_claimed",
+            guest_session_id=str(guest_session_id),
+            user_id=str(user_id),
+            count=len(results),
+        )
+        return results
 
     async def generate_result(
         self,
