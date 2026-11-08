@@ -30,6 +30,14 @@ from app.schemas.message import (
     MessageCreate,
     MessageRead,
 )
+from app.schemas.profile import (
+    AgeBand,
+    BiologicalSex,
+    ProfileContext,
+    ProfileCreate,
+    ProfileRead,
+    ProfileUpdate,
+)
 from app.schemas.result import (
     AssessmentResult,
     ReferralInfo,
@@ -43,11 +51,13 @@ from app.schemas.symptom import (
 )
 
 __all__ = [
+    "AgeBand",
     "AssessmentCreate",
     "AssessmentRead",
     "AssessmentResult",
     "AssessmentState",
     "AssessmentStateResponse",
+    "BiologicalSex",
     "Condition",
     "ConfidenceLabel",
     "Duration",
@@ -58,6 +68,10 @@ __all__ = [
     "MessageRole",
     "MessageType",
     "ProcessResult",
+    "ProfileContext",
+    "ProfileCreate",
+    "ProfileRead",
+    "ProfileUpdate",
     "ReferralInfo",
     "RiskLevel",
     "SchemaBase",
