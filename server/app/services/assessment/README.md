@@ -1,6 +1,6 @@
 # Assessment Service Module
 
-**Owner:** Darshil (Assessment Orchestration) · **Task:** S1-DAR-2, S1-DAR-3, S1-DAR-4, S2-DAR-1, S2-DAR-2 · **Requirements:** idea §3, idea §10, FR-03, FR-04, FR-05, FR-06, FR-07, FR-16, FR-17, FR-19, FR-20, FR-21, FR-25, DR-05
+**Owner:** Darshil (Assessment Orchestration) · **Task:** S1-DAR-2, S1-DAR-3, S1-DAR-4, S2-DAR-1, S2-DAR-2, S2-DAR-3 · **Requirements:** idea §3, idea §10, FR-02, FR-03, FR-04, FR-05, FR-06, FR-07, FR-16, FR-17, FR-19, FR-20, FR-21, FR-25, DR-05
 
 The Assessment Service orchestrates the conversational symptom assessment lifecycle. It provides:
 1. **Assessment State Machine**: Strictly governs valid states and enforces medical-safety guards throughout the user experience.
@@ -161,7 +161,19 @@ For visibly assessable conditions (e.g. eczema, hives, rashes), optional photos 
 
 ---
 
-## 9. Running Unit Tests
+## 9. Clinical Profile Context (S2-DAR-3)
+
+Per **FR-02** and **idea §10**:
+Users with registered accounts may optionally supply coarse demographic and chronic health details to provide clinical context for assessments without building an invasive medical dossier.
+
+- **`ProfileContext`**: Data model capturing optional coarse `AgeBand` (`child`, `teen`, `young_adult`, `adult`, `senior`), `BiologicalSex` (`female`, `male`, `other`, `prefer_not_to_say`), and self-reported `chronic_conditions` (e.g. Asthma, Diabetes).
+- **Session Integration**: `AssessmentSession` and `AssessmentContext` support storing optional profile context attached at session initialization (`create_assessment()`), updated mid-assessment (`set_profile_context()`), or inspected (`get_profile_context()`).
+- **Analysis Integration**: `generate_result(assessment_id, profile=...)` accepts optional profile context to contextualize clinical triage and passes it forward into downstream analysis.
+- **Privacy Compliance**: Profile collection is strictly optional, minimal, and fully compliant with data minimization under the DPDP Act 2023.
+
+---
+
+## 10. Running Unit Tests
 
 From `server/`:
 
