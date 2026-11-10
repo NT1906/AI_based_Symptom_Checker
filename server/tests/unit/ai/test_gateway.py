@@ -96,6 +96,28 @@ def test_versioned_extraction_prompt_exists_and_valid() -> None:
     assert "NEUROLOGICAL" in content
 
 
+def test_versioned_extraction_prompt_v2_exists_and_valid() -> None:
+    """Extraction prompt v2 must exist and enforce multi-turn and safety rules."""
+    prompts_dir = (
+        Path(__file__).resolve().parents[3] / "app" / "services" / "ai" / "prompts"
+    )
+    prompt_file = prompts_dir / "extraction.v2.txt"
+
+    assert prompt_file.exists(), f"Missing prompt file: {prompt_file}"
+    content = prompt_file.read_text(encoding="utf-8")
+    assert len(content.strip()) > 300
+    assert "{user_message}" in content
+    assert "{conversation_history}" in content
+    # Medical safety invariants
+    assert "DO NOT provide any medical diagnosis" in content
+    # Multi-turn context resolution
+    assert "MULTI-TURN CONVERSATION CONTEXT" in content
+    assert "TARGET SYMPTOM ATTRIBUTION" in content
+    # Eval improvements
+    assert "COMMON MISSPELLINGS & PHONETIC TYPOS" in content
+    assert "COMMON HINGLISH & TRANSLITERATED PHRASE MAPPINGS" in content
+
+
 def test_versioned_clarification_prompt_v1_exists_and_valid() -> None:
     """Versioned prompt v1 must exist and enforce the 3-question cap."""
     prompts_dir = (
