@@ -8,7 +8,8 @@ Responsibilities:
     - Allow teammates and CI to run tests without OpenAI API keys.
     - Support deterministic failure simulation for error handling tests.
 
-Owner: Nishith · Task: S1-NIT-2 · Requirements: FR-04, FR-19, FR-20, NFR-05
+Owner: Nishith · Tasks: S1-NIT-2, S2-NIT-1
+Requirements: FR-03, FR-04, FR-17, FR-19, FR-20, NFR-05, NFR-07
 """
 
 import json
@@ -184,6 +185,39 @@ BASE_FIXTURE_MAP: dict[str, str] = {
     "pimples": "pimples",
     "spreading redness": "spreading_redness",
     "non blanching rash": "non_blanching_rash",
+    # Common Misspellings and Phonetic Typos (S2-NIT-1)
+    "headack": "headache",
+    "hedache": "headache",
+    "headach": "headache",
+    "stomake": "abdominal_pain",
+    "stomake aking": "abdominal_pain",
+    "naucea": "nausea",
+    "nausia": "nausea",
+    "nauseous": "nausea",
+    "feel nauseous": "nausea",
+    "dizzynes": "dizziness",
+    "blured vission": "blurred_vision",
+    "confution": "confusion",
+    "droopin face": "facial_droop",
+    "drooping face": "facial_droop",
+    "vomting": "vomiting",
+    "vomitting": "vomiting",
+    "diarhea": "diarrhea",
+    "diarrhoea": "diarrhea",
+    "shiverring": "chills",
+    # Expanded Hinglish & Idiomatic Descriptions (S2-NIT-1)
+    "pet saaf nahi hua": "constipation",
+    "dast lag gaye": "diarrhea",
+    "sans phoolna": "shortness_of_breath",
+    "seene me jakdan": "chest_tightness",
+    "chhati me dabav": "chest_tightness",
+    "bahut tezz bukhar": "fever",
+    "susti": "fatigue",
+    "gala kharab": "sore_throat",
+    "kharrash": "sore_throat",
+    "sar ghoom raha": "dizziness",
+    "sar ghoom raha hai": "dizziness",
+    "lal daane": "skin_rash",
     # Mental Health
     "thoughts of self harm": "thoughts_of_self_harm",
 }
@@ -323,38 +357,51 @@ class MockAiProvider:
                     )
                 )
 
-        # Clarification reply resolution: if no new symptom phrase appears in the
-        # current message but conversation history references an ongoing symptom,
-        # attribute reply properties (severity, duration, onset) to that symptom.
-        if not extracted_symptoms and conversation_history:
-            for phrase in sorted_phrases:
-                canonical_name = FIXTURE_SYMPTOM_MAP[phrase]
-                if (
-                    phrase in conversation_history.lower()
-                    or canonical_name.replace("_", " ") in conversation_history.lower()
-                ):
-                    reply_sev = self._parse_severity(cleaned)
-                    reply_dur = self._parse_duration(cleaned)
-                    reply_onset = self._parse_onset(cleaned)
-                    reply_site = self._parse_location(cleaned, canonical_name)
-                    if (
-                        reply_sev != SeverityEnum.UNKNOWN
-                        or reply_dur is not None
-                        or reply_onset is not None
-                        or reply_site is not None
-                    ):
-                        extracted_symptoms.append(
-                            ExtractedSymptom(
-                                name=canonical_name,
-                                severity=reply_sev,
-                                duration=reply_dur,
-                                onset=reply_onset,
-                                body_site=reply_site,
-                                body_location=reply_site,
-                                confidence=0.95,
-                            )
-                        )
+        # Multi-turn clarification reply resolution (FR-19, S2-NIT-1):
+        # When conversation history is present, search backwards to find the
+        # active target symptom queried by the assistant or discussed most recently.
+        # Attribute standalone response properties (severity, duration, onset, site)
+        # to that target symptom (even when new symptoms are also introduced).
+        if conversation_history:
+            history_lines = [
+                line.strip()
+                for line in conversation_history.strip().split("\n")
+                if line.strip()
+            ]
+            target_canonical: str | None = None
+            for line in reversed(history_lines):
+                line_lower = line.lower()
+                for phrase in sorted_phrases:
+                    canon = FIXTURE_SYMPTOM_MAP[phrase]
+                    if phrase in line_lower or canon.replace("_", " ") in line_lower:
+                        target_canonical = canon
                         break
+                if target_canonical:
+                    break
+
+            if target_canonical and target_canonical not in detected_canonical_names:
+                reply_sev = self._parse_severity(cleaned)
+                reply_dur = self._parse_duration(cleaned)
+                reply_onset = self._parse_onset(cleaned)
+                reply_site = self._parse_location(cleaned, target_canonical)
+                if (
+                    reply_sev != SeverityEnum.UNKNOWN
+                    or reply_dur is not None
+                    or reply_onset is not None
+                    or reply_site is not None
+                ):
+                    extracted_symptoms.append(
+                        ExtractedSymptom(
+                            name=target_canonical,
+                            severity=reply_sev,
+                            duration=reply_dur,
+                            onset=reply_onset,
+                            body_site=reply_site,
+                            body_location=reply_site,
+                            confidence=0.95,
+                        )
+                    )
+                    detected_canonical_names.add(target_canonical)
 
         # Missing-information detection engine integration
         requires_clarification, clarification_reason = should_request_clarification(
@@ -508,8 +555,10 @@ class MockAiProvider:
             "excruciating",
             "tez",
             "bahut tez",
+            "bahut tezz",
             "bahut zyada",
             "very bad",
+            "high fever",
         ]
         if any(w in snippet for w in severe_terms):
             return SeverityEnum.SEVERE
@@ -591,13 +640,20 @@ class MockAiProvider:
             or "from yesterday" in text
             or "started yesterday" in text
             or "yesterday" in text
+            or "kal se" in text
+            or "24 hours" in text
         ):
             return Duration(value=1.0, unit=DurationUnitEnum.DAY)
         if "for a couple days" in text or "couple of days" in text:
             return Duration(value=2.0, unit=DurationUnitEnum.DAY)
         if "for a week" in text or "one week" in text:
             return Duration(value=1.0, unit=DurationUnitEnum.WEEK)
-        if "all day" in text:
+        if (
+            "all day" in text
+            or "since morning" in text
+            or "this morning" in text
+            or "aaj subah se" in text
+        ):
             return Duration(value=1.0, unit=DurationUnitEnum.DAY)
 
         match = re.search(
