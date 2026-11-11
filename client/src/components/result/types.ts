@@ -41,6 +41,20 @@ export interface ConditionListProps {
   title?: string;
 }
 
+/** Props for the WhyThisResultPanel component (FR-24). */
+export interface WhyThisResultPanelProps {
+  /** Candidate conditions presented to the user. */
+  conditions: ConditionItem[];
+  /** Confirmed symptoms reported by user. */
+  reportedSymptoms?: string[];
+  /** Whether the panel starts expanded. */
+  defaultExpanded?: boolean;
+  /** Section heading title override. */
+  title?: string;
+  /** Custom container styling classes. */
+  className?: string;
+}
+
 /** Clinical guidance information covering self-care recommendations and warning signs. */
 export interface TriageGuidance {
   /** Summary or headline for the guidance section. */

@@ -18,6 +18,7 @@
 import React from "react";
 import { AppLayout } from "../components/layout/AppLayout";
 import { ConditionList } from "../components/result/ConditionList";
+import { WhyThisResultPanel } from "../components/result/WhyThisResultPanel";
 import { RiskBadge, getRiskConfig } from "../components/result/RiskBadge";
 import type {
   AssessmentResultData,
@@ -229,6 +230,11 @@ export function ResultPage({
             onSelectCondition={onSelectCondition}
             emptyMessage="No matching conditions identified for the provided symptoms. Please consult a qualified physician for a clinical evaluation."
           />
+
+          {/* Explanation panel for contributing factors (FR-24) */}
+          {conditions.length > 0 && (
+            <WhyThisResultPanel conditions={conditions} />
+          )}
         </section>
 
         {/* 3. Clinical Guidance Slot (Self-Care & Warning Signs) */}
