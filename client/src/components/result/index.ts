@@ -4,6 +4,13 @@
  */
 
 export {
+  DoctorReferral,
+  buildMapSearchUrl,
+  DOCTOR_REFERRAL_DATA_NOTICE,
+  DEFAULT_REFERRAL_SPECIALTY,
+} from "./DoctorReferral";
+
+export {
   ConditionList,
   getConfidenceLabel,
   getConfidenceBadgeClass,
@@ -27,5 +34,7 @@ export type {
   RiskLevel,
   TriageGuidance,
   ReferralInfo,
+  DoctorReferralProps,
+  MapProvider,
   AssessmentResultData,
 } from "./types";
