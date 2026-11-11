@@ -23,6 +23,13 @@ export type {
   VisualSymptomCandidate,
   VisualSymptomInput,
 } from "./visualSymptoms";
+export {
+  SymptomTooltip,
+} from "./SymptomTooltip";
+export {
+  getSymptomDefinition,
+  SYMPTOM_GLOSSARY,
+} from "./symptomGlossary";
 export { CANONICAL_SYMPTOMS } from "./canonicalSymptoms";
 export type {
   ConfirmedSymptom,
@@ -33,5 +40,11 @@ export type {
   ImageAttachProps,
 } from "./types";
 export type { CanonicalSymptomItem } from "./canonicalSymptoms";
+export type {
+  SymptomGlossaryEntry,
+} from "./symptomGlossary";
+export type {
+  SymptomTooltipProps,
+} from "./SymptomTooltip";
 
 

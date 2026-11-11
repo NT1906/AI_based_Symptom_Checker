@@ -2,16 +2,17 @@
 
 **Owner:** Mann (Frontend + Deployment · Testing)  
 **Sprint 1 Task:** S1-MAN-1 (Issue #59)  
-**Sprint 2 Task:** S2-MAN-1 (Issue #184)  
-**Requirements:** FR-16, FR-21, FR-03, DR-01, idea §3, DR-06
+**Sprint 2 Tasks:** S2-MAN-1 (Issue #184), S2-MAN-3 (Issue #186)  
+**Requirements:** FR-16, FR-21, FR-03, DR-01, idea §3, DR-06, FR-18
 
 ---
 
 ## Purpose
 
-Provides user-facing assessment review, confirmation, and situational image attachment components:
+Provides user-facing assessment review, confirmation, situational image attachment, and symptom definition components:
 1. **Symptom Review & Confirmation (`SymptomConfirmationCard`)**: Before transitioning to condition analysis, users review extracted symptoms, edit attributes (severity, duration, location), remove incorrect items, and add missing symptoms from a canonical selectable list.
 2. **Situational Image Attachment (`ImageAttach`)**: Offered *only* when visual symptoms are identified (rashes, skin discoloration, swelling, bumps, blisters, lesions). Provides direct mobile camera capture (`capture="environment"`), client-side MIME and 5 MB size validation, in-memory preview with removal capability, and mandatory non-retention privacy notices (`DR-06`).
+3. **Symptom Definition Tooltips (`SymptomTooltip`)**: Displays plain-language definitions and safe guidance on when to seek prompt medical attention for symptoms from the curated knowledge glossary (FR-18).
 
 ---
 
@@ -29,6 +30,8 @@ Provides user-facing assessment review, confirmation, and situational image atta
 * **`MAX_IMAGE_SIZE_BYTES`**: Constant defining the 5 MB payload limit (`5 * 1024 * 1024`).
 * **`ALLOWED_IMAGE_TYPES`**: Allowed MIME types (`image/jpeg`, `image/png`, `image/webp`).
 * **`IMAGE_PRIVACY_DISCLAIMER`**: Mandatory non-retention notice: *"Photos are processed in-memory for visual triage analysis and are never stored, logged, or shared."*
+* **`SymptomTooltip`**: Accessible symptom popover tooltip displaying plain-language definition and seek-care advice (FR-18).
+* **`getSymptomDefinition(identifier)`**: Curated plain-language glossary lookup helper.
 * **`SymptomConfirmationCard`**: Main confirmation component.
   * `initialSymptoms: ConfirmedSymptom[]`: Pre-extracted symptom items.
   * `onConfirm: (symptoms: ConfirmedSymptom[]) => void`: Dispatched when the user confirms verified symptoms.
@@ -47,6 +50,7 @@ Run the Vitest component test suite:
 cd client
 npm test src/components/assessment/ImageAttach.test.tsx
 npm test src/components/assessment/visualSymptoms.test.ts
+npm test src/components/assessment/SymptomTooltip.test.tsx
 npm test src/components/assessment/SymptomConfirmationCard.test.tsx
 ```
 
