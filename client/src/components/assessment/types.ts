@@ -3,6 +3,8 @@
  * Owner: Mann (Frontend + Deployment · Testing) · Task: S1-MAN-1 · Requirements: FR-16, FR-21, FR-03
  */
 
+import type { VisualSymptomInput } from "./visualSymptoms";
+
 /** Clinical severity classifications matching the backend severity schema. */
 export type SeverityLevel = "MILD" | "MODERATE" | "SEVERE" | "UNKNOWN";
 
@@ -44,4 +46,23 @@ export interface SymptomConfirmationCardProps {
   /** Whether analysis submission is currently in progress. */
   isSubmitting?: boolean;
 }
+
+/** Props for the ImageAttach component (idea §3, S2-MAN-1). */
+export interface ImageAttachProps {
+  /** Symptoms or message text evaluated to determine if visual symptoms are present. */
+  symptoms?: VisualSymptomInput;
+  /** Force showing the component even if visual symptoms were not detected. */
+  forceShow?: boolean;
+  /** Currently selected file, if managed externally. */
+  selectedFile?: File | null;
+  /** Callback when a valid photo is selected or removed. */
+  onImageSelect: (file: File | null) => void;
+  /** Callback when validation or file read error occurs. */
+  onError?: (error: string | null) => void;
+  /** Whether the attachment controls are disabled. */
+  disabled?: boolean;
+  /** Optional container CSS class name. */
+  className?: string;
+}
+
 
