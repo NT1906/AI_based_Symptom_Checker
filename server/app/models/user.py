@@ -1,6 +1,7 @@
 """Optional registered user storage.
 
-Owner: Harsh, Kavya · Task: S0-HAR-1, S1-KAV-4 · Requirements: FR-01, idea § 10
+Owner: Harsh, Kavya · Tasks: S0-HAR-1, S1-KAV-4, S2-KAV-3
+Requirements: FR-01, FR-02, idea § 10
 """
 
 from typing import TYPE_CHECKING
@@ -13,6 +14,7 @@ from app.models.base import Base, RecordMixin
 if TYPE_CHECKING:
     from app.models.assessment import Assessment
     from app.models.guest_session import GuestSession
+    from app.models.profile import Profile
 
 
 class User(RecordMixin, Base):
@@ -36,4 +38,9 @@ class User(RecordMixin, Base):
     )
     claimed_guest_sessions: Mapped[list["GuestSession"]] = relationship(
         back_populates="claimed_by_user", passive_deletes="all"
+    )
+    profile: Mapped["Profile | None"] = relationship(
+        back_populates="user",
+        uselist=False,
+        cascade="all, delete-orphan",
     )
