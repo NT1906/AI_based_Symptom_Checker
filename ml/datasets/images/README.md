@@ -101,11 +101,8 @@ Images left out:
 - **Three classes miss the class-size rule even before cleaning:**
   - `fungal_infection`, `chickenpox` and `cellulitis`. Neither source has enough of them, and cleaning can only lower the counts.
   - Under cv-plan §2 they are dropped from the model and their images go to `unclear`. The conditions stay reachable through text symptoms.
-  - The class list in `ml/cv/configs/baseline.yaml` (and the server's `ImageLabel`) changes in S1-NIS-6 (#29), once the post-cleaning counts below are in.
-- **DermaAmin links look dead.** It hosts 1,012 of the 1,211 Fitzpatrick17k images.
-  - In a 3 Nov 2026 sample, 30 of 30 DermaAmin URLs failed (26 HTTP 404, 4 connection resets). All 10 Atlas Dermatologico URLs worked.
-  - If DermaAmin is fully gone, `acne` (≈90 train) and `scabies` (≈106 train) also fall below the rule. That leaves `eczema`, `urticaria` and `unclear`.
-  - The real numbers come from `clean_report.json` after the Kaggle run (§7).
+  - Applied in S1-NIS-6 (#29): `ml/cv/configs/baseline.yaml` and the server's `ImageLabel` list only the classes that pass (§8).
+- **DermaAmin links are dead.** It hosted 1,012 of the 1,211 Fitzpatrick17k images, and the full run (§8) confirmed every one fails. That pushed `acne` and `scabies` below the rule as well, leaving `eczema`, `urticaria` and `unclear`.
 - **Dark skin is under-represented:**
   - `urticaria`: 23 dark images. `acne`: 47.
   - The skin-tone gap metric (cv-plan §6) and the rebalancing in S2-NIS-4 handle this, and the model card reports it.
@@ -138,9 +135,43 @@ The cleaning step:
 - Removes near-duplicates by 64-bit dHash (≤ 3 bits apart). In each duplicate set it keeps the test copy first, then val, then train; a set with conflicting labels is dropped.
 - Writes `clean_v1.csv`, which is what training reads, and `clean_report.json`.
 
-After the first full run, copy the `clean_report.json` counts into a new §8 here (S1-NIS-6).
+The first full run's counts are in §8.
 
-## 8. Files
+## 8. Counts after download and cleaning (Kaggle run, 3 Nov 2026)
+
+From `clean_report.json` of the first full run (`download_images.py` + `clean_images.py`): **9,242 of 10,598 images kept.**
+
+| Dropped | SCIN | Fitzpatrick17k |
+|---|---|---|
+| Download failed (dead link) | 1 | 1,012 (every DermaAmin image; all 199 Atlas Dermatologico images downloaded) |
+| Smaller than 128 px | 3 | 0 |
+| Near-duplicate (one copy kept) | 45 | 1 |
+| Near-duplicates with conflicting labels (all dropped) | 291 | 3 |
+
+**Conflicting duplicates.** Unrelated photos in a 30-image sample were at least 14 bits apart (median 31), so the ≤ 3-bit threshold is strict. The 291 are most likely the same photo submitted in different SCIN cases with different labels, and dropping them is correct.
+
+| Manifest label | Train | Val | Test | Class-size rule | In the model |
+|---|---|---|---|---|---|
+| `eczema` | 592 | 103 | 102 | meets | **class** |
+| `urticaria` | 282 | 49 | 46 | meets | **class** |
+| `unclear` | 5,347 | 1,155 | 1,154 | meets | **class** |
+| `scabies` | 105 | 24 | 20 | below | merged into `unclear` |
+| `fungal_infection` | 94 | 21 | 17 | below | merged into `unclear` |
+| `acne` | 90 | 9 | 13 | below | merged into `unclear` |
+| `cellulitis` | 11 | 4 | 3 | below | merged into `unclear` |
+| `chickenpox` | 1 | 0 | 0 | below | merged into `unclear` |
+
+**Model classes (S1-NIS-6)**, after merging (`data.merged_into_unclear` in `ml/cv/configs/baseline.yaml`):
+
+| Class | Train | Val | Test | Light | Medium | Dark | Unknown |
+|---|---|---|---|---|---|---|---|
+| `eczema` | 592 | 103 | 102 | 364 | 339 | 70 | 24 |
+| `urticaria` | 282 | 49 | 46 | 141 | 193 | 21 | 22 |
+| `unclear` | 5,648 | 1,213 | 1,207 | — | — | — | — |
+
+The five merged conditions are still reachable through the user's text symptoms. A v2 can bring them back as classes if a properly licensed source adds enough photos (≥ 150 train, ≥ 30 test).
+
+## 9. Files
 
 | Path | What it is |
 |---|---|

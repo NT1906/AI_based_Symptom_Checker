@@ -18,15 +18,15 @@ from pydantic import BaseModel, ConfigDict, Field, model_validator
 
 
 class ImageLabel(StrEnum):
-    """CV model classes, in model output order (ml/cv/configs/baseline.yaml)."""
+    """CV model classes, in model output order (ml/cv/configs/baseline.yaml).
+
+    Only conditions with enough training photos are classes; the others were
+    merged into ``unclear`` and stay reachable through text symptoms
+    (ml/datasets/images/README.md §8).
+    """
 
     ECZEMA = "eczema"
-    FUNGAL_INFECTION = "fungal_infection"
     URTICARIA = "urticaria"
-    SCABIES = "scabies"
-    ACNE = "acne"
-    CHICKENPOX = "chickenpox"
-    CELLULITIS = "cellulitis"
     UNCLEAR = "unclear"
 
 

@@ -64,12 +64,15 @@ def test_shipped_config_loads() -> None:
     assert config.class_names[-1] == UNCLEAR_CLASS
 
 
-def test_shipped_classes_match_visual_skin_conditions() -> None:
+def test_shipped_classes_cover_visual_skin_conditions() -> None:
     config = load_config()
     mapped = {c.condition_id for c in config.classes if c.condition_id is not None}
+    visual = _visual_skin_condition_ids()
 
-    # Every visual skin condition gets a class, and no class points elsewhere.
-    assert mapped == _visual_skin_condition_ids()
+    # Classes point only at visual skin conditions; every other one was merged
+    # into `unclear` by the class-size rule (docs/cv-plan.md §2).
+    assert mapped <= visual
+    assert len(mapped) + len(config.data.merged_into_unclear) == len(visual)
 
 
 def test_shipped_split_and_skin_tone_groups_are_complete() -> None:
@@ -101,6 +104,7 @@ def test_accepts_one_condition_class_plus_unclear(raw: Raw) -> None:
         {"name": "acne", "condition_id": "acne"},
         {"name": UNCLEAR_CLASS, "condition_id": None},
     ]
+    raw["data"]["merged_into_unclear"] = []
 
     assert parse_config(raw).class_names == ("acne", UNCLEAR_CLASS)
 
@@ -166,6 +170,21 @@ INVALID_CASES = [
     ("latency_over_budget", _set("export.max_latency_ms", 2000), "max_latency_ms"),
     ("unknown_quantization", _set("export.quantization", "fp8"), "quantization"),
     ("bad_wandb_project", _set("tracking.wandb_project", "My Project"), "wandb"),
+    (
+        "merged_is_a_class",
+        _set("data.merged_into_unclear", ["eczema"]),
+        "also model classes",
+    ),
+    (
+        "merged_unclear",
+        _set("data.merged_into_unclear", ["unclear"]),
+        "merged_into_unclear",
+    ),
+    (
+        "merged_twice",
+        _set("data.merged_into_unclear", ["acne", "acne"]),
+        "merged_into_unclear",
+    ),
 ]
 
 

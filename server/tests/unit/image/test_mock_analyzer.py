@@ -63,7 +63,7 @@ async def test_mock_simulates_analyzer_failure() -> None:
 
 def test_mock_rejects_reason_for_clear_label_at_setup() -> None:
     with pytest.raises(SchemaValidationError):
-        MockImageAnalyzer(ImageLabel.ACNE, reason=UnclearReason.LOW_CONFIDENCE)
+        MockImageAnalyzer(ImageLabel.URTICARIA, reason=UnclearReason.LOW_CONFIDENCE)
 
 
 @pytest.mark.parametrize("provider", ["mock", " MOCK ", "Mock"])

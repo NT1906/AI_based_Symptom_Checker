@@ -36,6 +36,7 @@ class DataConfig:
     skin_tone_groups: dict[str, tuple[int, ...]]
     min_train_images_per_class: int
     min_test_images_per_class: int
+    merged_into_unclear: tuple[str, ...]
 
 
 @dataclass(frozen=True)

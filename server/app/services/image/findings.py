@@ -21,24 +21,14 @@ from app.services.image.schemas import ImageAnalysis, ImageLabel, UnclearReason
 LABEL_CONDITIONS: MappingProxyType[ImageLabel, str] = MappingProxyType(
     {
         ImageLabel.ECZEMA: "atopic_dermatitis",
-        ImageLabel.FUNGAL_INFECTION: "fungal_skin_infection",
         ImageLabel.URTICARIA: "urticaria",
-        ImageLabel.SCABIES: "scabies",
-        ImageLabel.ACNE: "acne",
-        ImageLabel.CHICKENPOX: "chickenpox",
-        ImageLabel.CELLULITIS: "cellulitis",
     }
 )
 
 VISUAL_SYMPTOMS: MappingProxyType[ImageLabel, tuple[str, ...]] = MappingProxyType(
     {
         ImageLabel.ECZEMA: ("dry_skin", "scaly_skin", "skin_rash"),
-        ImageLabel.FUNGAL_INFECTION: ("ring_shaped_rash", "scaly_skin"),
         ImageLabel.URTICARIA: ("hives",),
-        ImageLabel.SCABIES: ("small_itchy_bumps", "skin_burrows"),
-        ImageLabel.ACNE: ("pimples", "blackheads_or_whiteheads"),
-        ImageLabel.CHICKENPOX: ("fluid_filled_blisters",),
-        ImageLabel.CELLULITIS: ("spreading_redness", "skin_swelling"),
     }
 )
 
