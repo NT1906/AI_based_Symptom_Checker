@@ -487,3 +487,19 @@ Content-Type: application/json
   "version": "0.1.0"
 }
 ```
+
+## Active consent policy (DR-08)
+
+`GET /api/v1/consents/current-policy` returns `{"policyVersion":"1.0.0"}`.
+An outdated or unknown policy version submitted to `POST /api/v1/consents`
+returns HTTP 409, code `CONSENT_REQUIRED`, and the active version in
+`details.policyVersion`. The response omits a consent ID and the server
+does not insert a row. A successful acceptance still returns HTTP 201
+with `consentId`.
+
+Before launching assessments under the changed policy, the consent UI must
+compare its notice version with the server and require a fresh affirmative
+action after displaying the updated text. The assessment creation service must
+call `require_current_consent` on the looked-up consent before persisting or
+processing new assessment data. These integrations require the consent UI and
+assessment owners. Historical consent remains available as acceptance evidence.
