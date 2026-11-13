@@ -487,3 +487,20 @@ Content-Type: application/json
   "version": "0.1.0"
 }
 ```
+
+## Account data rights (DR-06, NFR-04)
+
+`GET /api/v1/privacy/export` downloads the authenticated user's data as JSON
+with `Cache-Control: no-store`. Only the current account's data is eligible.
+Passwords, password hashes, guest tokens, auth tokens and internal security
+metadata must be excluded.
+
+`DELETE /api/v1/privacy/data` erases data scoped to the authenticated account.
+It requires the application's CSRF validation and returns 204 once the
+database transaction commits. A failure returns an error rather than a
+successful deletion response. Neither route takes an account ID from the caller.
+
+Integration for #173: provide the authenticated ID and CSRF dependency from
+#225, agree the export fields and deletion scope with #190, and supply a
+database adapter for `DataRightsRepository`. Verify the deletion semantics
+against #163 before enabling the routes.
