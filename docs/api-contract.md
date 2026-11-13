@@ -497,9 +497,12 @@ returns HTTP 409, code `CONSENT_REQUIRED`, and the active version in
 does not insert a row. A successful acceptance still returns HTTP 201
 with `consentId`.
 
-Before launching assessments under the changed policy, the consent UI must
-compare its notice version with the server and require a fresh affirmative
-action after displaying the updated text. The assessment creation service must
-call `require_current_consent` on the looked-up consent before persisting or
-processing new assessment data. These integrations require the consent UI and
-assessment owners. Historical consent remains available as acceptance evidence.
+`POST /api/v1/assessments` returns the same 409 when the submitted
+consent ID does not exist or refers to an earlier policy. A new assessment
+requires a consent ID recorded for the active version. Historical consent
+remains available as acceptance evidence.
+
+The client compares stored consent with the active version before entering
+chat. A mismatch returns the user to the consent flow. During a rollout, an
+older client cannot submit acceptance for a notice it does not display.
+Deploy the updated notice and its version together.

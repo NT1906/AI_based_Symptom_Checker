@@ -33,6 +33,14 @@ def require_current_consent(consent: Consent | None) -> None:
         raise ConsentRequiredError()
 
 
+def require_current_consent_id(
+    session_factory: sessionmaker[Session], consent_id: UUID
+) -> None:
+    """Check the submitted consent against the active version before assessment."""
+    with session_factory() as session:
+        require_current_consent(session.get(Consent, consent_id))
+
+
 def record_consent(session_factory: sessionmaker[Session], policy_version: str) -> UUID:
     """Persist one affirmative acceptance and return its consent ID.
 

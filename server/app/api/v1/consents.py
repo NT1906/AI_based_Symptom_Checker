@@ -5,7 +5,7 @@ Owner: Harsh | Task: S1-HAR-4, S2-HAR-3 | Issues: #50, #174 | Requirement: DR-08
 
 from uuid import UUID
 
-from fastapi import APIRouter, status
+from fastapi import APIRouter, Response, status
 from pydantic import BaseModel, Field
 
 from app.api.deps import SessionFactoryDep
@@ -32,8 +32,9 @@ class ConsentResponse(BaseModel):
     response_model=ConsentRequest,
     summary="Read the active privacy policy version",
 )
-def get_current_policy() -> ConsentRequest:
+def get_current_policy(response: Response) -> ConsentRequest:
     """Return the version required for new consent records."""
+    response.headers["Cache-Control"] = "no-store"
     return ConsentRequest(policyVersion=consent.CURRENT_POLICY_VERSION)
 
 
