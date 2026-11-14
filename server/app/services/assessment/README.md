@@ -1,6 +1,6 @@
 # Assessment Service Module
 
-**Owner:** Darshil (Assessment Orchestration) · **Task:** S1-DAR-2, S1-DAR-3, S1-DAR-4, S2-DAR-1, S2-DAR-2, S2-DAR-3 · **Requirements:** idea §3, idea §10, FR-02, FR-03, FR-04, FR-05, FR-06, FR-07, FR-16, FR-17, FR-19, FR-20, FR-21, FR-25, DR-05
+**Owner:** Darshil (Assessment Orchestration) · **Task:** S1-DAR-2, S1-DAR-3, S1-DAR-4, S2-DAR-1, S2-DAR-2, S2-DAR-3, S2-DAR-4 · **Requirements:** idea §3, idea §10, FR-02, FR-03, FR-04, FR-05, FR-06, FR-07, FR-16, FR-17, FR-19, FR-20, FR-21, FR-25, DR-05, NFR-05
 
 The Assessment Service orchestrates the conversational symptom assessment lifecycle. It provides:
 1. **Assessment State Machine**: Strictly governs valid states and enforces medical-safety guards throughout the user experience.
@@ -9,6 +9,7 @@ The Assessment Service orchestrates the conversational symptom assessment lifecy
 4. **Clinical Analysis & Triage Results**: Executes the clinical prediction and risk evaluation pipeline upon symptom confirmation (`generate_result()`), applying the safety-wording guard before user delivery (FR-05, FR-06, FR-07, DR-05).
 5. **Symptom Confirmation, Editing & Session Restart**: Enables user review and modification (add, remove, edit severity/duration, bulk update) of recognized symptoms before analysis (`confirm_symptoms()`, `update_symptoms()`), stepping back to chat (`step_back_to_chat()`), and cleanly starting over (`restart_assessment()`) per FR-16, FR-21, and FR-25.
 6. **Guest Assessment Claiming**: Allows anonymous guests to transfer assessment history into a registered user account upon sign-up (`claim_assessment()`, `claim_guest_session()`) per idea §10.
+7. **Idempotent Message Processing & Transactions**: Eliminates double answers on client retry, handles rapid concurrent submissions via per-session async locks, and enforces atomic transactions across database and in-memory session changes (NFR-05).
 
 ---
 
@@ -173,7 +174,26 @@ Users with registered accounts may optionally supply coarse demographic and chro
 
 ---
 
-## 10. Running Unit Tests
+## 10. Idempotent Message Processing & Transactions (S2-DAR-4)
+
+Per **NFR-05** (Resilience) and `docs/database.md`:
+Network retries and rapid client resubmissions must never create duplicate answers, corrupt conversation ordering, or advance lifecycle states multiple times.
+
+- **Idempotency Deduplication**:
+  - **Explicit Key (`idempotency_key` / `client_message_id`)**: `process_message()` checks the session's idempotency cache. If a turn with the matching key was already completed, it returns the cached `ProcessResult` immediately without invoking AI extraction or appending duplicate messages.
+  - **Turn/Content-based Retry Detection**: If no explicit key is provided, the orchestrator inspects the last completed dialogue turn. If the incoming message text matches the immediately preceding user message, it treats the request as a retry and returns the existing response.
+- **Concurrency Safety**:
+  - Per-session asynchronous locking (`async with session.lock`) prevents race conditions between rapid concurrent submissions, ensuring only one intake pipeline runs at a time and any concurrent duplicates wait to receive the cached result.
+- **Transactional Integrity**:
+  - **In-Memory**: A complete state snapshot is captured before intake begins. Any unexpected processing failure automatically rolls back messages, symptoms, and state machine context to the snapshot.
+  - **Database Persistence**: When an active SQLAlchemy `db_session` is supplied, user messages, symptoms, assistant replies, and assessment state updates are executed inside a savepoint transaction (`db_session.begin_nested()`). Failures trigger a clean rollback.
+- **Cache Management**:
+  - `get_idempotent_result(assessment_id, key)`: Inspects cached results.
+  - `clear_idempotency_cache(assessment_id)`: Flushes cached keys (automatically invoked during `restart_assessment()`).
+
+---
+
+## 11. Running Unit Tests
 
 From `server/`:
 
