@@ -266,3 +266,120 @@ async def test_send_message_over_4000_chars_rejected(
     )
     assert resp.status_code == status.HTTP_422_UNPROCESSABLE_ENTITY
     assert resp.json()["code"] == "VALIDATION_ERROR"
+
+
+# ---------------------------------------------------------------------------
+# 5. Medical-safety rules
+# ---------------------------------------------------------------------------
+
+
+@pytest.mark.anyio
+async def test_result_always_contains_mandatory_disclaimer(
+    async_client: AsyncClient,
+    assessment_create_payload: dict,
+) -> None:
+    """GET /result response always contains the exact mandatory disclaimer (DR-01)."""
+    create = await async_client.post(
+        "/api/v1/assessments",
+        json=assessment_create_payload,
+    )
+    aid = create.json()["id"]
+    await async_client.post(
+        f"/api/v1/assessments/{aid}/messages",
+        json={"content": VALID_SYMPTOM_MESSAGE},
+    )
+    await async_client.post(f"/api/v1/assessments/{aid}/analyze")
+    resp = await async_client.get(f"/api/v1/assessments/{aid}/result")
+
+    assert resp.status_code == status.HTTP_200_OK
+    data = resp.json()
+    assert data.get("disclaimer") == DEFAULT_DISCLAIMER, (
+        "Mandatory disclaimer missing or incorrect in result response"
+        " (AI_RULES §2 rule 8)"
+    )
+
+
+@pytest.mark.anyio
+async def test_result_conditions_use_categorical_confidence_not_percentages(
+    async_client: AsyncClient,
+    assessment_create_payload: dict,
+) -> None:
+    """Conditions must use categorical labels, never raw scores (AI_RULES §2 rule 3)."""
+    create = await async_client.post(
+        "/api/v1/assessments",
+        json=assessment_create_payload,
+    )
+    aid = create.json()["id"]
+    await async_client.post(
+        f"/api/v1/assessments/{aid}/messages",
+        json={"content": VALID_SYMPTOM_MESSAGE},
+    )
+    await async_client.post(f"/api/v1/assessments/{aid}/analyze")
+    resp = await async_client.get(f"/api/v1/assessments/{aid}/result")
+
+    data = resp.json()
+    allowed_labels = {"LIKELY", "POSSIBLE", "LESS_LIKELY"}
+    for condition in data.get("conditions", []):
+        assert "score" not in condition, (
+            "Raw score must not appear in condition response"
+        )
+        assert "probability" not in condition, "Probability must not be exposed"
+        assert condition.get("confidence") in allowed_labels, (
+            f"Confidence must be in {allowed_labels}, got {condition.get('confidence')}"
+        )
+
+
+@pytest.mark.anyio
+async def test_urgent_result_exposes_emergency_number_112(
+    async_client: AsyncClient,
+) -> None:
+    """URGENT result must include emergencyNumber='112' (FR-15, AI_RULES §2 rule 5)."""
+    from app.api.v1._assessment_stubs import STUB_URGENT_ASSESSMENT_ID
+
+    resp = await async_client.get(
+        f"/api/v1/assessments/{STUB_URGENT_ASSESSMENT_ID}/result"
+    )
+    assert resp.status_code == status.HTTP_200_OK
+    data = resp.json()
+    assert data["riskLevel"] == "URGENT"
+    assert data["referral"]["emergencyNumber"] == "112", (
+        "Emergency number 112 must be first in URGENT referral (AI_RULES §2 rule 5)"
+    )
+    assert data["referral"]["required"] is True
+
+
+# ---------------------------------------------------------------------------
+# 6. Health endpoint sanity check
+# ---------------------------------------------------------------------------
+
+
+@pytest.mark.anyio
+async def test_health_endpoint_returns_ok(async_client: AsyncClient) -> None:
+    """GET /api/v1/health returns 200 with status=ok and version field."""
+    resp = await async_client.get("/api/v1/health")
+    assert resp.status_code == status.HTTP_200_OK
+    data = resp.json()
+    assert data["status"] == "ok"
+    assert "version" in data
+    assert isinstance(data["version"], str)
+
+
+# ---------------------------------------------------------------------------
+# 7. HTTP method guards
+# ---------------------------------------------------------------------------
+
+
+@pytest.mark.anyio
+async def test_delete_assessment_returns_405(
+    async_client: AsyncClient,
+    assessment_create_payload: dict,
+) -> None:
+    """DELETE /assessments/{id} returns 405 Method Not Allowed."""
+    create = await async_client.post(
+        "/api/v1/assessments",
+        json=assessment_create_payload,
+    )
+    aid = create.json()["id"]
+
+    resp = await async_client.delete(f"/api/v1/assessments/{aid}")
+    assert resp.status_code == status.HTTP_405_METHOD_NOT_ALLOWED
