@@ -1,16 +1,20 @@
 """Comprehensive unit tests for assessment state machine transitions and guards.
 
 Responsibilities:
+    - Test every valid state transition in the lifecycle graph (23 transitions).
+    - Test every invalid transition across all state pairs (41 transitions).
     - Test every guard function in isolation (pure-function coverage).
-    - Test AssessmentContext defaults, attributes, and validation.
+    - Test guard violation handling and error attributes.
     - Test is_low_confidence flag lifecycle and preservation.
     - Test transition history immutability and record integrity.
+    - Test AssessmentContext defaults, attributes, and validation.
 
 Owner: Mohit (testing) · Task: S1-MOH-1 · Requirements: N/A
 """
 
 from __future__ import annotations
 
+from datetime import datetime
 from typing import Any
 from uuid import UUID, uuid4
 
@@ -21,6 +25,8 @@ from app.services.assessment import (
     MAX_CLARIFICATION_TURNS,
     AssessmentContext,
     AssessmentStateMachine,
+    InvalidStateTransitionError,
+    StateGuardViolationError,
     guard_analysis_completed,
     guard_has_consent,
     guard_has_symptoms,
@@ -71,7 +77,118 @@ def fully_valid_context(
 
 
 # ---------------------------------------------------------------------------
-# 1. Guard Functions in Isolation (Unit Pure Functions)
+# Helper: Extract all valid and invalid state pairs from TRANSITIONS
+# ---------------------------------------------------------------------------
+
+
+def _get_transition_pairs() -> tuple[
+    list[tuple[AssessmentState, AssessmentState]],
+    list[tuple[AssessmentState, AssessmentState]],
+]:
+    """Calculate the complete partition of valid and invalid state transitions.
+
+    Returns:
+        tuple containing (valid_pairs, invalid_pairs) covering all 64 combinations.
+    """
+    all_states = list(AssessmentState)
+    valid: list[tuple[AssessmentState, AssessmentState]] = []
+    invalid: list[tuple[AssessmentState, AssessmentState]] = []
+
+    for source in all_states:
+        allowed = {rule.target_state for rule in TRANSITIONS.get(source, [])}
+        for target in all_states:
+            if target in allowed:
+                valid.append((source, target))
+            else:
+                invalid.append((source, target))
+
+    return valid, invalid
+
+
+VALID_TRANSITIONS, INVALID_TRANSITIONS = _get_transition_pairs()
+
+
+# ---------------------------------------------------------------------------
+# 1. Exhaustive Valid Transitions (23 transitions)
+# ---------------------------------------------------------------------------
+
+
+@pytest.mark.parametrize("from_state,to_state", VALID_TRANSITIONS)
+def test_all_valid_transitions_succeed_with_satisfied_guards(
+    from_state: AssessmentState,
+    to_state: AssessmentState,
+    fully_valid_context: AssessmentContext,
+) -> None:
+    """Every allowed transition defined in TRANSITIONS succeeds when guards pass.
+
+    Args:
+        from_state: The initial source state.
+        to_state: The target state configured as valid in the graph.
+        fully_valid_context: Fixture satisfying all guards.
+    """
+    sm = AssessmentStateMachine(from_state, context=fully_valid_context)
+
+    # can_transition_to must return True
+    can_transition, reason = sm.can_transition_to(to_state)
+    assert can_transition is True, (
+        f"Expected can_transition_to({to_state}) from {from_state} to be True, "
+        f"got False with reason: {reason}"
+    )
+    assert reason is None
+
+    # transition_to must succeed and update current state
+    result_state = sm.transition_to(to_state)
+    assert result_state == to_state
+    assert sm.current_state == to_state
+
+    # history must record this transition
+    assert len(sm.history) == 1
+    assert sm.history[0][0] == from_state
+    assert sm.history[0][1] == to_state
+    assert isinstance(sm.history[0][2], datetime)
+
+
+# ---------------------------------------------------------------------------
+# 2. Exhaustive Invalid Transitions (41 transitions)
+# ---------------------------------------------------------------------------
+
+
+@pytest.mark.parametrize("from_state,to_state", INVALID_TRANSITIONS)
+def test_all_invalid_transitions_are_blocked(
+    from_state: AssessmentState,
+    to_state: AssessmentState,
+    fully_valid_context: AssessmentContext,
+) -> None:
+    """Any state transition not declared in the transition graph is strictly blocked.
+
+    Args:
+        from_state: The source state.
+        to_state: An invalid destination state not in the graph.
+        fully_valid_context: Satisfied context fixture.
+    """
+    sm = AssessmentStateMachine(from_state, context=fully_valid_context)
+
+    # can_transition_to must return False
+    can_transition, reason = sm.can_transition_to(to_state)
+    assert can_transition is False, (
+        f"Expected can_transition_to({to_state}) from {from_state} to be False"
+    )
+    assert reason is not None
+    assert "not permitted" in reason.lower()
+
+    # transition_to must raise InvalidStateTransitionError
+    with pytest.raises(InvalidStateTransitionError) as exc_info:
+        sm.transition_to(to_state)
+
+    err = exc_info.value
+    assert err.current_state == from_state
+    assert err.target_state == to_state
+    assert err.code == "INVALID_STATE_TRANSITION"
+    assert err.status_code == 409
+
+
+# ---------------------------------------------------------------------------
+# 3. Guard Functions in Isolation (Unit Pure Functions)
 # ---------------------------------------------------------------------------
 
 
@@ -222,7 +339,61 @@ def test_guard_analysis_completed_fails_when_no_result(
 
 
 # ---------------------------------------------------------------------------
-# 2. AssessmentContext Defaults and Attributes
+# 4. Guard Violations Trigger StateGuardViolationError
+# ---------------------------------------------------------------------------
+
+
+def test_guard_violation_raises_typed_error_with_status_409() -> None:
+    """Attempting START -> SYMPTOM_COLLECTION without consent raises 409 error."""
+    ctx = AssessmentContext(consent_id=None)
+    sm = AssessmentStateMachine(AssessmentState.START, context=ctx)
+
+    with pytest.raises(StateGuardViolationError) as exc_info:
+        sm.start_symptom_collection()
+
+    err = exc_info.value
+    assert err.status_code == 409
+    assert err.guard_name == "guard_has_consent"
+    assert err.current_state == AssessmentState.START
+    assert err.target_state == AssessmentState.SYMPTOM_COLLECTION
+
+
+def test_confirming_to_ready_without_confirmation_raises_guard_violation(
+    sample_consent_id: UUID, sample_symptom: dict[str, Any]
+) -> None:
+    """CONFIRMING -> READY without user confirmation raises StateGuardViolationError."""
+    ctx = AssessmentContext(
+        consent_id=sample_consent_id,
+        symptoms=[sample_symptom],
+        is_confirmed=False,
+    )
+    sm = AssessmentStateMachine(AssessmentState.CONFIRMING, context=ctx)
+
+    with pytest.raises(StateGuardViolationError) as exc_info:
+        sm.transition_to(AssessmentState.READY)
+
+    assert exc_info.value.guard_name == "guard_symptoms_confirmed"
+
+
+def test_analyzing_to_completed_without_results_raises_guard_violation(
+    sample_consent_id: UUID, sample_symptom: dict[str, Any]
+) -> None:
+    """ANALYZING -> COMPLETED without result flag raises StateGuardViolationError."""
+    ctx = AssessmentContext(
+        consent_id=sample_consent_id,
+        symptoms=[sample_symptom],
+        has_analysis_result=False,
+    )
+    sm = AssessmentStateMachine(AssessmentState.ANALYZING, context=ctx)
+
+    with pytest.raises(StateGuardViolationError) as exc_info:
+        sm.transition_to(AssessmentState.COMPLETED)
+
+    assert exc_info.value.guard_name == "guard_analysis_completed"
+
+
+# ---------------------------------------------------------------------------
+# 5. AssessmentContext Defaults and Attributes
 # ---------------------------------------------------------------------------
 
 
@@ -243,7 +414,7 @@ def test_assessment_context_defaults() -> None:
 
 
 # ---------------------------------------------------------------------------
-# 3. is_low_confidence Flag Lifecycle (Preservation & Reset)
+# 6. is_low_confidence Flag Lifecycle (Preservation & Reset)
 # ---------------------------------------------------------------------------
 
 
@@ -281,7 +452,7 @@ def test_is_low_confidence_flag_persists_across_analysis_flow(
 
 
 # ---------------------------------------------------------------------------
-# 4. Transition History Recording & Immutability
+# 7. Transition History Recording & Immutability
 # ---------------------------------------------------------------------------
 
 
@@ -299,7 +470,7 @@ def test_transition_history_immutability(sample_consent_id: UUID) -> None:
 
 
 # ---------------------------------------------------------------------------
-# 5. get_allowed_transitions for Every State
+# 8. get_allowed_transitions for Every State
 # ---------------------------------------------------------------------------
 
 
