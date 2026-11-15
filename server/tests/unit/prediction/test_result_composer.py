@@ -9,9 +9,11 @@ Covers:
     - Uncertainty (S2-NIS-1): an escalated result says why, and an unclear
       photo or AI error adds its own limitation; the new wording passes the
       real safety-wording guard.
+    - Contributing factors (S2-NIS-2): every condition gets a "Because you
+      reported …" line that names its matched symptoms and passes the guard.
 
-Owner: Nisarg (prediction) · Task: S1-NIS-3, S2-NIS-1 · Requirements: FR-07, DR-01,
-DR-04
+Owner: Nisarg (prediction) · Task: S1-NIS-3, S2-NIS-1, S2-NIS-2 · Requirements: FR-07,
+FR-24, DR-01, DR-04
 """
 
 import re
@@ -196,7 +198,8 @@ def test_every_generated_sentence_goes_through_the_guard() -> None:
 
     result = _compose("chest_pain", "sweating", guard=guard)
 
-    expected = [*result.guidance, *result.limitations, result.referral.reason]
+    whys = [condition.why for condition in result.conditions]
+    expected = [*result.guidance, *result.limitations, result.referral.reason, *whys]
     assert sorted(guard.checked) == sorted(s for s in expected if s)
     # The fixed disclaimer contains "diagnosis" and is not generated text.
     assert result.disclaimer not in guard.checked
@@ -225,10 +228,16 @@ def _all_fixed_sentences() -> list[str]:
         text.RED_FLAG_LIMITATION,
         text.UNCERTAINTY_REASON,
         text.UNCERTAINTY_LIMITATION,
+        text.WHY_TEMPLATE,
         *text.UNCERTAINTY_LIMITATIONS.values(),
     ]
     return [
-        s.format(specialty="a dermatologist", label="Severe pain", condition="Dengue")
+        s.format(
+            specialty="a dermatologist",
+            label="Severe pain",
+            condition="Dengue",
+            symptoms="fever and joint pain",
+        )
         for s in sentences
     ]
 
@@ -332,3 +341,27 @@ def test_uncertain_result_passes_the_real_wording_guard() -> None:
 
     assert result.risk_level is RiskLevel.CONSULT_DOCTOR
     assert len(result.limitations) == len(text.LIMITATIONS_ALWAYS) + 3
+
+
+# --- contributing factors (S2-NIS-2) --------------------------------------------
+
+
+def test_every_condition_explains_its_matched_symptoms() -> None:
+    result = _compose("fever", "pain_behind_eyes", "joint_pain")
+
+    assert result.conditions
+    for condition in result.conditions:
+        assert condition.why is not None
+        assert condition.why.startswith("Because you reported ")
+        assert "_" not in condition.why  # display names, never raw IDs
+
+
+def test_why_line_passes_the_real_wording_guard() -> None:
+    ids = ["fever", "pain_behind_eyes", "joint_pain", "headache", "rash"]
+    reported = [ReportedSymptom(id=i, severity=Severity.MODERATE) for i in ids]
+    predictions = BaselineConditionModel().predict(ids)
+    decision = assess_risk(reported, predictions)
+
+    result = ResultComposer(assert_safe_wording).compose(uuid4(), decision, predictions)
+
+    assert all(condition.why for condition in result.conditions)
