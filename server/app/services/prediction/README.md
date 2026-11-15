@@ -68,6 +68,7 @@ Rules, in order:
 | 1 | Any red flag fires | `URGENT`, whatever the predictions say (DR-02) | `RED_FLAG` |
 | 2 | Otherwise, the highest tier from the predictions: `LIKELY` gives the condition's full `base_risk`, `POSSIBLE` at most `CONSULT_DOCTOR`, `LESS_LIKELY` nothing | that tier | `CONDITION` |
 | 3 | No prediction is at least `POSSIBLE` | `CONSULT_DOCTOR` (not knowing is never "probably nothing", idea §7) | `NO_CONDITION_MATCH` |
+| 4 | Any uncertainty, and the level so far is `SELF_CARE` | raised to `CONSULT_DOCTOR` | `UNCERTAINTY` |
 
 **Red-flag triggers:** a red flag fires when **any** trigger fires, and a trigger fires when **all** of its parts are present.
 A part with `min_severity` needs that severity or worse.
@@ -75,8 +76,26 @@ A part with `min_severity` needs that severity or worse.
 **Unknown severity:** if the user did not say how bad a symptom is, a severity minimum counts as **met**, because uncertainty never lowers risk (AI_RULES.md §2.6).
 The hit is marked `assumed_severity=True`. The orchestrator should ask about severity while the user can still answer (clarification or confirmation), so the assumption is rarely needed.
 
-`RiskDecision` also carries `driving_condition_ids` (for the "why" panel) and `engine_version` (for the audit log).
-Bump `RISK_ENGINE_VERSION` whenever a rule changes. Uncertainty escalation on low confidence is added in S2-NIS-1.
+**Uncertainty escalation (S2-NIS-1, AI_RULES.md §2.6).** Uncertainty only ever raises the tier.
+It stops at `CONSULT_DOCTOR`: `URGENT` stays reserved for red flags and Likely urgent conditions.
+
+| `UncertaintyReason` | When | Who sets it |
+|---|---|---|
+| `LOW_CONFIDENCE` | No prediction is `LIKELY` | The risk engine itself |
+| `IMAGE_UNCLEAR` | The user sent a photo and the analyzer answered `unclear` | The caller: `assess_risk(..., uncertainty=[...])` |
+| `AI_ERROR` | The AI gateway failed during the conversation | The caller |
+
+```python
+from app.services.prediction import UncertaintyReason
+
+decision = assess_risk(
+    symptoms, predictions, uncertainty=[UncertaintyReason.IMAGE_UNCLEAR]
+)
+decision.uncertainty  # every reason that applied, in enum order, even if the level did not change
+```
+
+`RiskDecision` also carries `driving_condition_ids` (for the "why" panel and the referral specialty, also after an escalation), `uncertainty` and `engine_version` (for the audit log).
+Bump `RISK_ENGINE_VERSION` whenever a rule changes (now `1.1.0`, for uncertainty escalation).
 
 ## Specialty mapper and result composer
 
@@ -102,8 +121,8 @@ result = composer.compose(assessment_id, decision, predictions)
 | `risk_level` | Copied from the decision, **never changed** |
 | `conditions` | The predictions in the published `Condition` schema, with the specialty display name |
 | `guidance` | Next steps for the tier (`result_text.NEXT_STEPS`). Red flags in the `mental_health` category add Tele-MANAS 14416. An assumed severity is explained. Extra self-care guidance (S2-KAV-1) is added for `SELF_CARE` only. |
-| `referral` | `required` unless `SELF_CARE`; specialty name; reason (red-flag label, "may be related to …", or no-match); 112 for `URGENT` |
-| `limitations` | Always the self-report and coverage limits, plus a red-flag or no-match note |
+| `referral` | `required` unless `SELF_CARE`; specialty name; reason (red-flag label, "may be related to …", no-match, or uncertain match); 112 for `URGENT` |
+| `limitations` | Always the self-report and coverage limits, plus a red-flag, no-match or "raised to the safer level" note, plus one note per unclear photo or AI error |
 | `model_version` | The risk engine version |
 | `disclaimer` | The fixed default from `app.schemas.result` |
 

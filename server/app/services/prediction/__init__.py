@@ -3,11 +3,12 @@
 Responsibilities:
     - Load the condition dataset shipped with the server.
     - Provide the ``ConditionModel`` protocol and the baseline overlap model.
-    - Provide the deterministic risk engine with its red-flag override.
+    - Provide the deterministic risk engine with its red-flag override and
+      uncertainty escalation.
     - Map a decision to a referral specialty and compose the final result.
 
-Owner: Nisarg (prediction) · Task: S1-NIS-1, S1-NIS-2, S1-NIS-3 · Requirements:
-FR-05, FR-06, FR-07, FR-15, FR-22, FR-23, DR-02, DR-04
+Owner: Nisarg (prediction) · Task: S1-NIS-1, S1-NIS-2, S1-NIS-3, S2-NIS-1 ·
+Requirements: FR-05, FR-06, FR-07, FR-15, FR-22, FR-23, DR-02, DR-04, NFR-07
 """
 
 from app.services.prediction.condition_catalog import (
@@ -27,7 +28,9 @@ from app.services.prediction.risk_engine import (
     RISK_ENGINE_VERSION,
     assess_risk,
     condition_tier,
+    escalate_for_uncertainty,
     find_red_flags,
+    uncertainty_reasons,
 )
 from app.services.prediction.risk_schemas import (
     RedFlag,
@@ -35,6 +38,7 @@ from app.services.prediction.risk_schemas import (
     ReportedSymptom,
     RiskDecision,
     RiskRule,
+    UncertaintyReason,
 )
 from app.services.prediction.schemas import (
     ConditionPrediction,
@@ -61,12 +65,15 @@ __all__ = [
     "RiskRule",
     "Specialty",
     "SpecialtyMapper",
+    "UncertaintyReason",
     "WeightedSymptom",
     "WordingGuard",
     "assess_risk",
     "condition_tier",
+    "escalate_for_uncertainty",
     "find_red_flags",
     "get_catalog",
     "load_catalog",
     "to_confidence_label",
+    "uncertainty_reasons",
 ]
