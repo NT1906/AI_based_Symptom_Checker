@@ -159,3 +159,18 @@ The predictor reads the conditions, the risk engine the red-flag rules, and the 
 cd server
 pytest tests/unit/prediction -v
 ```
+
+### Consistency verification (S2-NIS-9, DR-02)
+
+`tests/unit/prediction/test_risk_consistency.py` checks that only the input decides the output (AI_RULES.md §2.4).
+It runs the full pipeline (predictor → risk engine → composer with the real wording guard) and compares everything except `created_at`:
+
+| Check | Runs |
+|---|---|
+| Each reference case (self-care, consult, red flag, assumed severity, mental health, unclear photo, many symptoms, no match) gives identical output, with the symptoms in a new order each run | 8 × 1000 |
+| 1000 seeded, varied inputs (1–6 symptoms, any severity, any uncertainty) give the same output in reverse order | 1000 × 2 |
+| The same 1000 inputs give the same SHA-256 digest in fresh processes with other `PYTHONHASHSEED` values, so set or dict order can never leak into a result | 2 processes |
+| A repeated symptom changes nothing; an empty input fails the same way every time | 1 + 1000 |
+
+The varied inputs reach every outcome: red flag, condition (self-care and consult), uncertainty and no match.
+The whole file runs in about 3 seconds, so it runs in CI on every PR.
