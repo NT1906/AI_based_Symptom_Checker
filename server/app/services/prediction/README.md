@@ -119,12 +119,24 @@ result = composer.compose(assessment_id, decision, predictions)
 | Field | Content |
 |---|---|
 | `risk_level` | Copied from the decision, **never changed** |
-| `conditions` | The predictions in the published `Condition` schema, with the specialty display name |
+| `conditions` | The predictions in the published `Condition` schema, with the specialty display name and a `why` line (below) |
 | `guidance` | Next steps for the tier (`result_text.NEXT_STEPS`). Red flags in the `mental_health` category add Tele-MANAS 14416. An assumed severity is explained. Extra self-care guidance (S2-KAV-1) is added for `SELF_CARE` only. |
 | `referral` | `required` unless `SELF_CARE`; specialty name; reason (red-flag label, "may be related to …", no-match, or uncertain match); 112 for `URGENT` |
 | `limitations` | Always the self-report and coverage limits, plus a red-flag, no-match or "raised to the safer level" note, plus one note per unclear photo or AI error |
 | `model_version` | The risk engine version |
 | `disclaimer` | The fixed default from `app.schemas.result` |
+
+**"Why" line per condition (S2-NIS-2, FR-24).** `ConditionExplainer` (`explanations.py`) turns each prediction's `matched_symptom_ids` (heaviest first) into one sentence.
+Mann's `ConditionList` shows it as the "Why:" line.
+
+- **Names:** symptom display names come from the knowledge service, lowercased inside the sentence unless they start with an acronym.
+- **Length:** at most 3 symptoms are named, and the rest are counted.
+- **Wording:** it names only what the user reported, never what the user has, and it goes through the wording guard like every other sentence.
+
+```text
+Dengue [Likely]       → Because you reported fever, pain behind the eyes, headache and 1 other symptom.
+Chikungunya [Likely]  → Because you reported fever, joint pain and headache.
+```
 
 **Wording:** every sentence lives in `result_text.py`, so wording can be reviewed in one place (DR-05).
 The composer passes each generated sentence to the **required** `wording_guard` before returning, and a guard error stops the result.
