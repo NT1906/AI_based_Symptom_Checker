@@ -8,10 +8,12 @@ Responsibilities:
 
 The composer still runs every sentence through the safety-wording guard.
 
-Owner: Nisarg (prediction) · Task: S1-NIS-3 · Requirements: FR-07, DR-01, DR-05
+Owner: Nisarg (prediction) · Task: S1-NIS-3, S2-NIS-1 · Requirements: FR-07, DR-01,
+DR-05
 """
 
 from app.schemas.enums import RiskLevel
+from app.services.prediction.risk_schemas import UncertaintyReason
 
 EMERGENCY_NUMBER = "112"
 MENTAL_HEALTH_HELPLINE = "14416"  # Tele-MANAS, India's national mental-health line
@@ -52,6 +54,10 @@ NO_MATCH_REASON = (
     "Your symptoms did not clearly match a common condition, "
     "so a general check-up is the safest next step."
 )
+UNCERTAINTY_REASON = (
+    "The match with your symptoms was not certain enough to suggest home care, "
+    "so a doctor's check is the safer next step."
+)
 
 LIMITATIONS_ALWAYS = (
     "This result is based only on the symptoms you reported; "
@@ -63,6 +69,18 @@ RED_FLAG_LIMITATION = (
     "A warning-sign rule raised this result to urgent, whatever the possible "
     "conditions are."
 )
+UNCERTAINTY_LIMITATION = (
+    "Because the match was uncertain, this result was raised to the safer level."
+)
+UNCERTAINTY_LIMITATIONS: dict[UncertaintyReason, str] = {
+    UncertaintyReason.IMAGE_UNCLEAR: (
+        "The photo could not be assessed, so only the symptoms you described were used."
+    ),
+    UncertaintyReason.AI_ERROR: (
+        "Part of the conversation could not be processed, so some symptoms "
+        "may be missing."
+    ),
+}
 
 
 def with_article(specialty_name: str) -> str:

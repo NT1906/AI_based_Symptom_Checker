@@ -5,6 +5,7 @@ Responsibilities:
       the published ``AssessmentResult`` contract (``app.schemas.result``).
     - Add next steps, the referral reason and limitations from ``result_text``,
       plus any self-care guidance supplied by the caller (S2-KAV-1).
+    - Say when uncertainty raised the result, and why (S2-NIS-1).
     - Run every generated sentence through the safety-wording guard before it
       can reach the user (DR-05). The fixed disclaimer is not generated text,
       so it is not passed to the guard.
@@ -12,7 +13,8 @@ Responsibilities:
 The risk level is copied from the decision unchanged: composing never changes
 risk (AI_RULES.md §2.4).
 
-Owner: Nisarg (prediction) · Task: S1-NIS-3 · Requirements: FR-07, DR-01, DR-04
+Owner: Nisarg (prediction) · Task: S1-NIS-3, S2-NIS-1 · Requirements: FR-07, DR-01,
+DR-04
 """
 
 from collections.abc import Callable, Sequence
@@ -145,6 +147,8 @@ class ResultComposer:
             return text.RED_FLAG_REASON.format(label=label)
         if decision.rule is RiskRule.NO_CONDITION_MATCH:
             return text.NO_MATCH_REASON
+        if decision.rule is RiskRule.UNCERTAINTY:
+            return text.UNCERTAINTY_REASON
         if decision.level is RiskLevel.SELF_CARE:
             return None
         names = {p.condition_id: p.name for p in predictions}
@@ -158,12 +162,19 @@ class ResultComposer:
 
     @staticmethod
     def _limitations(decision: RiskDecision) -> list[str]:
-        """Limits that always apply, plus the ones specific to this rule."""
+        """Limits that always apply, then the rule's, then each uncertainty's."""
         limitations = list(text.LIMITATIONS_ALWAYS)
         if decision.rule is RiskRule.RED_FLAG:
             limitations.append(text.RED_FLAG_LIMITATION)
         elif decision.rule is RiskRule.NO_CONDITION_MATCH:
             limitations.append(text.NO_MATCH_LIMITATION)
+        elif decision.rule is RiskRule.UNCERTAINTY:
+            limitations.append(text.UNCERTAINTY_LIMITATION)
+        limitations.extend(
+            text.UNCERTAINTY_LIMITATIONS[reason]
+            for reason in decision.uncertainty
+            if reason in text.UNCERTAINTY_LIMITATIONS
+        )
         return limitations
 
     def _to_condition(self, prediction: ConditionPrediction) -> Condition:
