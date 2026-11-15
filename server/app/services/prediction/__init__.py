@@ -5,10 +5,12 @@ Responsibilities:
     - Provide the ``ConditionModel`` protocol and the baseline overlap model.
     - Provide the deterministic risk engine with its red-flag override and
       uncertainty escalation.
-    - Map a decision to a referral specialty and compose the final result.
+    - Map a decision to a referral specialty and compose the final result,
+      with a "Because you reported …" line per condition.
 
-Owner: Nisarg (prediction) · Task: S1-NIS-1, S1-NIS-2, S1-NIS-3, S2-NIS-1 ·
-Requirements: FR-05, FR-06, FR-07, FR-15, FR-22, FR-23, DR-02, DR-04, NFR-07
+Owner: Nisarg (prediction) · Task: S1-NIS-1, S1-NIS-2, S1-NIS-3, S2-NIS-1,
+S2-NIS-2 · Requirements: FR-05, FR-06, FR-07, FR-15, FR-22, FR-23, FR-24, DR-02, DR-04,
+NFR-07
 """
 
 from app.services.prediction.condition_catalog import (
@@ -23,6 +25,7 @@ from app.services.prediction.condition_predictor import (
     ConditionModel,
     to_confidence_label,
 )
+from app.services.prediction.explanations import ConditionExplainer
 from app.services.prediction.result_composer import ResultComposer, WordingGuard
 from app.services.prediction.risk_engine import (
     RISK_ENGINE_VERSION,
@@ -54,6 +57,7 @@ __all__ = [
     "BaselineConditionModel",
     "ConditionCatalog",
     "ConditionDataError",
+    "ConditionExplainer",
     "ConditionModel",
     "ConditionPrediction",
     "ConditionProfile",
