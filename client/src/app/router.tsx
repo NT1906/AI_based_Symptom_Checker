@@ -10,6 +10,7 @@ import ProfilePage from "../pages/ProfilePage";
 import LoginPage from "../pages/LoginPage";
 import RegisterPage from "../pages/RegisterPage";
 import HistoryPage from "../pages/HistoryPage";
+import PrivacyPolicyPage from "../pages/PrivacyPolicyPage";
 
 /** Defines the application's browser routes. */
 export const router = createBrowserRouter([
@@ -26,19 +27,23 @@ export const router = createBrowserRouter([
     element: <ProfilePage />,
   },
   {
-  path: "/login",
-  element: <LoginPage />,
-},
-{
-  path: "/register",
-  element: <RegisterPage />,
-},
-{
-  path: "/history",
-  element: <HistoryPage />,
-},
-{
-  path: "/history/:assessmentId",
-  element: <HistoryPage />,
-},
+    path: "/login",
+    element: <LoginPage />,
+  },
+  {
+    path: "/register",
+    element: <RegisterPage />,
+  },
+  {
+    path: "/history",
+    element: <HistoryPage />,
+  },
+  {
+    path: "/history/:assessmentId",
+    element: <HistoryPage />,
+  },
+  {
+    path: "/privacy",
+    element: <PrivacyPolicyPage />,
+  },
 ]);
