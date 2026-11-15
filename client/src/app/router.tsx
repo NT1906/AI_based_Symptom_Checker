@@ -6,6 +6,7 @@ import { createBrowserRouter } from "react-router-dom";
 import App from "../App";
 import LandingPage from "../pages/LandingPage";
 import ProfilePage from "../pages/ProfilePage";
+import PrivacyPolicyPage from "../pages/PrivacyPolicyPage";
 
 /** Defines the application's browser routes. */
 export const router = createBrowserRouter([
@@ -20,5 +21,9 @@ export const router = createBrowserRouter([
   {
     path: "/profile",
     element: <ProfilePage />,
+  },
+  {
+    path: "/privacy",
+    element: <PrivacyPolicyPage />,
   },
 ]);
