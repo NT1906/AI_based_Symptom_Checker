@@ -142,6 +142,27 @@ Chikungunya [Likely]  → Because you reported fever, joint pain and headache.
 The composer passes each generated sentence to the **required** `wording_guard` before returning, and a guard error stops the result.
 The fixed disclaimer is not passed to the guard: it contains the word "diagnosis" by design.
 
+## Condition model v2 (S2-NIS-3)
+
+`OnnxConditionModel` (`onnx_condition_model.py`) is a second `ConditionModel`: a logistic regression trained in `ml/prediction/`, exported to ONNX and run with ONNX Runtime.
+**The baseline stays the default.** v2 matched but did not beat it on synthetic cases; see [docs/condition-model-v2.md](../../../../docs/condition-model-v2.md).
+
+```python
+from app.services.prediction.condition_model_config import (
+    ConditionModelSettings,
+    build_condition_model,
+)
+
+model = build_condition_model(
+    ConditionModelSettings()
+)  # baseline unless CONDITION_MODEL_KIND=onnx
+```
+
+- **Settings:** `CONDITION_MODEL_KIND` (`baseline` / `onnx`), plus either `CONDITION_MODEL_PATH`, or `CONDITION_MODEL_REPO` and `CONDITION_MODEL_REVISION` (a pinned Hub commit).
+- **Same contract as the baseline:** only conditions that explain a reported symptom, top 3, ties by ID, labels only. "Likely" needs the model's threshold **and** a hallmark symptom.
+- **Model checks:** a model whose vocabulary, conditions or dataset version differ from the packaged dataset is refused.
+- **Fallback:** if v2 can't be loaded, `build_condition_model` falls back to the baseline and logs it.
+
 ## Data
 
 `data/conditions.json` is a **copy** of `ml/datasets/conditions/conditions.json`, because the server image has no `ml/`.
