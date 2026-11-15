@@ -1,0 +1,274 @@
+{
+  "version": "1.0",
+  "description": "S2-NIS-7 evaluation phrases: name as an AI or user might write it -> expected canonical symptom ID (null = must stay unresolved). Misspellings and Hinglish come from ml/nlp_eval/report_v2.md §4.",
+  "groups": {
+    "misspelling": [
+      {
+        "name": "naucea",
+        "expected": "nausea"
+      },
+      {
+        "name": "dizzynes",
+        "expected": "dizziness"
+      },
+      {
+        "name": "blured vission",
+        "expected": "blurred_vision"
+      },
+      {
+        "name": "stomake aking",
+        "expected": "abdominal_pain"
+      },
+      {
+        "name": "confution",
+        "expected": "confusion"
+      },
+      {
+        "name": "droopin face",
+        "expected": "facial_droop"
+      },
+      {
+        "name": "hedache",
+        "expected": "headache"
+      },
+      {
+        "name": "feaver",
+        "expected": "fever"
+      },
+      {
+        "name": "diarea",
+        "expected": "diarrhea"
+      },
+      {
+        "name": "vomitting",
+        "expected": "vomiting"
+      },
+      {
+        "name": "coughng",
+        "expected": "cough"
+      },
+      {
+        "name": "sore throt",
+        "expected": "sore_throat"
+      },
+      {
+        "name": "chest pian",
+        "expected": "chest_pain"
+      },
+      {
+        "name": "shortnes of breth",
+        "expected": "shortness_of_breath"
+      },
+      {
+        "name": "rash on skn",
+        "expected": "skin_rash"
+      },
+      {
+        "name": "itchy skn",
+        "expected": "itchy_skin"
+      },
+      {
+        "name": "lower back pane",
+        "expected": "lower_back_pain"
+      },
+      {
+        "name": "joint pian",
+        "expected": "joint_pain"
+      },
+      {
+        "name": "fatige",
+        "expected": "fatigue"
+      },
+      {
+        "name": "palpitaions",
+        "expected": "palpitations"
+      }
+    ],
+    "hinglish": [
+      {
+        "name": "sans phoolna",
+        "expected": "shortness_of_breath"
+      },
+      {
+        "name": "dast lag gaye",
+        "expected": "diarrhea"
+      },
+      {
+        "name": "pet saaf nahi hua",
+        "expected": "constipation"
+      },
+      {
+        "name": "seene me jakdan",
+        "expected": "chest_tightness"
+      },
+      {
+        "name": "tez bukhar",
+        "expected": "fever"
+      },
+      {
+        "name": "sir dard",
+        "expected": "headache"
+      },
+      {
+        "name": "pet dard",
+        "expected": "abdominal_pain"
+      },
+      {
+        "name": "ulti",
+        "expected": "vomiting"
+      },
+      {
+        "name": "chakkar aana",
+        "expected": "dizziness"
+      },
+      {
+        "name": "khansi",
+        "expected": "cough"
+      },
+      {
+        "name": "gala kharab",
+        "expected": "sore_throat"
+      },
+      {
+        "name": "kamzori",
+        "expected": "fatigue"
+      },
+      {
+        "name": "jodon me dard",
+        "expected": "joint_pain"
+      },
+      {
+        "name": "aankh lal",
+        "expected": "red_eye"
+      },
+      {
+        "name": "khujli",
+        "expected": "itchy_skin"
+      }
+    ],
+    "ai_variant": [
+      {
+        "name": "Chest pain",
+        "expected": "chest_pain"
+      },
+      {
+        "name": "chest-pain",
+        "expected": "chest_pain"
+      },
+      {
+        "name": "Shortness of breath",
+        "expected": "shortness_of_breath"
+      },
+      {
+        "name": "High fever",
+        "expected": "fever"
+      },
+      {
+        "name": "Runny nose",
+        "expected": "runny_nose"
+      },
+      {
+        "name": "Stomach ache",
+        "expected": "abdominal_pain"
+      },
+      {
+        "name": "Feeling sick to my stomach",
+        "expected": "nausea"
+      },
+      {
+        "name": "Difficulty breathing",
+        "expected": "shortness_of_breath"
+      },
+      {
+        "name": "Heart racing",
+        "expected": "palpitations"
+      },
+      {
+        "name": "Itchy eyes",
+        "expected": "itchy_eyes"
+      },
+      {
+        "name": "Loss of smell",
+        "expected": "loss_of_smell_or_taste"
+      },
+      {
+        "name": "Muscle pain",
+        "expected": "body_aches"
+      },
+      {
+        "name": "Tiredness",
+        "expected": "fatigue"
+      },
+      {
+        "name": "Passing out",
+        "expected": "fainting"
+      },
+      {
+        "name": "Weakness on one side of the body",
+        "expected": "one_sided_weakness"
+      },
+      {
+        "name": "Slurred speech",
+        "expected": "slurred_speech"
+      },
+      {
+        "name": "Blood in stool",
+        "expected": "black_or_bloody_stool"
+      },
+      {
+        "name": "Coughing up blood",
+        "expected": "coughing_blood"
+      },
+      {
+        "name": "Swollen tongue",
+        "expected": "throat_or_tongue_swelling"
+      },
+      {
+        "name": "Burning when peeing",
+        "expected": "burning_urination"
+      }
+    ],
+    "negative": [
+      {
+        "name": "my mother",
+        "expected": null
+      },
+      {
+        "name": "since yesterday",
+        "expected": null
+      },
+      {
+        "name": "I went to work",
+        "expected": null
+      },
+      {
+        "name": "blue car",
+        "expected": null
+      },
+      {
+        "name": "happy",
+        "expected": null
+      },
+      {
+        "name": "pizza",
+        "expected": null
+      },
+      {
+        "name": "the weather is cold",
+        "expected": null
+      },
+      {
+        "name": "headphones",
+        "expected": null
+      },
+      {
+        "name": "I am fine",
+        "expected": null
+      },
+      {
+        "name": "appointment",
+        "expected": null
+      }
+    ]
+  }
+}
