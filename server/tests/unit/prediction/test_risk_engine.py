@@ -7,11 +7,19 @@ Covers:
     - Red flags override any predicted condition.
     - Tiers from predicted conditions: Likely, Possible (capped), Less likely.
     - The no-match default, determinism and the empty-input failure.
+    - A multi-part trigger needs every part.
+    - Uncertainty escalation (S2-NIS-1): no Likely condition, an unclear photo
+      or an AI error raises SELF_CARE to CONSULT_DOCTOR; across every tier,
+      confidence and reason combination it never lowers a tier and never
+      reaches URGENT on its own.
 
-Owner: Nisarg (prediction) · Task: S1-NIS-2 · Requirements: FR-06, FR-15, DR-02
+Owner: Nisarg (prediction) · Task: S1-NIS-2, S2-NIS-1 · Requirements: FR-06, FR-15,
+DR-02, NFR-07
 """
 
+import itertools
 import random
+from dataclasses import dataclass
 
 import pytest
 from app.core.errors import ValidationError
@@ -22,12 +30,17 @@ from app.services.prediction.risk_engine import (
     RISK_ENGINE_VERSION,
     assess_risk,
     condition_tier,
+    escalate_for_uncertainty,
     find_red_flags,
+    uncertainty_reasons,
 )
 from app.services.prediction.risk_schemas import (
+    RedFlag,
     RedFlagTrigger,
     ReportedSymptom,
+    RiskDecision,
     RiskRule,
+    UncertaintyReason,
 )
 from app.services.prediction.schemas import ConditionPrediction
 
@@ -42,6 +55,26 @@ GATED_SINGLE_PART = [
     for trigger in rule.triggers
     if len(trigger.all_of) == 1 and trigger.all_of[0].min_severity is not None
 ]
+MULTI_PART = [
+    pytest.param(rule, trigger, id=f"{rule.id}[{index}]")
+    for rule in get_catalog().red_flags
+    for index, trigger in enumerate(rule.triggers)
+    if len(trigger.all_of) > 1
+]
+TIER_ORDER = [RiskLevel.SELF_CARE, RiskLevel.CONSULT_DOCTOR, RiskLevel.URGENT]
+CALLER_REASONS = [UncertaintyReason.IMAGE_UNCLEAR, UncertaintyReason.AI_ERROR]
+REASON_SETS = [
+    combo
+    for size in range(len(CALLER_REASONS) + 1)
+    for combo in itertools.combinations(CALLER_REASONS, size)
+]
+
+
+@dataclass(frozen=True)
+class _OneRuleCatalog:
+    """Catalog stand-in holding a single red-flag rule."""
+
+    red_flags: tuple[RedFlag, ...]
 
 
 def _symptoms(
@@ -132,6 +165,19 @@ def test_any_reported_severity_can_meet_the_minimum() -> None:
 
 def test_mild_chest_pain_alone_is_not_a_red_flag() -> None:
     assert find_red_flags(_symptoms("chest_pain", severity=Severity.MILD)) == ()
+
+
+@pytest.mark.parametrize(("rule", "trigger"), MULTI_PART)
+def test_multi_part_trigger_needs_every_part(
+    rule: RedFlag, trigger: RedFlagTrigger
+) -> None:
+    only_this = _OneRuleCatalog((rule.model_copy(update={"triggers": (trigger,)}),))
+    full = _trigger_symptoms(trigger)
+
+    for missing in range(len(full)):
+        partial = full[:missing] + full[missing + 1 :]
+        assert find_red_flags(partial, only_this) == ()  # type: ignore[arg-type]
+    assert [h.id for h in find_red_flags(full, only_this)] == [rule.id]  # type: ignore[arg-type]
 
 
 def test_self_harm_red_flag_reports_its_category() -> None:
@@ -243,3 +289,127 @@ def test_same_input_gives_same_decision_in_any_order() -> None:
 def test_empty_symptoms_raise_validation_error() -> None:
     with pytest.raises(ValidationError, match="At least one confirmed symptom"):
         assess_risk([], predictions=[])
+
+
+# --- uncertainty escalation (S2-NIS-1) ------------------------------------------
+
+
+def test_possible_self_care_condition_is_raised_to_consult_doctor() -> None:
+    possible = _prediction("eczema", RiskLevel.SELF_CARE, ConfidenceLabel.POSSIBLE)
+
+    decision = assess_risk(_symptoms("itching"), [possible])
+
+    # idea §7: a weak match is never treated as "probably nothing".
+    assert decision.level is RiskLevel.CONSULT_DOCTOR
+    assert decision.rule is RiskRule.UNCERTAINTY
+    assert decision.uncertainty == (UncertaintyReason.LOW_CONFIDENCE,)
+    # The referral can still point to the condition's specialty.
+    assert decision.driving_condition_ids == ("eczema",)
+
+
+@pytest.mark.parametrize("reason", CALLER_REASONS)
+def test_reported_uncertainty_raises_likely_self_care(
+    reason: UncertaintyReason,
+) -> None:
+    likely = _prediction("common_cold", RiskLevel.SELF_CARE, ConfidenceLabel.LIKELY)
+
+    decision = assess_risk(_symptoms("sneezing"), [likely], uncertainty=[reason])
+
+    assert decision.level is RiskLevel.CONSULT_DOCTOR
+    assert decision.rule is RiskRule.UNCERTAINTY
+    assert decision.uncertainty == (reason,)
+
+
+def test_confident_self_care_result_is_not_escalated() -> None:
+    likely = _prediction("common_cold", RiskLevel.SELF_CARE, ConfidenceLabel.LIKELY)
+
+    decision = assess_risk(_symptoms("sneezing"), [likely])
+
+    assert decision.level is RiskLevel.SELF_CARE
+    assert decision.rule is RiskRule.CONDITION
+    assert decision.uncertainty == ()
+
+
+def test_uncertainty_alone_never_reaches_urgent() -> None:
+    possible = _prediction("meningitis", RiskLevel.URGENT, ConfidenceLabel.POSSIBLE)
+
+    decision = assess_risk(
+        _symptoms("headache"), [possible], uncertainty=CALLER_REASONS
+    )
+
+    assert decision.level is RiskLevel.CONSULT_DOCTOR
+    assert decision.rule is RiskRule.CONDITION
+    assert decision.uncertainty == (
+        UncertaintyReason.LOW_CONFIDENCE,
+        *CALLER_REASONS,
+    )
+
+
+def test_red_flag_keeps_its_rule_and_records_uncertainty() -> None:
+    decision = assess_risk(
+        _symptoms("chest_pain", severity=Severity.SEVERE),
+        predictions=[],
+        uncertainty=[UncertaintyReason.IMAGE_UNCLEAR],
+    )
+
+    assert decision.level is RiskLevel.URGENT
+    assert decision.rule is RiskRule.RED_FLAG
+    assert decision.uncertainty == (
+        UncertaintyReason.LOW_CONFIDENCE,
+        UncertaintyReason.IMAGE_UNCLEAR,
+    )
+
+
+def test_no_match_keeps_its_rule_and_records_low_confidence() -> None:
+    decision = assess_risk(_symptoms("fatigue"), predictions=[])
+
+    assert decision.rule is RiskRule.NO_CONDITION_MATCH
+    assert decision.uncertainty == (UncertaintyReason.LOW_CONFIDENCE,)
+
+
+@pytest.mark.parametrize("reasons", REASON_SETS)
+@pytest.mark.parametrize("confidence", list(ConfidenceLabel))
+@pytest.mark.parametrize("base_risk", TIER_ORDER)
+def test_uncertainty_never_lowers_a_tier(
+    base_risk: RiskLevel,
+    confidence: ConfidenceLabel,
+    reasons: tuple[UncertaintyReason, ...],
+) -> None:
+    prediction = _prediction("c", base_risk, confidence)
+    without = _decide_without_uncertainty(prediction)
+
+    decision = assess_risk(_symptoms("fever"), [prediction], uncertainty=reasons)
+
+    rank = TIER_ORDER.index
+    assert rank(decision.level) >= rank(without)
+    if decision.uncertainty:
+        assert rank(decision.level) >= rank(RiskLevel.CONSULT_DOCTOR)
+    if without is not RiskLevel.URGENT:
+        assert decision.level is not RiskLevel.URGENT
+
+
+def _decide_without_uncertainty(prediction: ConditionPrediction) -> RiskLevel:
+    """The tier the condition rules alone give, before any escalation."""
+    tier = condition_tier(prediction)
+    return RiskLevel.CONSULT_DOCTOR if tier is None else tier
+
+
+def test_uncertainty_reasons_are_deduplicated_and_in_enum_order() -> None:
+    likely = _prediction("c", RiskLevel.SELF_CARE, ConfidenceLabel.LIKELY)
+    reported = [
+        UncertaintyReason.AI_ERROR,
+        UncertaintyReason.IMAGE_UNCLEAR,
+        UncertaintyReason.AI_ERROR,
+    ]
+
+    assert uncertainty_reasons([likely], reported) == tuple(CALLER_REASONS)
+
+
+def test_escalation_without_reasons_returns_the_decision_unchanged() -> None:
+    decision = RiskDecision(
+        level=RiskLevel.SELF_CARE,
+        rule=RiskRule.CONDITION,
+        engine_version=RISK_ENGINE_VERSION,
+    )
+
+    assert escalate_for_uncertainty(decision, ()) is decision

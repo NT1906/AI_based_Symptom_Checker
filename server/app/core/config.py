@@ -4,7 +4,8 @@ Responsibilities:
     - Define typed settings using pydantic-settings.
     - Provide cached settings accessor for dependency injection and services.
 
-Owner: Vivek (core) · Task: S0-VIV-1 · Requirements: NFR-08
+Owner: Vivek (core) · Task: S0-VIV-1, S2-VIV-1, S2-VIV-2
+Requirements: FR-01, NFR-03, NFR-08
 """
 
 from functools import lru_cache
@@ -22,6 +23,12 @@ class Settings(BaseSettings):
         port: HTTP port for the Uvicorn server.
         database_url: PostgreSQL connection string.
         jwt_secret: Secret key for signing JWT auth tokens.
+        jwt_algorithm: Cryptographic algorithm for JWT signatures.
+        jwt_access_token_expire_minutes: Expiration window for access tokens.
+        jwt_refresh_token_expire_days: Expiration window for refresh tokens.
+        auth_cookie_name: HttpOnly cookie key storing the session JWT.
+        refresh_cookie_name: HttpOnly cookie key storing the refresh JWT.
+        csrf_cookie_name: Cookie key storing the readable CSRF token.
         ai_provider: Active LLM provider ('mock', 'openai', 'gemini').
         ai_model: Model name for LLM requests.
         openai_api_key: Optional API key for OpenAI.
@@ -43,6 +50,12 @@ class Settings(BaseSettings):
         "postgresql+psycopg://postgres:postgres@localhost:5432/symptom_checker"
     )
     jwt_secret: str = "local-development-secret-that-is-at-least-32-chars-long"
+    jwt_algorithm: str = "HS256"
+    jwt_access_token_expire_minutes: int = 15
+    jwt_refresh_token_expire_days: int = 7
+    auth_cookie_name: str = "auth_token"
+    refresh_cookie_name: str = "refresh_token"
+    csrf_cookie_name: str = "csrf_token"
     ai_provider: str = "mock"
     ai_model: str = "gpt-4o-mini"
     openai_api_key: str | None = None
