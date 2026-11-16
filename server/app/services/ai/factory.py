@@ -63,9 +63,7 @@ def get_ai_gateway(provider: str | None = None) -> AiGateway:
             raise AiError("OPENAI_API_KEY is not configured.")
         return cast(
             AiGateway,
-            PrivacyAiGateway(
-                OpenAiProvider(api_key=api_key, model=settings.ai_model)
-            ),
+            PrivacyAiGateway(OpenAiProvider(api_key=api_key, model=settings.ai_model)),
         )
 
     if resolved_provider == "gemini":
