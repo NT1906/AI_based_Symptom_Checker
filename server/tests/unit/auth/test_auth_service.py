@@ -153,12 +153,16 @@ async def test_authenticate_user_success(
         email="auth.user@example.com",
         password="SuperSecretPassword123!",
     )
-    user_read, token = await auth_service.authenticate_user(login_payload)
+    user_read, access_token, refresh_token = await auth_service.authenticate_user(
+        login_payload
+    )
 
     assert user_read.id == registered.id
     assert user_read.email == registered.email
-    assert isinstance(token, str)
-    assert len(token) > 20
+    assert isinstance(access_token, str)
+    assert len(access_token) > 20
+    assert isinstance(refresh_token, str)
+    assert len(refresh_token) > 20
 
 
 @pytest.mark.asyncio
@@ -243,3 +247,62 @@ async def test_get_user_by_id_not_found(
 ) -> None:
     """Verify get_user_by_id returns None for a non-existent UUID."""
     assert await auth_service.get_user_by_id(uuid4()) is None
+
+
+# ---------------------------------------------------------------------------
+# Token Refresh & Rotation Tests
+# ---------------------------------------------------------------------------
+
+
+@pytest.mark.asyncio
+async def test_refresh_session_success_and_rotation(
+    auth_service: AuthService,
+) -> None:
+    """Verify refresh_session returns fresh access token and rotates refresh token."""
+    reg = await auth_service.register_user(
+        UserRegisterRequest(
+            email="rotate.test@example.com",
+            password="RotatePassword123!",
+        )
+    )
+    _, _, initial_refresh = await auth_service.authenticate_user(
+        UserLoginRequest(
+            email="rotate.test@example.com",
+            password="RotatePassword123!",
+        )
+    )
+
+    user_refreshed, new_access, new_refresh = await auth_service.refresh_session(
+        initial_refresh
+    )
+    assert user_refreshed.id == reg.id
+    assert new_access != initial_refresh
+    assert new_refresh != initial_refresh
+
+    # Verify that attempting to reuse the old rotated refresh token is rejected
+    with pytest.raises(UnauthorizedError, match="revoked or already rotated"):
+        await auth_service.refresh_session(initial_refresh)
+
+
+@pytest.mark.asyncio
+async def test_revoke_token_prevents_subsequent_refresh(
+    auth_service: AuthService,
+) -> None:
+    """Verify revoking a refresh token blocks its use."""
+    await auth_service.register_user(
+        UserRegisterRequest(
+            email="revoke.test@example.com",
+            password="RevokePassword123!",
+        )
+    )
+    _, _, refresh_token = await auth_service.authenticate_user(
+        UserLoginRequest(
+            email="revoke.test@example.com",
+            password="RevokePassword123!",
+        )
+    )
+
+    auth_service.revoke_token(refresh_token)
+
+    with pytest.raises(UnauthorizedError, match="revoked or already rotated"):
+        await auth_service.refresh_session(refresh_token)

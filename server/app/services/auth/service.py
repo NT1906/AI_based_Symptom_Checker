@@ -3,9 +3,10 @@
 Responsibilities:
     - Register unique user accounts with Argon2id password hashing.
     - Authenticate credentials safely with timing-attack mitigation.
+    - Manage access and refresh token lifecycle, rotation, and revocation.
     - Resolve authenticated user records by ID.
 
-Owner: Vivek (auth) · Task: S2-VIV-1 · Requirements: FR-01
+Owner: Vivek (auth) · Task: S2-VIV-1, S2-VIV-2 · Requirements: FR-01, NFR-03
 """
 
 from uuid import UUID
@@ -24,6 +25,8 @@ from app.services.auth.schemas import (
 )
 from app.services.auth.security import (
     create_access_token,
+    create_refresh_token,
+    decode_refresh_token,
     hash_password,
     verify_dummy_password,
     verify_password,
@@ -34,6 +37,9 @@ logger = get_logger(__name__)
 
 class AuthService:
     """Domain service managing user registration and authentication workflows."""
+
+    # Class-level registry tracking revoked/rotated refresh token identifiers
+    _revoked_tokens: set[str] = set()
 
     def __init__(
         self,
@@ -96,14 +102,15 @@ class AuthService:
 
     async def authenticate_user(
         self, payload: UserLoginRequest
-    ) -> tuple[UserRead, str]:
-        """Authenticate user credentials and issue a signed JWT access token.
+    ) -> tuple[UserRead, str, str]:
+        """Authenticate user credentials and issue signed access and refresh tokens.
 
         Args:
             payload: Validated login payload with email and password.
 
         Returns:
-            tuple[UserRead, str]: Tuple of sanitized UserRead record and raw JWT token.
+            tuple[UserRead, str, str]: Tuple of sanitized UserRead record,
+                access token string, and refresh token string.
 
         Raises:
             UnauthorizedError: If email is not found or password verification fails.
@@ -127,7 +134,9 @@ class AuthService:
                 )
                 raise UnauthorizedError("Invalid email or password.")
 
-            token = create_access_token(user.id, user.email, self.settings)
+            access_token = create_access_token(user.id, user.email, self.settings)
+            refresh_token, _ = create_refresh_token(user.id, user.email, self.settings)
+
             logger.info("user_authenticated", user_id=str(user.id))
             return (
                 UserRead(
@@ -135,8 +144,75 @@ class AuthService:
                     email=user.email,
                     created_at=user.created_at,
                 ),
-                token,
+                access_token,
+                refresh_token,
             )
+
+    async def refresh_session(
+        self, raw_refresh_token: str
+    ) -> tuple[UserRead, str, str]:
+        """Validate a refresh token and issue rotated access and refresh tokens.
+
+        Args:
+            raw_refresh_token: Encoded refresh token string from cookie.
+
+        Returns:
+            tuple[UserRead, str, str]: (user_record, new_access, new_refresh).
+
+        Raises:
+            UnauthorizedError: If token is expired, invalid, already rotated/revoked,
+                or user no longer exists.
+        """
+        claims = decode_refresh_token(raw_refresh_token, self.settings)
+        jti = claims["jti"]
+        user_id_str = claims["sub"]
+
+        # Detect reuse of an already rotated or revoked refresh token
+        if jti in self._revoked_tokens:
+            logger.warning(
+                "refresh_token_reuse_detected",
+                jti=jti,
+                user_id=user_id_str,
+            )
+            raise UnauthorizedError(
+                "Refresh token has been revoked or already rotated."
+            )
+
+        try:
+            user_id = UUID(user_id_str)
+        except ValueError as exc:
+            raise UnauthorizedError(
+                "Malformed user identifier in refresh token"
+            ) from exc
+
+        user = await self.get_user_by_id(user_id)
+        if user is None:
+            raise UnauthorizedError("User account no longer exists.")
+
+        # Invalidate old refresh token (rotation enforcement)
+        self._revoked_tokens.add(jti)
+
+        # Issue fresh token pair
+        new_access_token = create_access_token(user.id, user.email, self.settings)
+        new_refresh_token, _ = create_refresh_token(user.id, user.email, self.settings)
+
+        logger.info("auth_session_refreshed", user_id=str(user.id))
+        return user, new_access_token, new_refresh_token
+
+    def revoke_token(self, raw_token: str) -> None:
+        """Revoke a token by recording its jti identifier.
+
+        Args:
+            raw_token: Raw encoded token string.
+        """
+        try:
+            claims = decode_refresh_token(raw_token, self.settings)
+            jti = claims.get("jti")
+            if jti:
+                self._revoked_tokens.add(jti)
+                logger.info("refresh_token_revoked", jti=jti)
+        except UnauthorizedError:
+            pass
 
     async def get_user_by_id(self, user_id: UUID) -> UserRead | None:
         """Retrieve a user account by its unique identifier.

@@ -1,12 +1,13 @@
-"""Unit tests for cryptographic primitives and JWT authentication utilities.
+"""Unit tests for cryptographic primitives, JWT tokens, and CSRF protection.
 
 Responsibilities:
     - Verify Argon2id password hashing parameters, prefixes, and digest verification.
     - Test constant-time verification behavior on valid and invalid credentials.
-    - Validate JWT creation, claim structure (sub, email, iat, exp), and decoding.
-    - Verify strict rejection of expired, malformed, or tampered tokens.
+    - Validate JWT access and refresh token creation, claim structures, and decoding.
+    - Verify strict rejection of expired, malformed, or cross-typed tokens.
+    - Verify CSRF token generation and constant-time validation.
 
-Owner: Vivek (tests) · Task: S2-VIV-1 · Requirements: FR-01, NFR-03
+Owner: Vivek (tests) · Task: S2-VIV-1, S2-VIV-2 · Requirements: FR-01, NFR-03
 """
 
 from datetime import timedelta
@@ -19,8 +20,12 @@ from app.core.config import Settings
 from app.core.errors import UnauthorizedError
 from app.services.auth.security import (
     create_access_token,
+    create_refresh_token,
     decode_access_token,
+    decode_refresh_token,
+    generate_csrf_token,
     hash_password,
+    validate_csrf_token,
     verify_dummy_password,
     verify_password,
 )
@@ -176,3 +181,100 @@ def test_decode_access_token_missing_subject_claim_raises_unauthorized(
 
     with pytest.raises(UnauthorizedError, match="missing subject claim"):
         decode_access_token(raw_token, auth_settings)
+
+
+# ---------------------------------------------------------------------------
+# Refresh Token Tests
+# ---------------------------------------------------------------------------
+
+
+def test_create_and_decode_refresh_token(auth_settings: Settings) -> None:
+    """Verify refresh token contains type='refresh', jti, sub, and email claims."""
+    user_id = uuid4()
+    email = "refresh.user@example.com"
+    token, jti = create_refresh_token(user_id, email, auth_settings)
+
+    assert isinstance(token, str)
+    assert isinstance(jti, str)
+    assert len(jti) == 36  # UUID string
+
+    claims = decode_refresh_token(token, auth_settings)
+    assert claims["sub"] == str(user_id)
+    assert claims["email"] == email
+    assert claims["type"] == "refresh"
+    assert claims["jti"] == jti
+
+
+def test_decode_access_token_rejects_refresh_token(
+    auth_settings: Settings,
+) -> None:
+    """Verify decode_access_token rejects tokens with type='refresh'."""
+    user_id = uuid4()
+    refresh_token, _ = create_refresh_token(user_id, "user@example.com", auth_settings)
+
+    with pytest.raises(UnauthorizedError, match="Invalid token type"):
+        decode_access_token(refresh_token, auth_settings)
+
+
+def test_decode_refresh_token_rejects_access_token(
+    auth_settings: Settings,
+) -> None:
+    """Verify decode_refresh_token rejects tokens with type='access'."""
+    user_id = uuid4()
+    access_token = create_access_token(user_id, "user@example.com", auth_settings)
+
+    with pytest.raises(UnauthorizedError, match="Invalid token type"):
+        decode_refresh_token(access_token, auth_settings)
+
+
+def test_decode_refresh_token_expired_raises_unauthorized(
+    auth_settings: Settings,
+) -> None:
+    """Verify expired refresh token raises typed UnauthorizedError."""
+    user_id = uuid4()
+    expired_token, _ = create_refresh_token(
+        user_id,
+        "user@example.com",
+        auth_settings,
+        expires_delta=timedelta(seconds=-1),
+    )
+
+    with pytest.raises(UnauthorizedError, match="Refresh token has expired"):
+        decode_refresh_token(expired_token, auth_settings)
+
+
+# ---------------------------------------------------------------------------
+# CSRF Token Tests
+# ---------------------------------------------------------------------------
+
+
+def test_generate_csrf_token_structure() -> None:
+    """Verify generate_csrf_token produces a 64-character hexadecimal token."""
+    token1 = generate_csrf_token()
+    token2 = generate_csrf_token()
+
+    assert len(token1) == 64
+    assert len(token2) == 64
+    assert token1 != token2
+    # Verify hex format
+    int(token1, 16)
+
+
+def test_validate_csrf_token_matching() -> None:
+    """Verify validate_csrf_token returns True for matching tokens."""
+    token = generate_csrf_token()
+    assert validate_csrf_token(token, token) is True
+    # Strip whitespace test
+    assert validate_csrf_token(f"  {token}  ", token) is True
+
+
+def test_validate_csrf_token_mismatched() -> None:
+    """Verify validate_csrf_token returns False for mismatched or blank tokens."""
+    token1 = generate_csrf_token()
+    token2 = generate_csrf_token()
+
+    assert validate_csrf_token(token1, token2) is False
+    assert validate_csrf_token(None, token1) is False
+    assert validate_csrf_token(token1, None) is False
+    assert validate_csrf_token("", token1) is False
+    assert validate_csrf_token("   ", token1) is False
