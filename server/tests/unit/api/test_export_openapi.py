@@ -104,6 +104,8 @@ def test_openapi_contains_auth_operations(app: FastAPI) -> None:
     expected_auth_routes = [
         ("/api/v1/auth/register", "post"),
         ("/api/v1/auth/login", "post"),
+        ("/api/v1/auth/refresh", "post"),
+        ("/api/v1/auth/csrf", "get"),
         ("/api/v1/auth/logout", "post"),
         ("/api/v1/auth/me", "get"),
     ]

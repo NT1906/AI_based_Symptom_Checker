@@ -3,9 +3,9 @@
 Responsibilities:
     - Validate registration and login payloads (email normalization, password strength).
     - Provide safe, sanitized UserRead schema omitting password hashes.
-    - Define logout and authentication status responses.
+    - Define logout, token refresh, and CSRF token responses.
 
-Owner: Vivek (auth) · Task: S2-VIV-1 · Requirements: FR-01
+Owner: Vivek (auth) · Task: S2-VIV-1, S2-VIV-2 · Requirements: FR-01, NFR-03
 """
 
 import re
@@ -104,4 +104,13 @@ class LogoutResponse(SchemaBase):
     message: str = Field(
         default="Successfully logged out",
         description="Human-readable status summary",
+    )
+
+
+class CsrfTokenResponse(SchemaBase):
+    """Payload providing CSRF protection token."""
+
+    csrf_token: str = Field(
+        ...,
+        description="CSRF protection token to attach in X-CSRF-Token header",
     )
