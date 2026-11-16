@@ -7,7 +7,7 @@ Responsibilities:
     - Translate upstream provider errors into typed AiError subclasses.
     - Load versioned prompt templates adhering to medical-safety invariants.
 
-Owner: Nishith · Task: S1-NIT-3 · Requirements: NFR-05
+Owner: Nishith · Tasks: S1-NIT-3, S2-NIT-1 · Requirements: NFR-05, FR-19, NFR-07
 """
 
 import asyncio
@@ -50,7 +50,7 @@ logger = get_logger(__name__)
 T = TypeVar("T")
 
 PROMPTS_DIR = Path(__file__).resolve().parent / "prompts"
-EXTRACTION_PROMPT_PATH = PROMPTS_DIR / "extraction.v1.txt"
+EXTRACTION_PROMPT_PATH = PROMPTS_DIR / "extraction.v2.txt"
 CLARIFICATION_PROMPT_PATH = PROMPTS_DIR / "clarification.v2.txt"
 
 MAX_CLARIFICATION_TURNS: int = 3
