@@ -94,3 +94,25 @@ def test_openapi_contains_all_assessment_operations(app: FastAPI) -> None:
             and "200" in operation["responses"]
             or "201" in operation["responses"]
         )
+
+
+def test_openapi_contains_auth_operations(app: FastAPI) -> None:
+    """Verify OpenAPI spec includes all authentication routes."""
+    spec = app.openapi()
+    paths = spec["paths"]
+
+    expected_auth_routes = [
+        ("/api/v1/auth/register", "post"),
+        ("/api/v1/auth/login", "post"),
+        ("/api/v1/auth/logout", "post"),
+        ("/api/v1/auth/me", "get"),
+    ]
+
+    for path, method in expected_auth_routes:
+        assert path in paths, f"Path {path} missing from OpenAPI schema"
+        assert method in paths[path], f"Method {method.upper()} {path} missing"
+        operation = paths[path][method]
+        assert "summary" in operation and operation["summary"]
+        assert "responses" in operation and (
+            "200" in operation["responses"] or "201" in operation["responses"]
+        )
