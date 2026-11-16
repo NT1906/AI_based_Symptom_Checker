@@ -488,6 +488,21 @@ Content-Type: application/json
 }
 ```
 
+## Account assessment history (FR-02)
+
+`GET /api/v1/history` returns the authenticated account's assessment
+summaries in newest-first order. Pass `limit` (1–100, default 20) and `offset` (zero-based, default 0). The response is
+`{"items": [...], "nextOffset": 20}`. A null `nextOffset` marks the last page.
+Items use the existing assessment summary schema.
+
+`GET /api/v1/history/{assessment_id}` returns the same summary schema for an
+owned assessment. Unknown, guest-owned and other users' assessments return
+404. Both routes require authentication (401) and mark successful responses
+`Cache-Control: no-store`.
+
+The routes use the same session cookie or bearer authentication as
+`GET /api/v1/auth/me`.
+
 ## Active consent policy (DR-08)
 
 `GET /api/v1/consents/current-policy` returns `{"policyVersion":"1.0.0"}`.
