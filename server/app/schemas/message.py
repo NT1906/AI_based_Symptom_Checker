@@ -3,9 +3,10 @@
 Responsibilities:
     - Validate chat message input, sender roles, and position order.
     - Provide Create and Read contract models for message endpoints.
+    - Support optional client message ID and idempotency key for deduplication.
     - Enforce non-empty message content.
 
-Owner: Darshil (orchestration) · Task: S0-DAR-1 · Requirements: N/A
+Owner: Darshil (orchestration) · Task: S0-DAR-1, S2-DAR-4 · Requirements: NFR-05
 """
 
 from datetime import datetime, UTC
@@ -46,6 +47,15 @@ class Message(SchemaBase):
         default_factory=lambda: datetime.now(UTC),
         description="Timestamp in UTC",
     )
+    client_message_id: UUID | None = Field(
+        default=None,
+        description="Optional client-generated UUID for deduplicating retried messages",
+    )
+    idempotency_key: str | None = Field(
+        default=None,
+        max_length=128,
+        description="Optional idempotency key to prevent double answers on retry",
+    )
 
     @field_validator("content")
     @classmethod
@@ -75,6 +85,15 @@ class MessageCreate(SchemaBase):
         min_length=1,
         max_length=4000,
         description="User response text",
+    )
+    client_message_id: UUID | None = Field(
+        default=None,
+        description="Optional client-generated UUID for deduplicating retried messages",
+    )
+    idempotency_key: str | None = Field(
+        default=None,
+        max_length=128,
+        description="Optional idempotency key to prevent double answers on retry",
     )
 
     @field_validator("content")

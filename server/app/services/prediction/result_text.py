@@ -8,10 +8,12 @@ Responsibilities:
 
 The composer still runs every sentence through the safety-wording guard.
 
-Owner: Nisarg (prediction) · Task: S1-NIS-3 · Requirements: FR-07, DR-01, DR-05
+Owner: Nisarg (prediction) · Task: S1-NIS-3, S2-NIS-1, S2-NIS-2 · Requirements: FR-07,
+FR-24, DR-01, DR-05
 """
 
 from app.schemas.enums import RiskLevel
+from app.services.prediction.risk_schemas import UncertaintyReason
 
 EMERGENCY_NUMBER = "112"
 MENTAL_HEALTH_HELPLINE = "14416"  # Tele-MANAS, India's national mental-health line
@@ -52,6 +54,11 @@ NO_MATCH_REASON = (
     "Your symptoms did not clearly match a common condition, "
     "so a general check-up is the safest next step."
 )
+WHY_TEMPLATE = "Because you reported {symptoms}."
+UNCERTAINTY_REASON = (
+    "The match with your symptoms was not certain enough to suggest home care, "
+    "so a doctor's check is the safer next step."
+)
 
 LIMITATIONS_ALWAYS = (
     "This result is based only on the symptoms you reported; "
@@ -63,6 +70,54 @@ RED_FLAG_LIMITATION = (
     "A warning-sign rule raised this result to urgent, whatever the possible "
     "conditions are."
 )
+UNCERTAINTY_LIMITATION = (
+    "Because the match was uncertain, this result was raised to the safer level."
+)
+UNCERTAINTY_LIMITATIONS: dict[UncertaintyReason, str] = {
+    UncertaintyReason.IMAGE_UNCLEAR: (
+        "The photo could not be assessed, so only the symptoms you described were used."
+    ),
+    UncertaintyReason.AI_ERROR: (
+        "Part of the conversation could not be processed, so some symptoms "
+        "may be missing."
+    ),
+}
+
+
+def other_symptoms(count: int) -> str:
+    """Phrase for symptoms left out of a "Because you reported …" list.
+
+    Args:
+        count: How many symptoms were not listed (at least 1).
+
+    Returns:
+        "1 other symptom" or "<count> other symptoms".
+
+    Example:
+        >>> other_symptoms(2)
+        '2 other symptoms'
+    """
+    return "1 other symptom" if count == 1 else f"{count} other symptoms"
+
+
+def lower_first(name: str) -> str:
+    """Lowercase a display name's first letter for use inside a sentence.
+
+    Names that start with an acronym ("ENT specialist") are kept as they are.
+
+    Args:
+        name: Display name from a dataset, e.g. "Joint pain".
+
+    Returns:
+        The in-sentence form, e.g. "joint pain".
+
+    Example:
+        >>> lower_first("ENT specialist")
+        'ENT specialist'
+    """
+    if len(name) > 1 and name[1].isupper():
+        return name
+    return name[:1].lower() + name[1:]
 
 
 def with_article(specialty_name: str) -> str:
@@ -82,12 +137,7 @@ def with_article(specialty_name: str) -> str:
         >>> with_article("Eye specialist")
         'an eye specialist'
     """
-    is_acronym = len(specialty_name) > 1 and specialty_name[1].isupper()
-    name = (
-        specialty_name
-        if is_acronym
-        else specialty_name[:1].lower() + specialty_name[1:]
-    )
+    name = lower_first(specialty_name)
     # Why: "u" usually sounds like "you" ("a urologist"), so only a/e/i/o take "an".
     article = "an" if name[:1].lower() in "aeio" else "a"
     return f"{article} {name}"
