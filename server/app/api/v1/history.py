@@ -9,6 +9,7 @@ from uuid import UUID
 
 from fastapi import APIRouter, Depends, Query, Response
 
+from app.api.deps import CurrentUserDep, SessionFactoryDep
 from app.core.errors import ErrorResponse
 from app.schemas.assessment import AssessmentRead
 from app.services.privacy.history import (
@@ -69,3 +70,16 @@ def create_history_router(
         return service.get_detail(user_id, assessment_id)
 
     return router
+
+
+def get_history_user_id(current_user: CurrentUserDep) -> UUID:
+    """Return the account ID resolved by the shared authentication dependency."""
+    return current_user.id
+
+
+def get_history_service(session_factory: SessionFactoryDep) -> HistoryService:
+    """Build the history service with the application's database session factory."""
+    return HistoryService(session_factory)
+
+
+router = create_history_router(get_history_user_id, get_history_service)

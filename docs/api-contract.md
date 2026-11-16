@@ -490,9 +490,8 @@ Content-Type: application/json
 
 ## Account assessment history (FR-02)
 
-After authentication and router registration, `GET /api/v1/history` returns an
-account's assessment summaries in newest-first order. Pass `limit` (1–100,
-default 20) and `offset` (zero-based, default 0). The response is
+`GET /api/v1/history` returns the authenticated account's assessment
+summaries in newest-first order. Pass `limit` (1–100, default 20) and `offset` (zero-based, default 0). The response is
 `{"items": [...], "nextOffset": 20}`. A null `nextOffset` marks the last page.
 Items use the existing assessment summary schema.
 
@@ -501,8 +500,5 @@ owned assessment. Unknown, guest-owned and other users' assessments return
 404. Both routes require authentication (401) and mark successful responses
 `Cache-Control: no-store`.
 
-Integration for #172: mount `create_history_router` in the application once
-#225 provides `CurrentUserDep`. Supply a dependency that returns the current
-user's ID and a service provider that constructs `HistoryService` from
-`SessionFactoryDep`. Check #162 for any repository contract updates before
-enabling these routes on staging.
+The routes use the same session cookie or bearer authentication as
+`GET /api/v1/auth/me`.
