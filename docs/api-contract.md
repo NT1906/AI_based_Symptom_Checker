@@ -503,6 +503,25 @@ owned assessment. Unknown, guest-owned and other users' assessments return
 The routes use the same session cookie or bearer authentication as
 `GET /api/v1/auth/me`.
 
+## Active consent policy (DR-08)
+
+`GET /api/v1/consents/current-policy` returns `{"policyVersion":"1.0.0"}`.
+An outdated or unknown policy version submitted to `POST /api/v1/consents`
+returns HTTP 409, code `CONSENT_REQUIRED`, and the active version in
+`details.policyVersion`. The response omits a consent ID and the server
+does not insert a row. A successful acceptance still returns HTTP 201
+with `consentId`.
+
+`POST /api/v1/assessments` returns the same 409 when the submitted
+consent ID does not exist or refers to an earlier policy. A new assessment
+requires a consent ID recorded for the active version. Historical consent
+remains available as acceptance evidence.
+
+The client compares stored consent with the active version before entering
+chat. A mismatch returns the user to the consent flow. During a rollout, an
+older client cannot submit acceptance for a notice it does not display.
+Deploy the updated notice and its version together.
+
 ## Account data rights (DR-06, NFR-04)
 
 `GET /api/v1/privacy/export` downloads the authenticated user's data as JSON
