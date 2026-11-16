@@ -11,6 +11,7 @@ import { useMutation } from "@tanstack/react-query";
 import { useState } from "react";
 import {
   CURRENT_POLICY_VERSION,
+  getCurrentPolicyVersion,
   postConsent,
 } from "../../services/consentApi";
 import { useConsentStore } from "../../stores/consentStore";
@@ -45,7 +46,13 @@ export function ConsentStep({ onConsented, onDeclined }: ConsentStepProps) {
   const recordConsent = useConsentStore((s) => s.recordConsent);
 
   const mutation = useMutation({
-    mutationFn: () => postConsent(CURRENT_POLICY_VERSION),
+    mutationFn: async () => {
+      const activeVersion = await getCurrentPolicyVersion();
+      if (activeVersion !== CURRENT_POLICY_VERSION) {
+        throw new Error("The privacy notice has changed. Refresh to see the latest version.");
+      }
+      return postConsent(CURRENT_POLICY_VERSION);
+    },
     onSuccess: (data) => {
       recordConsent(data.consentId, CURRENT_POLICY_VERSION);
       onConsented();

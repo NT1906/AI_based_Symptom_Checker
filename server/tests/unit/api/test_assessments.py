@@ -9,15 +9,23 @@ Responsibilities:
 Owner: Vivek (tests) · Task: S1-VIV-1, S1-VIV-3 · Requirements: —
 """
 
+from collections.abc import Iterator
+from pathlib import Path
 from unittest.mock import AsyncMock
 from uuid import UUID
 
+import pytest
 from fastapi import FastAPI, status
-from app.api.deps import AssessmentService, get_assessment_service
+from app.api.deps import AssessmentService, get_assessment_service, get_session_factory
 from app.schemas.assessment import AssessmentRead, AssessmentStateResponse
 from app.schemas.enums import AssessmentState, RiskLevel
 from app.schemas.result import AssessmentResult
 from fastapi.testclient import TestClient
+from sqlalchemy import create_engine
+from sqlalchemy.orm import sessionmaker
+
+from app.models.consent import Consent
+from app.services.privacy.consent import CURRENT_POLICY_VERSION
 
 from app.api.v1._assessment_stubs import (
     STUB_ASSESSMENT_ID,
@@ -30,8 +38,27 @@ SAMPLE_UUID = "e4caa1b2-8493-4a16-928e-5b1287c95e1a"
 SAMPLE_CONSENT_ID = "f81d4fae-7dec-11d0-a765-00a0c91e6bf6"
 
 
+@pytest.fixture
+def current_consent(app: FastAPI, tmp_path: Path) -> Iterator[None]:
+    """Provide a persisted consent for route tests that create an assessment."""
+    engine = create_engine(f"sqlite:///{tmp_path / 'assessment-consent.db'}")
+    sessions = sessionmaker(engine)
+    Consent.__table__.create(engine)
+    with sessions.begin() as session:
+        session.add(
+            Consent(id=UUID(SAMPLE_CONSENT_ID), policy_version=CURRENT_POLICY_VERSION)
+        )
+    app.dependency_overrides[get_session_factory] = lambda: sessions
+    try:
+        yield
+    finally:
+        app.dependency_overrides.pop(get_session_factory, None)
+        engine.dispose()
+
+
 def test_create_assessment_returns_201_and_start_state(
     client: TestClient,
+    current_consent: None,
 ) -> None:
     """Verify POST /api/v1/assessments initializes session in START state."""
     payload = {"consentId": SAMPLE_CONSENT_ID}
@@ -284,7 +311,7 @@ def test_urgent_result_stub_includes_emergency_number_112(
 
 
 def test_assessment_router_uses_dependency_injection_override(
-    app: FastAPI, client: TestClient
+    app: FastAPI, client: TestClient, current_consent: None
 ) -> None:
     """Verify assessment endpoints invoke the injected AssessmentService."""
     mock_service = AsyncMock(spec=AssessmentService)

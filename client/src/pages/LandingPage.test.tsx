@@ -14,6 +14,8 @@
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { render, screen, within } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
+import { http, HttpResponse } from "msw";
+import { server } from "../test/server";
 import { MemoryRouter, Route, Routes } from "react-router-dom";
 import { afterEach, describe, expect, it } from "vitest";
 import { useConsentStore } from "../stores/consentStore";
@@ -41,10 +43,29 @@ describe("LandingPage", () => {
     useConsentStore.setState({ consentId: null, consentedAt: null, policyVersion: null });
   });
 
-  it("redirects an already-consented session straight to chat", () => {
+  it("redirects a session with active consent straight to chat", async () => {
+    server.use(
+      http.get("/api/v1/consents/current-policy", () =>
+        HttpResponse.json({ policyVersion: "1.0.0" }),
+      ),
+    );
     useConsentStore.setState({ consentId: "consent-1", policyVersion: "1.0.0" });
     renderLanding();
-    expect(screen.getByText("Chat page")).toBeInTheDocument();
+    expect(await screen.findByText("Chat page")).toBeInTheDocument();
+  });
+
+  it("asks for consent again when the stored version is stale", async () => {
+    server.use(
+      http.get("/api/v1/consents/current-policy", () =>
+        HttpResponse.json({ policyVersion: "1.0.0" }),
+      ),
+    );
+    useConsentStore.setState({ consentId: "consent-1", policyVersion: "0.9.0" });
+    const user = userEvent.setup();
+    renderLanding();
+    await user.click(screen.getByRole("button", { name: /start symptom check/i }));
+    expect(screen.getByRole("dialog", { name: /your consent is required/i })).toBeInTheDocument();
+    expect(screen.queryByText("Chat page")).not.toBeInTheDocument();
   });
 
   it("shows the medical disclaimer on first render (DR-01)", () => {
