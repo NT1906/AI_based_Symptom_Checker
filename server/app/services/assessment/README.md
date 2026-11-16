@@ -1,6 +1,6 @@
 # Assessment Service Module
 
-**Owner:** Darshil (Assessment Orchestration) · **Task:** S1-DAR-2, S1-DAR-3, S1-DAR-4, S2-DAR-1, S2-DAR-2, S2-DAR-3, S2-DAR-4 · **Requirements:** idea §3, idea §10, FR-02, FR-03, FR-04, FR-05, FR-06, FR-07, FR-16, FR-17, FR-19, FR-20, FR-21, FR-25, DR-05, NFR-05
+**Owner:** Darshil (Assessment Orchestration) · **Task:** S1-DAR-2, S1-DAR-3, S1-DAR-4, S2-DAR-1, S2-DAR-2, S2-DAR-3, S2-DAR-4, S2-DAR-6 · **Requirements:** idea §3, idea §10, FR-02, FR-03, FR-04, FR-05, FR-06, FR-07, FR-16, FR-17, FR-19, FR-20, FR-21, FR-25, DR-05, NFR-03, NFR-05
 
 The Assessment Service orchestrates the conversational symptom assessment lifecycle. It provides:
 1. **Assessment State Machine**: Strictly governs valid states and enforces medical-safety guards throughout the user experience.
@@ -193,7 +193,28 @@ Network retries and rapid client resubmissions must never create duplicate answe
 
 ---
 
-## 11. Running Unit Tests
+## 11. Authorization Audit & Ownership Boundaries (S2-DAR-6)
+
+Per **NFR-03** (Security & Access Control), OWASP API Security Top 10 (A01: Broken Object Level Authorization / IDOR), and `docs/api-contract.md`:
+Every assessment resource is strictly scoped to its owner. Cross-user access is systematically blocked across all operational methods in the Assessment Orchestrator:
+
+- **Ownership Invariants**:
+  - **Registered User Assessments (`session.user_id` is set)**: Only requests authenticated with the exact matching `user_id` may read or modify the assessment. Anonymous callers and different registered users are blocked with `AssessmentAccessDeniedError` (`HTTP 403 Forbidden`).
+  - **Anonymous Guest Assessments (`session.user_id is None`, `session.guest_session_id` is set)**: Only requests presenting the matching `guest_session_id` bearer token may access the assessment. Mismatched guest session tokens or unlinked registered users attempting to access unclaimed guest sessions without claiming are rejected with `HTTP 403 Forbidden` (`GUEST_SESSION_MISMATCH`).
+  - **Post-Claim Invariant**: Once an assessment is claimed by a registered user (`claim_assessment()` / `claim_guest_session()`), ownership permanently shifts to `user_id`. The prior `guest_session_id` can no longer access or modify the assessment.
+- **Audit Logging**:
+  - Security violations emit structured audit warning logs: `logger.warning("unauthorized_access", assessment_id=..., reason=...)`.
+  - Authorized accesses emit structured audit logs: `logger.info("assessment_access_authorized", assessment_id=...)`.
+- **Enforcement Helpers**:
+  - `assert_ownership(assessment_id, user_id=None, guest_session_id=None, db_session=None)`: Validates ownership against in-memory runtime session and SQLAlchemy persistence layer, raising `AssessmentAccessDeniedError` (403) or `AssessmentServiceError` (404).
+  - `check_ownership(assessment_id, user_id=None, guest_session_id=None, db_session=None) -> bool`: Safe boolean predicate for route guards and conditional evaluation.
+- **Protected Methods**:
+  - Read access: `get_assessment`, `get_messages`, `list_messages`, `get_symptoms`, `get_state`, `get_profile_context`.
+  - Write access: `process_message`, `confirm_symptoms`, `update_symptoms`, `add_symptom`, `remove_symptom`, `edit_symptom`, `step_back_to_chat`, `restart_assessment`, `set_profile_context`, `generate_result`, `merge_image_findings`, `process_image`.
+
+---
+
+## 12. Running Unit Tests
 
 From `server/`:
 
