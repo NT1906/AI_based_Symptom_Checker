@@ -28,11 +28,14 @@ from sqlalchemy.pool import StaticPool
 import app.models  # noqa: F401
 from app.api.deps import get_db_engine, get_session_factory
 from app.api.v1._assessment_stubs import STUB_ASSESSMENT_ID
+from app.api.v1.consents import ConsentRequest, ConsentResponse
+from app.core.errors import ErrorResponse
 from app.models.base import Base
 from app.models.consent import Consent
 from app.schemas.assessment import AssessmentRead, AssessmentStateResponse
-from app.schemas.enums import AssessmentState
+from app.schemas.enums import AssessmentState, RiskLevel
 from app.schemas.message import MessageRead
+from app.schemas.result import DEFAULT_DISCLAIMER, AssessmentResult
 from app.schemas.symptom import SymptomRead
 from app.services.privacy.consent import CURRENT_POLICY_VERSION
 from tests.conftest import FAKE_CONSENT_ID
@@ -270,3 +273,173 @@ async def test_contract_analyze_assessment(async_client: AsyncClient) -> None:
     assert "resultAvailable" in raw, "resultAvailable missing from AnalyzeResponse"
     assert isinstance(raw["resultAvailable"], bool)
     UUID(raw["assessmentId"])
+
+
+# ---------------------------------------------------------------------------
+# 9. GET /api/v1/assessments/{id}/result -> AssessmentResult
+# ---------------------------------------------------------------------------
+
+
+@pytest.mark.anyio
+async def test_contract_get_result(async_client: AsyncClient) -> None:
+    """GET /result response must satisfy AssessmentResult schema."""
+    resp = await async_client.get(f"/api/v1/assessments/{SAMPLE_UUID}/result")
+    assert resp.status_code == status.HTTP_200_OK
+
+    parsed = _parse_or_fail(
+        AssessmentResult, resp.json(), "GET /api/v1/assessments/{id}/result"
+    )
+
+    assert parsed.disclaimer == DEFAULT_DISCLAIMER, (
+        "Disclaimer in result does not match DEFAULT_DISCLAIMER constant"
+    )
+    assert parsed.risk_level in (
+        RiskLevel.SELF_CARE,
+        RiskLevel.CONSULT_DOCTOR,
+        RiskLevel.URGENT,
+    )
+
+    raw = resp.json()
+    assert "riskLevel" in raw, "Wire format must use riskLevel"
+    assert "assessmentId" in raw, "Wire format must use assessmentId"
+    assert "risk_level" not in raw, "snake_case must not appear on wire"
+
+
+# ---------------------------------------------------------------------------
+# 10. GET /api/v1/consents/current-policy -> ConsentRequest
+# ---------------------------------------------------------------------------
+
+
+@pytest.mark.anyio
+async def test_contract_get_current_policy(async_client: AsyncClient) -> None:
+    """GET /consents/current-policy satisfies ConsentRequest schema."""
+    resp = await async_client.get("/api/v1/consents/current-policy")
+    assert resp.status_code == status.HTTP_200_OK
+
+    parsed = _parse_or_fail(
+        ConsentRequest, resp.json(), "GET /api/v1/consents/current-policy"
+    )
+    assert parsed.policy_version == CURRENT_POLICY_VERSION
+    assert "policyVersion" in resp.json()
+
+
+# ---------------------------------------------------------------------------
+# 11. POST /api/v1/consents -> ConsentResponse
+# ---------------------------------------------------------------------------
+
+
+@pytest.mark.anyio
+async def test_contract_create_consent(async_client: AsyncClient) -> None:
+    """POST /consents satisfies ConsentResponse schema."""
+    resp = await async_client.post(
+        "/api/v1/consents",
+        json={"policyVersion": CURRENT_POLICY_VERSION},
+    )
+    assert resp.status_code == status.HTTP_201_CREATED
+
+    raw = resp.json()
+    assert "consentId" in raw
+    UUID(raw["consentId"])
+    parsed = ConsentResponse.model_validate({"consent_id": raw["consentId"]})
+    assert str(parsed.consent_id) == raw["consentId"]
+
+
+# ---------------------------------------------------------------------------
+# 12. Error response shape: 422 VALIDATION_ERROR
+# ---------------------------------------------------------------------------
+
+
+@pytest.mark.anyio
+async def test_contract_error_response_shape_on_422(
+    async_client: AsyncClient,
+) -> None:
+    """422 error response must satisfy ErrorResponse schema with VALIDATION_ERROR."""
+    resp = await async_client.post(
+        "/api/v1/assessments",
+        json={},
+    )
+    assert resp.status_code == status.HTTP_422_UNPROCESSABLE_ENTITY
+
+    parsed = _parse_or_fail(ErrorResponse, resp.json(), "POST /api/v1/assessments 422")
+    assert parsed.code == "VALIDATION_ERROR"
+    assert len(parsed.message) > 0
+    assert len(parsed.request_id) > 0
+
+
+# ---------------------------------------------------------------------------
+# 13. Error response shape: invalid UUID path -> 422
+# ---------------------------------------------------------------------------
+
+
+@pytest.mark.anyio
+async def test_contract_invalid_uuid_path_error_shape(
+    async_client: AsyncClient,
+) -> None:
+    """Path parameter validation error must satisfy ErrorResponse schema."""
+    resp = await async_client.get("/api/v1/assessments/not-a-valid-uuid")
+    assert resp.status_code == status.HTTP_422_UNPROCESSABLE_ENTITY
+
+    parsed = _parse_or_fail(
+        ErrorResponse, resp.json(), "GET /assessments/invalid-uuid 422"
+    )
+    assert parsed.code == "VALIDATION_ERROR"
+    assert len(parsed.message) > 0
+
+
+# ---------------------------------------------------------------------------
+# 14. Error response shape: 404 NOT_FOUND
+# ---------------------------------------------------------------------------
+
+
+@pytest.mark.anyio
+async def test_contract_not_found_error_shape(
+    async_client: AsyncClient,
+) -> None:
+    """404 error response for unmatched route satisfies ErrorResponse schema."""
+    resp = await async_client.get("/api/v1/nonexistent-route")
+    assert resp.status_code == status.HTTP_404_NOT_FOUND
+
+    parsed = _parse_or_fail(ErrorResponse, resp.json(), "GET /nonexistent-route 404")
+    assert parsed.code == "NOT_FOUND"
+    assert len(parsed.message) > 0
+    assert len(parsed.request_id) > 0
+
+
+# ---------------------------------------------------------------------------
+# 15. Error response shape: 409 CONFLICT (unregistered consent)
+# ---------------------------------------------------------------------------
+
+
+@pytest.mark.anyio
+async def test_contract_conflict_error_shape(
+    async_client: AsyncClient,
+) -> None:
+    """409 error response for unconsented assessment satisfies ErrorResponse."""
+    unregistered_consent = "99999999-9999-9999-9999-999999999999"
+    resp = await async_client.post(
+        "/api/v1/assessments",
+        json={"consentId": unregistered_consent},
+    )
+    assert resp.status_code == status.HTTP_409_CONFLICT
+
+    parsed = _parse_or_fail(ErrorResponse, resp.json(), "POST /api/v1/assessments 409")
+    assert parsed.code == "CONSENT_REQUIRED"
+    assert len(parsed.message) > 0
+    assert parsed.details == {"policyVersion": CURRENT_POLICY_VERSION}
+
+
+# ---------------------------------------------------------------------------
+# 16. GET /api/v1/health -> {status, version}
+# ---------------------------------------------------------------------------
+
+
+@pytest.mark.anyio
+async def test_contract_health_endpoint(async_client: AsyncClient) -> None:
+    """GET /api/v1/health must return {status: 'ok', version: <str>}."""
+    resp = await async_client.get("/api/v1/health")
+    assert resp.status_code == status.HTTP_200_OK
+
+    raw = resp.json()
+    assert raw.get("status") == "ok"
+    assert isinstance(raw.get("version"), str)
+    assert len(raw["version"]) > 0
