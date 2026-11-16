@@ -7,7 +7,7 @@ Responsibilities:
       (Likely, Possible, Less likely) for non-diagnostic display.
     - Define symptom severity, duration units, and message categorization.
 
-Owner: Darshil (orchestration) · Task: S0-DAR-1 · Requirements: N/A
+Owner: Darshil (orchestration) · Task: S2-DAR-2 · Requirements: idea §3
 """
 
 from enum import StrEnum
@@ -76,6 +76,7 @@ class SymptomSource(StrEnum):
 
     USER = "USER"
     AI_EXTRACTED = "AI_EXTRACTED"
+    IMAGE_FINDING = "IMAGE_FINDING"
     USER_CONFIRMED = "USER_CONFIRMED"
     USER_CORRECTED = "USER_CORRECTED"
 

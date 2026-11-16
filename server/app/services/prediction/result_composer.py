@@ -5,6 +5,8 @@ Responsibilities:
       the published ``AssessmentResult`` contract (``app.schemas.result``).
     - Add next steps, the referral reason and limitations from ``result_text``,
       plus any self-care guidance supplied by the caller (S2-KAV-1).
+    - Say when uncertainty raised the result, and why (S2-NIS-1).
+    - Give each condition a "Because you reported X and Y" line (S2-NIS-2).
     - Run every generated sentence through the safety-wording guard before it
       can reach the user (DR-05). The fixed disclaimer is not generated text,
       so it is not passed to the guard.
@@ -12,7 +14,8 @@ Responsibilities:
 The risk level is copied from the decision unchanged: composing never changes
 risk (AI_RULES.md §2.4).
 
-Owner: Nisarg (prediction) · Task: S1-NIS-3 · Requirements: FR-07, DR-01, DR-04
+Owner: Nisarg (prediction) · Task: S1-NIS-3, S2-NIS-1, S2-NIS-2 · Requirements: FR-07,
+FR-24, DR-01, DR-04
 """
 
 from collections.abc import Callable, Sequence
@@ -24,6 +27,7 @@ from app.schemas.enums import RiskLevel
 from app.schemas.result import AssessmentResult, ReferralInfo
 from app.services.prediction import result_text as text
 from app.services.prediction.condition_catalog import ConditionCatalog, get_catalog
+from app.services.prediction.explanations import ConditionExplainer
 from app.services.prediction.risk_schemas import RiskDecision, RiskRule
 from app.services.prediction.schemas import ConditionPrediction, Specialty
 from app.services.prediction.specialty_mapper import SpecialtyMapper
@@ -38,7 +42,10 @@ class ResultComposer:
     """Turns a risk decision and predictions into an ``AssessmentResult``."""
 
     def __init__(
-        self, wording_guard: WordingGuard, catalog: ConditionCatalog | None = None
+        self,
+        wording_guard: WordingGuard,
+        catalog: ConditionCatalog | None = None,
+        explainer: ConditionExplainer | None = None,
     ) -> None:
         """Create the composer.
 
@@ -47,10 +54,13 @@ class ResultComposer:
                 ``assert_safe_wording`` (S1-HAR-3). Required on purpose, so a
                 result can never be composed without it.
             catalog: Condition data. Defaults to the packaged dataset.
+            explainer: Builds each condition's "Why:" line. Defaults to one
+                that uses the knowledge service's symptom names.
         """
         self._guard = wording_guard
         self._catalog = catalog or get_catalog()
         self._mapper = SpecialtyMapper(self._catalog)
+        self._explainer = explainer or ConditionExplainer()
 
     def compose(
         self,
@@ -79,13 +89,15 @@ class ResultComposer:
         guidance = self._guidance(decision, specialty, self_care_guidance)
         referral = self._referral(decision, predictions, specialty)
         limitations = self._limitations(decision)
-        for sentence in (*guidance, *limitations, referral.reason or ""):
+        conditions = [self._to_condition(p) for p in predictions]
+        whys = [c.why or "" for c in conditions]
+        for sentence in (*guidance, *limitations, referral.reason or "", *whys):
             if sentence:
                 self._guard(sentence)
         result = AssessmentResult(
             assessment_id=assessment_id,
             risk_level=decision.level,
-            conditions=[self._to_condition(p) for p in predictions],
+            conditions=conditions,
             guidance=guidance,
             referral=referral,
             limitations=limitations,
@@ -145,6 +157,8 @@ class ResultComposer:
             return text.RED_FLAG_REASON.format(label=label)
         if decision.rule is RiskRule.NO_CONDITION_MATCH:
             return text.NO_MATCH_REASON
+        if decision.rule is RiskRule.UNCERTAINTY:
+            return text.UNCERTAINTY_REASON
         if decision.level is RiskLevel.SELF_CARE:
             return None
         names = {p.condition_id: p.name for p in predictions}
@@ -158,12 +172,19 @@ class ResultComposer:
 
     @staticmethod
     def _limitations(decision: RiskDecision) -> list[str]:
-        """Limits that always apply, plus the ones specific to this rule."""
+        """Limits that always apply, then the rule's, then each uncertainty's."""
         limitations = list(text.LIMITATIONS_ALWAYS)
         if decision.rule is RiskRule.RED_FLAG:
             limitations.append(text.RED_FLAG_LIMITATION)
         elif decision.rule is RiskRule.NO_CONDITION_MATCH:
             limitations.append(text.NO_MATCH_LIMITATION)
+        elif decision.rule is RiskRule.UNCERTAINTY:
+            limitations.append(text.UNCERTAINTY_LIMITATION)
+        limitations.extend(
+            text.UNCERTAINTY_LIMITATIONS[reason]
+            for reason in decision.uncertainty
+            if reason in text.UNCERTAINTY_LIMITATIONS
+        )
         return limitations
 
     def _to_condition(self, prediction: ConditionPrediction) -> Condition:
@@ -175,4 +196,5 @@ class ResultComposer:
             rank=prediction.rank,
             icd10_code=prediction.icd10_code,
             specialty=specialty.name if specialty else None,
+            why=self._explainer.explain(prediction),
         )

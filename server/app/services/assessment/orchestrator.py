@@ -6,19 +6,26 @@ Responsibilities:
     - Cap clarification turns at MAX_CLARIFICATION_TURNS (3) per FR-04/FR-19.
     - Transition to CONFIRMING and flag low confidence when turn budget is reached.
     - Merge newly extracted symptoms into current assessment state deterministically.
+    - Merge image analysis findings into assessment state (idea §3, S2-DAR-2).
     - Support symptom confirmation, additions, deletions, edits, and bulk updates.
+    - Pass profile context (age, chronic conditions) into analysis (FR-02, S2-DAR-3).
+    - Guarantee idempotent message processing and transactions (NFR-05, S2-DAR-4).
     - Provide restart_assessment() to cleanly reset an assessment session (FR-25).
+    - Claim anonymous guest assessments into registered accounts (idea §10).
     - Step back to chat from CONFIRMING or READY for conversational edits.
     - Enforce state machine transitions (SYMPTOM_COLLECTION, CLARIFYING, CONFIRMING).
     - Handle AI timeouts and failures gracefully without crashing or changing state.
     - Run real analysis in generate_result() via condition predictor, risk engine,
       and result composer with safety-wording validation (FR-05, FR-06, FR-07, DR-05).
 
-Owner: Darshil (assessment) · Task: S1-DAR-4 · Requirements: FR-16, FR-21, FR-25
+Owner: Darshil (assessment) · Task: S2-DAR-4 · Requirements: NFR-05, FR-02, idea §3/§10
 """
 
+import asyncio
+from collections.abc import Sequence
 from dataclasses import dataclass, field
 from datetime import UTC, datetime
+from typing import Any
 from uuid import UUID, uuid4
 
 from fastapi import status
@@ -39,6 +46,7 @@ from app.schemas.enums import (
     SymptomSource,
 )
 from app.schemas.message import MessageRead
+from app.schemas.profile import ProfileContext
 from app.schemas.symptom import (
     Duration,
     Symptom,
@@ -48,8 +56,11 @@ from app.schemas.symptom import (
 )
 from app.services.ai.factory import get_ai_gateway
 from app.services.ai.gateway import AiError, AiGateway, AiTimeoutError
-from collections.abc import Sequence
 from app.services.ai.schemas import ExtractedSymptom
+from app.services.image.analyzer import ImageAnalysisError, ImageAnalyzer
+from app.services.image.factory import build_image_analyzer
+from app.services.image.findings import to_extracted_symptoms
+from app.services.image.schemas import ImageAnalysis, ImageLabel
 from app.services.prediction.condition_predictor import (
     BaselineConditionModel,
     ConditionModel,
@@ -76,6 +87,7 @@ logger = get_logger(__name__)
 def merge_symptoms(
     existing: list[Symptom],
     extracted_symptoms: list[ExtractedSymptom],
+    default_source: SymptomSource = SymptomSource.AI_EXTRACTED,
 ) -> list[Symptom]:
     """Merge newly extracted symptoms into existing assessment symptoms.
 
@@ -85,7 +97,9 @@ def merge_symptoms(
 
     Args:
         existing: Currently recorded symptoms for the assessment session.
-        extracted_symptoms: Structured symptoms extracted from the latest user message.
+        extracted_symptoms: Structured symptoms extracted from AI or image analysis.
+        default_source: Origin source for newly appended symptoms. Defaults to
+            SymptomSource.AI_EXTRACTED (or SymptomSource.IMAGE_FINDING for images).
 
     Returns:
         Updated list of Symptom models with new or merged clinical attributes.
@@ -129,7 +143,7 @@ def merge_symptoms(
                 source=(
                     prev.source
                     if prev.source == SymptomSource.USER_CONFIRMED
-                    else SymptomSource.AI_EXTRACTED
+                    else default_source
                 ),
                 extraction_confidence=1.0,
             )
@@ -140,7 +154,7 @@ def merge_symptoms(
                 severity=severity,
                 duration=duration,
                 body_location=ext.body_location,
-                source=SymptomSource.AI_EXTRACTED,
+                source=default_source,
                 extraction_confidence=1.0,
             )
 
@@ -159,6 +173,8 @@ class AssessmentSession:
         messages: Sequential dialogue message history.
         symptoms: Accumulated canonical recognized symptoms.
         is_low_confidence: Flag set when clarification loop cap was reached.
+        guest_session_id: Optional anonymous guest session identifier.
+        profile: Optional user clinical profile context (age, chronic conditions).
         created_at: Session creation timestamp in UTC.
         updated_at: Last activity timestamp in UTC.
     """
@@ -170,8 +186,21 @@ class AssessmentSession:
     messages: list[MessageRead] = field(default_factory=list)
     symptoms: list[SymptomRead] = field(default_factory=list)
     is_low_confidence: bool = False
+    guest_session_id: UUID | None = None
+    profile: ProfileContext | None = None
     created_at: datetime = field(default_factory=lambda: datetime.now(UTC))
     updated_at: datetime = field(default_factory=lambda: datetime.now(UTC))
+    _idempotency_cache: dict[str, ProcessResult] = field(
+        default_factory=dict, repr=False
+    )
+    _lock: asyncio.Lock | None = field(default=None, repr=False)
+
+    @property
+    def lock(self) -> asyncio.Lock:
+        """Lazily initialize an asyncio.Lock bound to the active event loop."""
+        if self._lock is None:
+            self._lock = asyncio.Lock()
+        return self._lock
 
 
 class AssessmentOrchestrator:
@@ -186,6 +215,7 @@ class AssessmentOrchestrator:
         ai_gateway: AiGateway | None = None,
         result_composer: ResultComposer | None = None,
         condition_model: ConditionModel | None = None,
+        image_analyzer: ImageAnalyzer | None = None,
     ) -> None:
         """Initialize the AssessmentOrchestrator.
 
@@ -197,6 +227,8 @@ class AssessmentOrchestrator:
                 assert_safe_wording.
             condition_model: Optional model conforming to ConditionModel protocol.
                 Defaults to BaselineConditionModel.
+            image_analyzer: Optional provider conforming to ImageAnalyzer protocol.
+                Defaults to mock image analyzer.
         """
         self._ai_gateway = ai_gateway or get_ai_gateway()
         self._result_composer = result_composer or ResultComposer(
@@ -205,6 +237,7 @@ class AssessmentOrchestrator:
         self._condition_model: ConditionModel = (
             condition_model or BaselineConditionModel()
         )
+        self._image_analyzer = image_analyzer or build_image_analyzer("mock")
         self._sessions: dict[UUID, AssessmentSession] = {}
 
     def create_assessment(
@@ -212,6 +245,8 @@ class AssessmentOrchestrator:
         consent_id: UUID,
         user_id: UUID | None = None,
         assessment_id: UUID | None = None,
+        guest_session_id: UUID | None = None,
+        profile: ProfileContext | None = None,
     ) -> AssessmentRead:
         """Initialize a new assessment session bound to verified consent.
 
@@ -219,6 +254,8 @@ class AssessmentOrchestrator:
             consent_id: Identifier of the verified consent record.
             user_id: Optional registered user identifier.
             assessment_id: Optional explicit UUID (generated if None).
+            guest_session_id: Optional anonymous guest session identifier.
+            profile: Optional user clinical profile context (age, chronic conditions).
 
         Returns:
             AssessmentRead model representing the initialized assessment.
@@ -228,6 +265,8 @@ class AssessmentOrchestrator:
             assessment_id=aid,
             consent_id=consent_id,
             user_id=user_id,
+            guest_session_id=guest_session_id,
+            profile=profile,
         )
         sm = AssessmentStateMachine(
             initial_state=AssessmentState.START,
@@ -238,6 +277,8 @@ class AssessmentOrchestrator:
             id=aid,
             consent_id=consent_id,
             user_id=user_id,
+            guest_session_id=guest_session_id,
+            profile=profile,
             state_machine=sm,
             messages=[],
             symptoms=[],
@@ -246,45 +287,63 @@ class AssessmentOrchestrator:
             updated_at=now,
         )
         self._sessions[aid] = session
-        logger.info("assessment_created", assessment_id=str(aid))
+        logger.info(
+            "assessment_created",
+            assessment_id=str(aid),
+            guest_session_id=str(guest_session_id) if guest_session_id else None,
+        )
         return AssessmentRead(
             id=aid,
             state=sm.current_state,
             consent_id=consent_id,
             user_id=user_id,
+            guest_session_id=guest_session_id,
             created_at=now,
             updated_at=now,
         )
 
     def register_session(
         self,
-        assessment_id: UUID,
-        state_machine: AssessmentStateMachine,
+        assessment_id: UUID | AssessmentSession,
+        state_machine: AssessmentStateMachine | None = None,
         messages: list[MessageRead] | None = None,
         symptoms: list[SymptomRead] | None = None,
         consent_id: UUID | None = None,
         user_id: UUID | None = None,
+        guest_session_id: UUID | None = None,
+        profile: ProfileContext | None = None,
     ) -> AssessmentSession:
         """Register an active assessment state machine session.
 
         Args:
-            assessment_id: Unique assessment identifier.
+            assessment_id: Unique UUID or pre-built AssessmentSession instance.
             state_machine: Configured AssessmentStateMachine instance.
             messages: Optional existing message dialogue list.
             symptoms: Optional pre-existing symptoms list.
             consent_id: Optional consent identifier (falls back to context).
             user_id: Optional user identifier (falls back to context).
+            guest_session_id: Optional anonymous guest session identifier.
+            profile: Optional user clinical profile context.
 
         Returns:
             The registered AssessmentSession.
         """
+        if isinstance(assessment_id, AssessmentSession):
+            self._sessions[assessment_id.id] = assessment_id
+            return assessment_id
+
+        assert state_machine is not None, "state_machine required when id is UUID"
         cid = consent_id or state_machine.context.consent_id or uuid4()
         uid = user_id or state_machine.context.user_id
+        gid = guest_session_id or state_machine.context.guest_session_id
+        prof = profile or state_machine.context.profile
         now = datetime.now(UTC)
         session = AssessmentSession(
             id=assessment_id,
             consent_id=cid,
             user_id=uid,
+            guest_session_id=gid,
+            profile=prof,
             state_machine=state_machine,
             messages=list(messages or []),
             symptoms=list(symptoms or []),
@@ -312,6 +371,7 @@ class AssessmentOrchestrator:
             state=session.state_machine.current_state,
             consent_id=session.consent_id,
             user_id=session.user_id,
+            guest_session_id=session.guest_session_id,
             created_at=session.created_at,
             updated_at=session.updated_at,
         )
@@ -388,27 +448,95 @@ class AssessmentOrchestrator:
             is_low_confidence=session.is_low_confidence,
         )
 
+    def set_profile_context(
+        self,
+        assessment_id: UUID,
+        profile: ProfileContext,
+    ) -> None:
+        """Attach or update the user clinical profile context for an assessment.
+
+        Args:
+            assessment_id: Unique assessment identifier.
+            profile: ProfileContext containing age band, sex, and chronic conditions.
+
+        Raises:
+            AssessmentServiceError: If assessment does not exist (404).
+        """
+        session = self._sessions.get(assessment_id)
+        if session is None:
+            raise AssessmentServiceError(
+                message=f"Assessment '{assessment_id}' was not found.",
+                code="ASSESSMENT_NOT_FOUND",
+                status_code=status.HTTP_404_NOT_FOUND,
+            )
+        session.profile = profile
+        session.state_machine.context.profile = profile
+        session.updated_at = datetime.now(UTC)
+        logger.info(
+            "assessment_profile_context_updated",
+            assessment_id=str(assessment_id),
+            age_band=profile.age_band.value if profile.age_band else None,
+            chronic_conditions_count=len(profile.chronic_conditions),
+        )
+
+    def get_profile_context(
+        self,
+        assessment_id: UUID,
+    ) -> ProfileContext | None:
+        """Retrieve the clinical profile context linked to an assessment.
+
+        Args:
+            assessment_id: Unique assessment identifier.
+
+        Returns:
+            ProfileContext if set, else None.
+
+        Raises:
+            AssessmentServiceError: If assessment does not exist (404).
+        """
+        session = self._sessions.get(assessment_id)
+        if session is None:
+            raise AssessmentServiceError(
+                message=f"Assessment '{assessment_id}' was not found.",
+                code="ASSESSMENT_NOT_FOUND",
+                status_code=status.HTTP_404_NOT_FOUND,
+            )
+        return session.profile
+
     async def process_message(
         self,
         assessment_id: UUID,
         message: str,
+        *,
+        idempotency_key: str | None = None,
+        client_message_id: UUID | None = None,
+        db_session: Any | None = None,
     ) -> ProcessResult:
         """Process user message: store -> AI extraction -> merge -> decide state.
 
-        Coordinates conversational intake:
+        Coordinates conversational intake with concurrency safety, idempotency
+        (no double answers on retry), and atomic transactional persistence:
         1. Validates assessment presence and non-blank message content.
-        2. Guards against message submission in terminal/locked lifecycle states.
-        3. Records user message in sequential order.
-        4. Invokes AI Gateway extraction with dialogue context.
-        5. Handles extraction failures (timeouts, network drops) safely.
-        6. Merges newly extracted symptoms into state without duplicates.
-        7. Evaluates state machine transition (COLLECTION, CLARIFYING, CONFIRMING).
-        8. Caps clarification at MAX_CLARIFICATION_TURNS (3) and flags low confidence.
-        9. Generates and stores appropriate assistant response message.
+        2. Acquires per-session asynchronous lock to prevent concurrent races.
+        3. Checks idempotency cache / duplicate retries (prevents double answers).
+        4. Takes transactional in-memory snapshot for rollback safety on error.
+        5. Guards against message submission in terminal/locked lifecycle states.
+        6. Records user message in sequential order with optional client key/ID.
+        7. Invokes AI Gateway extraction with dialogue context.
+        8. Handles extraction failures (timeouts, network drops) safely.
+        9. Merges newly extracted symptoms into state without duplicates.
+        10. Evaluates state machine transition (COLLECTION, CLARIFYING, CONFIRMING).
+        11. Caps clarification at MAX_CLARIFICATION_TURNS (3) and flags low confidence.
+        12. Generates and stores appropriate assistant response message.
+        13. Atomically persists messages, symptoms, and state if db_session is provided.
+        14. Caches ProcessResult under idempotency key and turn fingerprint for retries.
 
         Args:
             assessment_id: Unique identifier of the target assessment.
             message: Natural language user message text.
+            idempotency_key: Optional client idempotency key to prevent double answers.
+            client_message_id: Optional client message UUID for deduplication tracking.
+            db_session: Optional active SQLAlchemy database session for transaction.
 
         Returns:
             ProcessResult with recorded messages, next state, and symptoms.
@@ -418,6 +546,29 @@ class AssessmentOrchestrator:
             InvalidStateTransitionError: If session state blocks new messages.
         """
         session = self._sessions.get(assessment_id)
+        if session is None and db_session is not None:
+            from app.models.assessment import Assessment as DbAssessment
+
+            db_assessment = db_session.get(DbAssessment, assessment_id)
+            if db_assessment is not None:
+                db_context = AssessmentContext(
+                    assessment_id=db_assessment.id,
+                    consent_id=db_assessment.consent_id,
+                    user_id=db_assessment.user_id,
+                    guest_session_id=db_assessment.guest_session_id,
+                )
+                db_sm = AssessmentStateMachine(
+                    initial_state=AssessmentState(db_assessment.state),
+                    context=db_context,
+                )
+                session = self.register_session(
+                    assessment_id=db_assessment.id,
+                    state_machine=db_sm,
+                    consent_id=db_assessment.consent_id,
+                    user_id=db_assessment.user_id,
+                    guest_session_id=db_assessment.guest_session_id,
+                )
+
         if session is None:
             raise AssessmentServiceError(
                 message=f"Assessment '{assessment_id}' was not found.",
@@ -439,244 +590,498 @@ class AssessmentOrchestrator:
                 status_code=status.HTTP_422_UNPROCESSABLE_ENTITY,
             )
 
-        sm = session.state_machine
-        if sm.current_state in (
-            AssessmentState.READY,
-            AssessmentState.ANALYZING,
-            AssessmentState.COMPLETED,
-        ):
-            raise InvalidStateTransitionError(
-                current_state=sm.current_state,
-                target_state=AssessmentState.SYMPTOM_COLLECTION,
-                reason=(
-                    f"Assessment is in '{sm.current_state.value}' state and "
-                    "cannot accept new chat messages."
-                ),
-            )
-
-        # If in START state, transition into SYMPTOM_COLLECTION (checks consent guard)
-        if sm.current_state == AssessmentState.START:
-            sm.start_symptom_collection()
-
-        # Step 1: Store incoming user message
-        user_msg = MessageRead(
-            id=uuid4(),
-            assessment_id=assessment_id,
-            position=len(session.messages),
-            role=MessageRole.USER,
-            content=cleaned,
-            message_type=MessageType.TEXT,
-            created_at=datetime.now(UTC),
-        )
-        session.messages.append(user_msg)
-
-        # Step 2: Invoke AI Gateway extraction with dialogue context
-        history_lines = [f"{m.role}: {m.content}" for m in session.messages[:-1]]
-        conversation_history = "\n".join(history_lines)
-        assistant_msg: MessageRead | None = None
-        try:
-            extraction = await self._ai_gateway.extract_symptoms(
-                message=cleaned,
-                conversation_history=conversation_history,
-            )
-        except AiTimeoutError:
-            logger.warning("ai_extraction_timeout", assessment_id=str(assessment_id))
-            # Safe fallback: do not transition state; return retry-safe prompt
-            assistant_msg = MessageRead(
-                id=uuid4(),
-                assessment_id=assessment_id,
-                position=len(session.messages),
-                role=MessageRole.ASSISTANT,
-                content=(
-                    "I'm having trouble connecting. Could you please say that again?"
-                ),
-                message_type=MessageType.ERROR,
-                created_at=datetime.now(UTC),
-            )
-            session.messages.append(assistant_msg)
-            return ProcessResult(
-                assessment_id=assessment_id,
-                user_message=user_msg,
-                assistant_message=assistant_msg,
-                next_state=sm.current_state,
-                symptoms=session.symptoms,
-                result_type="ERROR",
-                is_low_confidence=session.is_low_confidence,
-            )
-        except AiError:
-            logger.warning("ai_extraction_failure", assessment_id=str(assessment_id))
-            assistant_msg = MessageRead(
-                id=uuid4(),
-                assessment_id=assessment_id,
-                position=len(session.messages),
-                role=MessageRole.ASSISTANT,
-                content=(
-                    "I had trouble understanding that. "
-                    "Could you try rephrasing your symptoms?"
-                ),
-                message_type=MessageType.ERROR,
-                created_at=datetime.now(UTC),
-            )
-            session.messages.append(assistant_msg)
-            return ProcessResult(
-                assessment_id=assessment_id,
-                user_message=user_msg,
-                assistant_message=assistant_msg,
-                next_state=sm.current_state,
-                symptoms=session.symptoms,
-                result_type="ERROR",
-                is_low_confidence=session.is_low_confidence,
-            )
-
-        # Step 3: Merge newly extracted symptoms into current assessment state
-        merged_symptoms = merge_symptoms(
-            existing=[Symptom.model_validate(s.model_dump()) for s in session.symptoms],
-            extracted_symptoms=extraction.symptoms,
-        )
-        session.symptoms = [
-            SymptomRead.model_validate(s.model_dump()) for s in merged_symptoms
-        ]
-        sm.context.symptoms = [s.model_dump() for s in session.symptoms]
-
-        # Step 4: Decide next state and formulate assistant response
-        result_type: str = "TEXT"
-
-        # Case 1: No symptoms detected yet
-        if not session.symptoms:
-            if sm.current_state != AssessmentState.SYMPTOM_COLLECTION:
-                sm.transition_to(AssessmentState.SYMPTOM_COLLECTION)
-            prompt_text = (
-                "Could you describe what symptoms you are experiencing "
-                "in a bit more detail?"
-            )
-            assistant_msg = MessageRead(
-                id=uuid4(),
-                assessment_id=assessment_id,
-                position=len(session.messages),
-                role=MessageRole.ASSISTANT,
-                content=prompt_text,
-                message_type=MessageType.TEXT,
-                created_at=datetime.now(UTC),
-            )
-            session.messages.append(assistant_msg)
-            result_type = "TEXT"
-
-        else:
-            # Determine whether clarification is required:
-            # 1. New extraction flagged requires_clarification, OR
-            # 2. Existing symptoms still lack essential duration attributes
-            has_unresolved_duration = any(s.duration is None for s in session.symptoms)
-            requires_clarification = (
-                extraction.requires_clarification
-                or (
-                    sm.current_state == AssessmentState.CLARIFYING
-                    and has_unresolved_duration
-                )
-                or (has_unresolved_duration and sm.context.clarification_count == 0)
-            )
-
-            # Case 2: Clarification branch: needs clarification and under turn cap
-            if (
-                requires_clarification
-                and sm.context.clarification_count < sm.context.max_clarifications
-            ):
-                already_asked = [
-                    m.content
-                    for m in session.messages
-                    if m.message_type == MessageType.CLARIFICATION
-                ]
-                clarification_res = await self._ai_gateway.generate_clarification(
-                    structured_state={
-                        "symptoms": [s.model_dump() for s in session.symptoms]
-                    },
-                    already_asked=already_asked,
-                )
-
-                if clarification_res.should_ask and clarification_res.question:
-                    sm.request_clarification()
-                    assistant_msg = MessageRead(
-                        id=uuid4(),
-                        assessment_id=assessment_id,
-                        position=len(session.messages),
-                        role=MessageRole.ASSISTANT,
-                        content=clarification_res.question,
-                        message_type=MessageType.CLARIFICATION,
-                        created_at=datetime.now(UTC),
-                    )
-                    session.messages.append(assistant_msg)
-                    result_type = "CLARIFICATION"
-                else:
-                    # No further clarification questions available from provider
-                    sm.proceed_to_confirmation()
-                    confirm_text = (
-                        "Thank you for providing those details. "
-                        "Please review and confirm your symptoms "
-                        "so we can analyze them."
-                    )
-                    assistant_msg = MessageRead(
-                        id=uuid4(),
-                        assessment_id=assessment_id,
-                        position=len(session.messages),
-                        role=MessageRole.ASSISTANT,
-                        content=confirm_text,
-                        message_type=MessageType.CONFIRMATION,
-                        created_at=datetime.now(UTC),
-                    )
-                    session.messages.append(assistant_msg)
-                    result_type = "CONFIRMATION"
-
-            # Case 3: Confirmation branch: clarification done or capped at limit
-            else:
-                # If ambiguity remained but budget was exhausted, flag low confidence
-                if (
-                    requires_clarification
-                    or sm.context.clarification_count >= sm.context.max_clarifications
-                ):
-                    session.is_low_confidence = True
-                    sm.context.is_low_confidence = True
+        async with session.lock:
+            # 1. Check explicit idempotency key
+            if idempotency_key:
+                cache_key = f"key:{idempotency_key}"
+                cached = session._idempotency_cache.get(cache_key)
+                if cached is not None:
                     logger.info(
-                        "clarification_cap_reached_low_confidence_flagged",
+                        "idempotent_message_retry_matched",
                         assessment_id=str(assessment_id),
-                        clarification_count=sm.context.clarification_count,
+                        idempotency_key=idempotency_key,
+                    )
+                    return cached
+
+            # 2. Check client message ID
+            if client_message_id:
+                cache_key = f"client_msg_id:{client_message_id}"
+                cached = session._idempotency_cache.get(cache_key)
+                if cached is not None:
+                    logger.info(
+                        "idempotent_message_retry_matched",
+                        assessment_id=str(assessment_id),
+                        client_message_id=str(client_message_id),
+                    )
+                    return cached
+
+            # 3. Check automatic turn-based retry (prevents double answers on retry)
+            sm = session.state_machine
+            if len(session.messages) >= 2:
+                last_user = session.messages[-2]
+                last_asst = session.messages[-1]
+                if (
+                    last_user.role == MessageRole.USER
+                    and last_user.content == cleaned
+                    and last_asst.role in (MessageRole.ASSISTANT, "assistant")
+                ):
+                    turn_key = f"turn:{last_user.position}:{cleaned}"
+                    cached = session._idempotency_cache.get(turn_key)
+                    if cached is not None:
+                        logger.info(
+                            "idempotent_turn_retry_matched",
+                            assessment_id=str(assessment_id),
+                            position=last_user.position,
+                        )
+                        return cached
+                    res_type = "TEXT"
+                    if last_asst.message_type == MessageType.CLARIFICATION:
+                        res_type = "CLARIFICATION"
+                    elif last_asst.message_type == MessageType.CONFIRMATION:
+                        res_type = "CONFIRMATION"
+                    elif last_asst.message_type == MessageType.ERROR:
+                        res_type = "ERROR"
+                    logger.info(
+                        "idempotent_turn_retry_from_history",
+                        assessment_id=str(assessment_id),
+                        position=last_user.position,
+                    )
+                    return ProcessResult(
+                        assessment_id=assessment_id,
+                        user_message=last_user,
+                        assistant_message=last_asst,
+                        next_state=sm.current_state,
+                        symptoms=session.symptoms,
+                        result_type=res_type,
+                        is_low_confidence=session.is_low_confidence,
                     )
 
-                sm.proceed_to_confirmation()
-                confirm_text = (
-                    "Thank you for providing those details. "
-                    "Please review and confirm your symptoms "
-                    "so we can analyze them."
+            if sm.current_state in (
+                AssessmentState.READY,
+                AssessmentState.ANALYZING,
+                AssessmentState.COMPLETED,
+            ):
+                raise InvalidStateTransitionError(
+                    current_state=sm.current_state,
+                    target_state=AssessmentState.SYMPTOM_COLLECTION,
+                    reason=(
+                        f"Assessment is in '{sm.current_state.value}' state and "
+                        "cannot accept new chat messages."
+                    ),
                 )
-                assistant_msg = MessageRead(
+
+            # Transactional in-memory snapshot
+            snapshot_messages = list(session.messages)
+            snapshot_symptoms = list(session.symptoms)
+            snapshot_state = sm.current_state
+            snapshot_clarification_count = sm.context.clarification_count
+            snapshot_is_confirmed = sm.context.is_confirmed
+            snapshot_low_confidence = session.is_low_confidence
+            snapshot_context_symptoms = list(sm.context.symptoms)
+
+            def _rollback_in_memory() -> None:
+                session.messages = snapshot_messages
+                session.symptoms = snapshot_symptoms
+                sm._current_state = snapshot_state
+                sm.context.clarification_count = snapshot_clarification_count
+                sm.context.is_confirmed = snapshot_is_confirmed
+                session.is_low_confidence = snapshot_low_confidence
+                sm.context.is_low_confidence = snapshot_low_confidence
+                sm.context.symptoms = snapshot_context_symptoms
+
+            try:
+                # If in START state, transition into SYMPTOM_COLLECTION
+                if sm.current_state == AssessmentState.START:
+                    sm.start_symptom_collection()
+
+                # Step 1: Store incoming user message
+                user_msg = MessageRead(
                     id=uuid4(),
                     assessment_id=assessment_id,
                     position=len(session.messages),
-                    role=MessageRole.ASSISTANT,
-                    content=confirm_text,
-                    message_type=MessageType.CONFIRMATION,
+                    role=MessageRole.USER,
+                    content=cleaned,
+                    message_type=MessageType.TEXT,
                     created_at=datetime.now(UTC),
+                    client_message_id=client_message_id,
+                    idempotency_key=idempotency_key,
                 )
-                session.messages.append(assistant_msg)
-                result_type = "CONFIRMATION"
+                session.messages.append(user_msg)
 
-        session.updated_at = datetime.now(UTC)
-        logger.info(
-            "assessment_message_processed",
-            assessment_id=str(assessment_id),
-            next_state=sm.current_state.value,
-            symptom_count=len(session.symptoms),
-            result_type=result_type,
-            is_low_confidence=session.is_low_confidence,
+                # Step 2: Invoke AI Gateway extraction with dialogue context
+                history_lines = [
+                    f"{m.role}: {m.content}" for m in session.messages[:-1]
+                ]
+                conversation_history = "\n".join(history_lines)
+                assistant_msg: MessageRead | None = None
+                extraction_failed = False
+                fallback_type = "ERROR"
+
+                try:
+                    extraction = await self._ai_gateway.extract_symptoms(
+                        message=cleaned,
+                        conversation_history=conversation_history,
+                    )
+                except AiTimeoutError:
+                    logger.warning(
+                        "ai_extraction_timeout", assessment_id=str(assessment_id)
+                    )
+                    extraction_failed = True
+                    assistant_msg = MessageRead(
+                        id=uuid4(),
+                        assessment_id=assessment_id,
+                        position=len(session.messages),
+                        role=MessageRole.ASSISTANT,
+                        content=(
+                            "I'm having trouble connecting. "
+                            "Could you please say that again?"
+                        ),
+                        message_type=MessageType.ERROR,
+                        created_at=datetime.now(UTC),
+                    )
+                    session.messages.append(assistant_msg)
+                except AiError:
+                    logger.warning(
+                        "ai_extraction_failure", assessment_id=str(assessment_id)
+                    )
+                    extraction_failed = True
+                    assistant_msg = MessageRead(
+                        id=uuid4(),
+                        assessment_id=assessment_id,
+                        position=len(session.messages),
+                        role=MessageRole.ASSISTANT,
+                        content=(
+                            "I had trouble understanding that. "
+                            "Could you try rephrasing your symptoms?"
+                        ),
+                        message_type=MessageType.ERROR,
+                        created_at=datetime.now(UTC),
+                    )
+                    session.messages.append(assistant_msg)
+
+                if extraction_failed:
+                    assert assistant_msg is not None
+                    result = ProcessResult(
+                        assessment_id=assessment_id,
+                        user_message=user_msg,
+                        assistant_message=assistant_msg,
+                        next_state=sm.current_state,
+                        symptoms=session.symptoms,
+                        result_type=fallback_type,
+                        is_low_confidence=session.is_low_confidence,
+                    )
+                    self._persist_and_cache(
+                        session=session,
+                        result=result,
+                        user_msg=user_msg,
+                        assistant_msg=assistant_msg,
+                        idempotency_key=idempotency_key,
+                        client_message_id=client_message_id,
+                        db_session=db_session,
+                    )
+                    return result
+
+                # Step 3: Merge newly extracted symptoms into assessment state
+                merged_symptoms = merge_symptoms(
+                    existing=[
+                        Symptom.model_validate(s.model_dump()) for s in session.symptoms
+                    ],
+                    extracted_symptoms=extraction.symptoms,
+                )
+                session.symptoms = [
+                    SymptomRead.model_validate(s.model_dump()) for s in merged_symptoms
+                ]
+                sm.context.symptoms = [s.model_dump() for s in session.symptoms]
+
+                # Step 4: Decide next state and formulate assistant response
+                result_type: str = "TEXT"
+
+                if not session.symptoms:
+                    if sm.current_state != AssessmentState.SYMPTOM_COLLECTION:
+                        sm.transition_to(AssessmentState.SYMPTOM_COLLECTION)
+                    prompt_text = (
+                        "Could you describe what symptoms you are experiencing "
+                        "in a bit more detail?"
+                    )
+                    assistant_msg = MessageRead(
+                        id=uuid4(),
+                        assessment_id=assessment_id,
+                        position=len(session.messages),
+                        role=MessageRole.ASSISTANT,
+                        content=prompt_text,
+                        message_type=MessageType.TEXT,
+                        created_at=datetime.now(UTC),
+                    )
+                    session.messages.append(assistant_msg)
+                    result_type = "TEXT"
+                else:
+                    has_unresolved_duration = any(
+                        s.duration is None for s in session.symptoms
+                    )
+                    requires_clarification = (
+                        extraction.requires_clarification
+                        or (
+                            sm.current_state == AssessmentState.CLARIFYING
+                            and has_unresolved_duration
+                        )
+                        or (
+                            has_unresolved_duration
+                            and sm.context.clarification_count == 0
+                        )
+                    )
+
+                    if (
+                        requires_clarification
+                        and sm.context.clarification_count
+                        < sm.context.max_clarifications
+                    ):
+                        already_asked = [
+                            m.content
+                            for m in session.messages
+                            if m.message_type == MessageType.CLARIFICATION
+                        ]
+                        clarification_res = (
+                            await self._ai_gateway.generate_clarification(
+                                structured_state={
+                                    "symptoms": [
+                                        s.model_dump() for s in session.symptoms
+                                    ]
+                                },
+                                already_asked=already_asked,
+                            )
+                        )
+                        if clarification_res.should_ask and clarification_res.question:
+                            sm.request_clarification()
+                            assistant_msg = MessageRead(
+                                id=uuid4(),
+                                assessment_id=assessment_id,
+                                position=len(session.messages),
+                                role=MessageRole.ASSISTANT,
+                                content=clarification_res.question,
+                                message_type=MessageType.CLARIFICATION,
+                                created_at=datetime.now(UTC),
+                            )
+                            session.messages.append(assistant_msg)
+                            result_type = "CLARIFICATION"
+                        else:
+                            sm.proceed_to_confirmation()
+                            confirm_text = (
+                                "Thank you for providing those details. "
+                                "Please review and confirm your symptoms "
+                                "so we can analyze them."
+                            )
+                            assistant_msg = MessageRead(
+                                id=uuid4(),
+                                assessment_id=assessment_id,
+                                position=len(session.messages),
+                                role=MessageRole.ASSISTANT,
+                                content=confirm_text,
+                                message_type=MessageType.CONFIRMATION,
+                                created_at=datetime.now(UTC),
+                            )
+                            session.messages.append(assistant_msg)
+                            result_type = "CONFIRMATION"
+                    else:
+                        if (
+                            requires_clarification
+                            or sm.context.clarification_count
+                            >= sm.context.max_clarifications
+                        ):
+                            session.is_low_confidence = True
+                            sm.context.is_low_confidence = True
+                            logger.info(
+                                "clarification_cap_reached_low_confidence_flagged",
+                                assessment_id=str(assessment_id),
+                                clarification_count=sm.context.clarification_count,
+                            )
+
+                        sm.proceed_to_confirmation()
+                        confirm_text = (
+                            "Thank you for providing those details. "
+                            "Please review and confirm your symptoms "
+                            "so we can analyze them."
+                        )
+                        assistant_msg = MessageRead(
+                            id=uuid4(),
+                            assessment_id=assessment_id,
+                            position=len(session.messages),
+                            role=MessageRole.ASSISTANT,
+                            content=confirm_text,
+                            message_type=MessageType.CONFIRMATION,
+                            created_at=datetime.now(UTC),
+                        )
+                        session.messages.append(assistant_msg)
+                        result_type = "CONFIRMATION"
+
+                session.updated_at = datetime.now(UTC)
+                logger.info(
+                    "assessment_message_processed",
+                    assessment_id=str(assessment_id),
+                    next_state=sm.current_state.value,
+                    symptom_count=len(session.symptoms),
+                    result_type=result_type,
+                    is_low_confidence=session.is_low_confidence,
+                )
+
+                result = ProcessResult(
+                    assessment_id=assessment_id,
+                    user_message=user_msg,
+                    assistant_message=assistant_msg,
+                    next_state=sm.current_state,
+                    symptoms=session.symptoms,
+                    result_type=result_type,
+                    is_low_confidence=session.is_low_confidence,
+                )
+
+                self._persist_and_cache(
+                    session=session,
+                    result=result,
+                    user_msg=user_msg,
+                    assistant_msg=assistant_msg,
+                    idempotency_key=idempotency_key,
+                    client_message_id=client_message_id,
+                    db_session=db_session,
+                )
+                return result
+
+            except Exception:
+                _rollback_in_memory()
+                raise
+
+    def _persist_and_cache(
+        self,
+        session: AssessmentSession,
+        result: ProcessResult,
+        user_msg: MessageRead,
+        assistant_msg: MessageRead,
+        idempotency_key: str | None,
+        client_message_id: UUID | None,
+        db_session: Any | None,
+    ) -> None:
+        """Atomically persist turn to database if session provided, and cache result."""
+        if db_session is not None:
+            savepoint = (
+                db_session.begin_nested()
+                if hasattr(db_session, "begin_nested")
+                else None
+            )
+            try:
+                from app.repositories.assessment_repository import (
+                    update_assessment_state,
+                )
+                from app.repositories.message_repository import (
+                    create_message as db_create_message,
+                )
+                from app.repositories.symptom_repository import upsert_symptom
+
+                db_create_message(
+                    session=db_session,
+                    assessment_id=session.id,
+                    role="user",
+                    content=user_msg.content,
+                    position=user_msg.position,
+                )
+                for sym in session.symptoms:
+                    dur_dict = sym.duration.model_dump() if sym.duration else None
+                    sev_str = (
+                        sym.severity.value
+                        if hasattr(sym.severity, "value")
+                        else str(sym.severity)
+                    )
+                    src_str = (
+                        sym.source.value
+                        if hasattr(sym.source, "value")
+                        else str(sym.source)
+                    )
+                    upsert_symptom(
+                        session=db_session,
+                        assessment_id=session.id,
+                        name=sym.name,
+                        severity=sev_str,
+                        duration=dur_dict,
+                        body_site=sym.body_location,
+                        source=src_str,
+                    )
+                db_create_message(
+                    session=db_session,
+                    assessment_id=session.id,
+                    role="assistant",
+                    content=assistant_msg.content,
+                    position=assistant_msg.position,
+                )
+                update_assessment_state(
+                    session=db_session,
+                    assessment_id=session.id,
+                    new_state=session.state_machine.current_state.value,
+                )
+                if savepoint is not None:
+                    savepoint.commit()
+                elif hasattr(db_session, "flush"):
+                    db_session.flush()
+            except Exception:
+                if savepoint is not None:
+                    savepoint.rollback()
+                raise
+
+        if idempotency_key:
+            session._idempotency_cache[f"key:{idempotency_key}"] = result
+        if client_message_id:
+            session._idempotency_cache[f"client_msg_id:{client_message_id}"] = result
+        session._idempotency_cache[f"turn:{user_msg.position}:{user_msg.content}"] = (
+            result
         )
 
-        return ProcessResult(
-            assessment_id=assessment_id,
-            user_message=user_msg,
-            assistant_message=assistant_msg,
-            next_state=sm.current_state,
-            symptoms=session.symptoms,
-            result_type=result_type,
-            is_low_confidence=session.is_low_confidence,
-        )
+    def get_idempotent_result(
+        self,
+        assessment_id: UUID,
+        key: str,
+    ) -> ProcessResult | None:
+        """Retrieve a cached ProcessResult by idempotency key or client message ID.
+
+        Args:
+            assessment_id: Assessment unique identifier.
+            key: Idempotency key, client message ID string, or turn key.
+
+        Returns:
+            ProcessResult if previously cached, None otherwise.
+
+        Raises:
+            AssessmentServiceError: If assessment is not found (404).
+        """
+        session = self._sessions.get(assessment_id)
+        if session is None:
+            raise AssessmentServiceError(
+                message=f"Assessment '{assessment_id}' was not found.",
+                code="ASSESSMENT_NOT_FOUND",
+                status_code=status.HTTP_404_NOT_FOUND,
+            )
+        if key in session._idempotency_cache:
+            return session._idempotency_cache[key]
+        for prefix in ("key:", "client_msg_id:", "turn:"):
+            if f"{prefix}{key}" in session._idempotency_cache:
+                return session._idempotency_cache[f"{prefix}{key}"]
+        return None
+
+    def clear_idempotency_cache(
+        self,
+        assessment_id: UUID,
+    ) -> None:
+        """Clear cached idempotency records for an assessment session.
+
+        Args:
+            assessment_id: Assessment unique identifier.
+
+        Raises:
+            AssessmentServiceError: If assessment is not found (404).
+        """
+        session = self._sessions.get(assessment_id)
+        if session is None:
+            raise AssessmentServiceError(
+                message=f"Assessment '{assessment_id}' was not found.",
+                code="ASSESSMENT_NOT_FOUND",
+                status_code=status.HTTP_404_NOT_FOUND,
+            )
+        session._idempotency_cache.clear()
 
     def _apply_symptoms_payload(
         self,
@@ -848,7 +1253,11 @@ class AssessmentOrchestrator:
             )
 
         for s in session.symptoms:
-            if s.source in (SymptomSource.AI_EXTRACTED, SymptomSource.USER):
+            if s.source in (
+                SymptomSource.AI_EXTRACTED,
+                SymptomSource.USER,
+                SymptomSource.IMAGE_FINDING,
+            ):
                 s.source = SymptomSource.USER_CONFIRMED
 
         session.state_machine.context.symptoms = [
@@ -1144,6 +1553,7 @@ class AssessmentOrchestrator:
         session.state_machine.restart(to_state=to_state)
         session.symptoms.clear()
         session.messages.clear()
+        session._idempotency_cache.clear()
         session.is_low_confidence = False
         session.state_machine.context.symptoms = []
         session.updated_at = datetime.now(UTC)
@@ -1192,26 +1602,309 @@ class AssessmentOrchestrator:
         )
         return self.get_state(assessment_id)
 
+    async def claim_assessment(
+        self,
+        assessment_id: UUID,
+        user_id: UUID,
+        guest_session_id: UUID | None = None,
+        db_session: Any | None = None,
+    ) -> AssessmentRead:
+        """Claim an anonymous guest assessment into a newly registered user account.
+
+        Per idea §10, allows an anonymous guest who completed or started an assessment
+        to transfer ownership of the assessment to their newly created user account.
+
+        Args:
+            assessment_id: Unique identifier of the assessment to claim.
+            user_id: UUID of the registered user account receiving ownership.
+            guest_session_id: Optional guest session UUID for ownership verification.
+            db_session: Optional active SQLAlchemy session for database persistence.
+
+        Returns:
+            AssessmentRead: Updated assessment representation with assigned user_id.
+
+        Raises:
+            AssessmentServiceError: If assessment is missing (404),
+                already claimed (409), guest session mismatches (403),
+                or DB entities not found (404).
+        """
+        session = self._sessions.get(assessment_id)
+        db_assessment = None
+
+        if db_session is not None:
+            from app.models.assessment import Assessment as DbAssessment
+            from app.models.guest_session import GuestSession as DbGuestSession
+            from app.models.user import User as DbUser
+
+            db_assessment = db_session.get(DbAssessment, assessment_id)
+            if db_assessment is None and session is None:
+                raise AssessmentServiceError(
+                    message=f"Assessment '{assessment_id}' was not found.",
+                    code="ASSESSMENT_NOT_FOUND",
+                    status_code=status.HTTP_404_NOT_FOUND,
+                )
+
+            if db_assessment is not None:
+                if db_assessment.user_id is not None:
+                    raise AssessmentServiceError(
+                        message="Assessment is already claimed by a user account.",
+                        code="ALREADY_CLAIMED",
+                        status_code=status.HTTP_409_CONFLICT,
+                    )
+                db_user = db_session.get(DbUser, user_id)
+                if db_user is None:
+                    raise AssessmentServiceError(
+                        message=f"User '{user_id}' was not found.",
+                        code="USER_NOT_FOUND",
+                        status_code=status.HTTP_404_NOT_FOUND,
+                    )
+                if (
+                    guest_session_id is not None
+                    and db_assessment.guest_session_id is not None
+                    and db_assessment.guest_session_id != guest_session_id
+                ):
+                    raise AssessmentServiceError(
+                        message=(
+                            "Assessment does not match provided guest session "
+                            "identifier."
+                        ),
+                        code="GUEST_SESSION_MISMATCH",
+                        status_code=status.HTTP_403_FORBIDDEN,
+                    )
+
+                db_assessment.user_id = user_id
+                if db_assessment.guest_session_id is not None:
+                    db_guest = db_session.get(
+                        DbGuestSession, db_assessment.guest_session_id
+                    )
+                    if db_guest is not None and not db_guest.is_claimed:
+                        db_guest.claimed_at = datetime.now(UTC)
+                        db_guest.claimed_by_user_id = user_id
+                db_session.flush()
+
+        if session is None and db_assessment is None:
+            raise AssessmentServiceError(
+                message=f"Assessment '{assessment_id}' was not found.",
+                code="ASSESSMENT_NOT_FOUND",
+                status_code=status.HTTP_404_NOT_FOUND,
+            )
+
+        if session is not None:
+            if session.user_id is not None:
+                raise AssessmentServiceError(
+                    message="Assessment is already claimed by a user account.",
+                    code="ALREADY_CLAIMED",
+                    status_code=status.HTTP_409_CONFLICT,
+                )
+
+            if (
+                guest_session_id is not None
+                and session.guest_session_id is not None
+                and session.guest_session_id != guest_session_id
+            ):
+                raise AssessmentServiceError(
+                    message=(
+                        "Assessment does not match provided guest session identifier."
+                    ),
+                    code="GUEST_SESSION_MISMATCH",
+                    status_code=status.HTTP_403_FORBIDDEN,
+                )
+
+            session.user_id = user_id
+            session.state_machine.context.user_id = user_id
+            if guest_session_id is not None and session.guest_session_id is None:
+                session.guest_session_id = guest_session_id
+            session.updated_at = datetime.now(UTC)
+
+        logger.info(
+            "guest_assessment_claimed",
+            assessment_id=str(assessment_id),
+            user_id=str(user_id),
+        )
+
+        if session is not None:
+            return AssessmentRead(
+                id=session.id,
+                state=session.state_machine.current_state,
+                consent_id=session.consent_id,
+                user_id=session.user_id,
+                guest_session_id=session.guest_session_id,
+                created_at=session.created_at,
+                updated_at=session.updated_at,
+            )
+
+        assert db_assessment is not None
+        db_created = db_assessment.created_at or datetime.now(UTC)
+        db_updated = getattr(db_assessment, "updated_at", None) or db_created
+        return AssessmentRead(
+            id=db_assessment.id,
+            state=AssessmentState(db_assessment.state),
+            consent_id=db_assessment.consent_id,
+            user_id=db_assessment.user_id,
+            guest_session_id=db_assessment.guest_session_id,
+            created_at=db_created,
+            updated_at=db_updated,
+        )
+
+    async def claim_guest_session(
+        self,
+        guest_session_id: UUID,
+        user_id: UUID,
+        db_session: Any | None = None,
+    ) -> list[AssessmentRead]:
+        """Transfer guest session assessments to a newly registered user account.
+
+        Per idea §10 and database.md, transfers ownership of all assessments
+        associated with the specified guest session to the newly registered user.
+
+        Args:
+            guest_session_id: UUID of the anonymous guest session.
+            user_id: UUID of the registered user account receiving ownership.
+            db_session: Optional active SQLAlchemy database session.
+
+        Returns:
+            list[AssessmentRead]: All claimed assessment representations.
+
+        Raises:
+            AssessmentServiceError: If session is already claimed (409)
+                or not found (404).
+        """
+        in_memory_matches = [
+            s for s in self._sessions.values() if s.guest_session_id == guest_session_id
+        ]
+
+        if any(s.user_id is not None for s in in_memory_matches):
+            raise AssessmentServiceError(
+                message=(f"Guest session '{guest_session_id}' is already claimed."),
+                code="ALREADY_CLAIMED",
+                status_code=status.HTTP_409_CONFLICT,
+            )
+
+        db_claimed_ids: list[UUID] = []
+        if db_session is not None:
+            from app.models.guest_session import GuestSession as DbGuestSession
+            from app.models.user import User as DbUser
+            from app.repositories.guest_session_repository import (
+                claim_guest_session as db_claim_session,
+            )
+
+            db_guest = db_session.get(DbGuestSession, guest_session_id)
+            if db_guest is None and not in_memory_matches:
+                raise AssessmentServiceError(
+                    message=f"Guest session '{guest_session_id}' was not found.",
+                    code="GUEST_SESSION_NOT_FOUND",
+                    status_code=status.HTTP_404_NOT_FOUND,
+                )
+            if db_guest is not None:
+                if db_guest.is_claimed:
+                    raise AssessmentServiceError(
+                        message=(
+                            f"Guest session '{guest_session_id}' is already claimed."
+                        ),
+                        code="ALREADY_CLAIMED",
+                        status_code=status.HTTP_409_CONFLICT,
+                    )
+                db_user = db_session.get(DbUser, user_id)
+                if db_user is None:
+                    raise AssessmentServiceError(
+                        message=f"User '{user_id}' was not found.",
+                        code="USER_NOT_FOUND",
+                        status_code=status.HTTP_404_NOT_FOUND,
+                    )
+                try:
+                    updated_guest = db_claim_session(
+                        session=db_session,
+                        guest_session_id=guest_session_id,
+                        user_id=user_id,
+                    )
+                    db_claimed_ids = [a.id for a in updated_guest.assessments]
+                except ValueError as exc:
+                    raise AssessmentServiceError(
+                        message=str(exc),
+                        code="CLAIM_FAILED",
+                        status_code=status.HTTP_400_BAD_REQUEST,
+                    ) from exc
+
+        if not in_memory_matches and not db_claimed_ids:
+            raise AssessmentServiceError(
+                message=f"No assessments found for guest session '{guest_session_id}'.",
+                code="GUEST_SESSION_NOT_FOUND",
+                status_code=status.HTTP_404_NOT_FOUND,
+            )
+
+        now = datetime.now(UTC)
+        results: list[AssessmentRead] = []
+        for session in in_memory_matches:
+            session.user_id = user_id
+            session.state_machine.context.user_id = user_id
+            session.updated_at = now
+            results.append(
+                AssessmentRead(
+                    id=session.id,
+                    state=session.state_machine.current_state,
+                    consent_id=session.consent_id,
+                    user_id=session.user_id,
+                    guest_session_id=session.guest_session_id,
+                    created_at=session.created_at,
+                    updated_at=session.updated_at,
+                )
+            )
+
+        if db_session is not None and db_claimed_ids:
+            from app.models.assessment import Assessment as DbAssessment
+
+            in_mem_ids = {s.id for s in in_memory_matches}
+            for aid in db_claimed_ids:
+                if aid not in in_mem_ids:
+                    db_a = db_session.get(DbAssessment, aid)
+                    if db_a is not None:
+                        db_a_created = db_a.created_at or now
+                        db_a_updated = getattr(db_a, "updated_at", None) or now
+                        results.append(
+                            AssessmentRead(
+                                id=db_a.id,
+                                state=AssessmentState(db_a.state),
+                                consent_id=db_a.consent_id,
+                                user_id=db_a.user_id,
+                                guest_session_id=db_a.guest_session_id,
+                                created_at=db_a_created,
+                                updated_at=db_a_updated,
+                            )
+                        )
+
+        logger.info(
+            "guest_session_claimed",
+            guest_session_id=str(guest_session_id),
+            user_id=str(user_id),
+            count=len(results),
+        )
+        return results
+
     async def generate_result(
         self,
         assessment_id: UUID,
         self_care_guidance: Sequence[str] = (),
+        profile: ProfileContext | None = None,
     ) -> AssessmentResult:
         """Trigger analysis and transition session through ANALYZING to COMPLETED.
 
         Executes the clinical evaluation pipeline:
         1. Transitions state machine from READY to ANALYZING.
-        2. Maps confirmed symptoms to ReportedSymptom domain representations.
-        3. Predicts ranked conditions via the configured condition model.
-        4. Evaluates clinical risk level deterministically via the risk engine.
-        5. Composes AssessmentResult with safety-wording guard validation.
-        6. On UnsafeWordingError, transitions state machine to ERROR and re-raises.
-        7. On success, transitions state machine from ANALYZING to COMPLETED.
+        2. Incorporates optional user profile context (age band, chronic conditions)
+           into the analysis pipeline (FR-02, S2-DAR-3).
+        3. Maps confirmed symptoms to ReportedSymptom domain representations.
+        4. Predicts ranked conditions via the configured condition model.
+        5. Evaluates clinical risk level deterministically via the risk engine.
+        6. Composes AssessmentResult with safety-wording guard validation.
+        7. On UnsafeWordingError, transitions state machine to ERROR and re-raises.
+        8. On success, transitions state machine from ANALYZING to COMPLETED.
 
         Args:
             assessment_id: Unique assessment identifier.
             self_care_guidance: Optional additional general self-care advice for
                 low-risk results.
+            profile: Optional user clinical profile context (age, chronic conditions).
+                If omitted, falls back to profile context attached to the session.
 
         Returns:
             AssessmentResult with triage risk tier, conditions, and safety disclaimer.
@@ -1228,6 +1921,11 @@ class AssessmentOrchestrator:
                 code="ASSESSMENT_NOT_FOUND",
                 status_code=status.HTTP_404_NOT_FOUND,
             )
+
+        prof = profile or session.profile
+        if prof is not None:
+            session.profile = prof
+            session.state_machine.context.profile = prof
 
         sm = session.state_machine
         sm.start_analysis()
@@ -1259,6 +1957,157 @@ class AssessmentOrchestrator:
         sm.complete_analysis()
         session.updated_at = datetime.now(UTC)
         return result
+
+    async def merge_image_findings(
+        self,
+        assessment_id: UUID,
+        findings: ImageAnalysis | list[ExtractedSymptom],
+    ) -> list[SymptomRead]:
+        """Merge visual findings from an image analysis into assessment symptoms.
+
+        Accepts either an ImageAnalysis or an already-converted list of
+        ExtractedSymptom objects. If the image analysis is unclear or produces no
+        symptoms, the assessment carries on with existing symptoms untouched
+        (idea §3, docs/cv-plan.md §1).
+
+        Visual findings are merged with severity UNKNOWN (since photos cannot
+        indicate perceived severity) and source set to IMAGE_FINDING.
+        The user subsequently reviews and confirms every symptom during the
+        confirmation step (FR-16, FR-21).
+
+        Args:
+            assessment_id: Unique assessment identifier.
+            findings: ImageAnalysis result from an ImageAnalyzer or list of
+                extracted symptoms.
+
+        Returns:
+            Updated list of SymptomRead models including any visual symptoms.
+
+        Raises:
+            AssessmentServiceError: If assessment does not exist (404).
+            InvalidStateTransitionError: If assessment is in a terminal or
+                non-editable state (COMPLETED, ANALYZING, ERROR).
+        """
+        session = self._sessions.get(assessment_id)
+        if session is None:
+            raise AssessmentServiceError(
+                message=f"Assessment '{assessment_id}' was not found.",
+                code="ASSESSMENT_NOT_FOUND",
+                status_code=status.HTTP_404_NOT_FOUND,
+            )
+
+        sm = session.state_machine
+        if sm.current_state in (
+            AssessmentState.COMPLETED,
+            AssessmentState.ANALYZING,
+            AssessmentState.ERROR,
+        ):
+            raise InvalidStateTransitionError(
+                current_state=sm.current_state,
+                target_state=AssessmentState.CONFIRMING,
+                reason=(
+                    f"Image findings cannot be merged in "
+                    f"'{sm.current_state.value}' state."
+                ),
+            )
+        if sm.current_state == AssessmentState.START:
+            sm.transition_to(AssessmentState.SYMPTOM_COLLECTION)
+        elif sm.current_state == AssessmentState.READY:
+            sm.transition_to(AssessmentState.CONFIRMING)
+
+        extracted: list[ExtractedSymptom]
+        if isinstance(findings, ImageAnalysis):
+            if findings.label == ImageLabel.UNCLEAR:
+                logger.info(
+                    "image_findings_unclear_ignored",
+                    assessment_id=str(assessment_id),
+                    reason=findings.reason.value if findings.reason else None,
+                )
+                return session.symptoms
+            extracted = to_extracted_symptoms(findings)
+        else:
+            extracted = list(findings)
+
+        if not extracted:
+            return session.symptoms
+
+        merged = merge_symptoms(
+            existing=[Symptom.model_validate(s.model_dump()) for s in session.symptoms],
+            extracted_symptoms=extracted,
+            default_source=SymptomSource.IMAGE_FINDING,
+        )
+
+        session.symptoms = [SymptomRead.model_validate(s.model_dump()) for s in merged]
+        session.state_machine.context.symptoms = [
+            s.model_dump() for s in session.symptoms
+        ]
+        session.updated_at = datetime.now(UTC)
+
+        logger.info(
+            "image_findings_merged",
+            assessment_id=str(assessment_id),
+            symptom_count=len(session.symptoms),
+            added_count=len(extracted),
+        )
+
+        return session.symptoms
+
+    async def process_image(
+        self,
+        assessment_id: UUID,
+        image_bytes: bytes,
+    ) -> list[SymptomRead]:
+        """Analyse image bytes and merge visual findings into assessment state.
+
+        Coordinates image analyzer execution and symptom state merging. If the
+        analyzer encounters an ImageAnalysisError, it safely carries on with
+        existing symptoms without interrupting the assessment (idea §3).
+
+        Args:
+            assessment_id: Unique assessment identifier.
+            image_bytes: Validated, sanitized image byte payload in memory.
+
+        Returns:
+            Updated list of SymptomRead models.
+
+        Raises:
+            AssessmentServiceError: If assessment is not found (404).
+            InvalidStateTransitionError: If session state blocks modifications (409).
+        """
+        session = self._sessions.get(assessment_id)
+        if session is None:
+            raise AssessmentServiceError(
+                message=f"Assessment '{assessment_id}' was not found.",
+                code="ASSESSMENT_NOT_FOUND",
+                status_code=status.HTTP_404_NOT_FOUND,
+            )
+
+        sm = session.state_machine
+        if sm.current_state in (
+            AssessmentState.COMPLETED,
+            AssessmentState.ANALYZING,
+            AssessmentState.ERROR,
+        ):
+            raise InvalidStateTransitionError(
+                current_state=sm.current_state,
+                target_state=AssessmentState.CONFIRMING,
+                reason=(
+                    f"Image findings cannot be merged in "
+                    f"'{sm.current_state.value}' state."
+                ),
+            )
+
+        try:
+            analysis = await self._image_analyzer.analyze(image_bytes)
+        except ImageAnalysisError as exc:
+            logger.warning(
+                "image_analysis_failed_continuing_text",
+                assessment_id=str(assessment_id),
+                error_code=exc.code,
+            )
+            return session.symptoms
+
+        return await self.merge_image_findings(assessment_id, analysis)
 
 
 __all__ = [

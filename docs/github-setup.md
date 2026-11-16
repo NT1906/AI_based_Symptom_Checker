@@ -37,7 +37,7 @@ Both `develop` and `main` have a ruleset (Settings → Rules → Rulesets):
 
 ## 4. Labels and milestones
 
-- **Milestones:** `Sprint 0` (due 13 Oct), `Sprint 1` (27 Oct), `Sprint 2` (10 Nov), `Sprint 3` (20 Nov). Every issue must be in one (PR policy checks this).
+- **Milestones:** `Sprint 0` (due 13 Oct), `Sprint 1` (27 Oct), `Sprint 2` (20 Nov; Sprint 3 was merged into it on 6 Nov and its milestone is closed). Every issue must be in one (PR policy checks this).
 - **Labels:** `type:*` (feature, bug, docs, test, chore), `area:*` (frontend, backend, ai, database, image, qa, security), `priority:*`, `status:blocked`, `out-of-scope`.
 
 ## 5. Leader routine
