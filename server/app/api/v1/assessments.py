@@ -18,6 +18,7 @@ from app.api.deps import (
     AnalyzeResponse,
     AssessmentServiceDep,
     SendMessageResponse,
+    SessionFactoryDep,
 )
 from app.core.errors import ErrorResponse
 from app.core.logging import get_logger
@@ -31,6 +32,7 @@ from app.schemas.base import SchemaBase
 from app.schemas.message import MessageCreate, MessageRead
 from app.schemas.result import AssessmentResult
 from app.schemas.symptom import SymptomRead, SymptomUpdate
+from app.services.privacy.consent import require_current_consent_id
 from app.services.upload import SanitizedImage, validate_and_sanitize_image
 from starlette.concurrency import run_in_threadpool
 
@@ -107,9 +109,9 @@ STATE_CONFLICT_ERROR_RESPONSES: dict[int | str, dict[str, Any]] = {
         "consent record. Returns initial START lifecycle state."
     ),
     responses={
-        status.HTTP_400_BAD_REQUEST: {
+        status.HTTP_409_CONFLICT: {
             "model": ErrorResponse,
-            "description": "Invalid consent identifier or consent missing",
+            "description": "Current policy consent required",
         },
         status.HTTP_422_UNPROCESSABLE_ENTITY: {
             "model": ErrorResponse,
@@ -120,17 +122,21 @@ STATE_CONFLICT_ERROR_RESPONSES: dict[int | str, dict[str, Any]] = {
 async def create_assessment(
     payload: AssessmentCreate,
     service: AssessmentServiceDep,
+    session_factory: SessionFactoryDep,
 ) -> AssessmentRead:
     """Initialize a new assessment session.
 
     Args:
         payload: Assessment creation payload containing consentId.
         service: Injected assessment domain service.
+        session_factory: Database factory used to verify the consent record.
 
     Returns:
         AssessmentRead: Created assessment with START state.
     """
-    logger.info("assessment_created", consent_id=str(payload.consent_id))
+    await run_in_threadpool(
+        require_current_consent_id, session_factory, payload.consent_id
+    )
     return await service.create_assessment(payload)
 
 
