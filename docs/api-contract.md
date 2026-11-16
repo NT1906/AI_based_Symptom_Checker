@@ -488,6 +488,21 @@ Content-Type: application/json
 }
 ```
 
+## Account assessment history (FR-02)
+
+`GET /api/v1/history` returns the authenticated account's assessment
+summaries in newest-first order. Pass `limit` (1–100, default 20) and `offset` (zero-based, default 0). The response is
+`{"items": [...], "nextOffset": 20}`. A null `nextOffset` marks the last page.
+Items use the existing assessment summary schema.
+
+`GET /api/v1/history/{assessment_id}` returns the same summary schema for an
+owned assessment. Unknown, guest-owned and other users' assessments return
+404. Both routes require authentication (401) and mark successful responses
+`Cache-Control: no-store`.
+
+The routes use the same session cookie or bearer authentication as
+`GET /api/v1/auth/me`.
+
 ## Account data rights (DR-06, NFR-04)
 
 `GET /api/v1/privacy/export` downloads the authenticated user's data as JSON
@@ -500,7 +515,9 @@ It requires the application's CSRF validation and returns 204 once the
 database transaction commits. A failure returns an error rather than a
 successful deletion response. Neither route takes an account ID from the caller.
 
-Integration for #173: provide the authenticated ID and CSRF dependency from
-#225, agree the export fields and deletion scope with #190, and supply a
-database adapter for `DataRightsRepository`. Verify the deletion semantics
-against #163 before enabling the routes.
+The routes use the shared authentication and the same CSRF check as the
+auth routes. Missing or mismatched CSRF tokens return 401.
+
+Integration for #173: mount the router only when it has a database-backed
+`DataRightsRepository` adapter. Confirm export and deletion scope with #190
+and verify transactional deletion against #163.
