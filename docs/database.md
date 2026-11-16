@@ -1,11 +1,10 @@
 # Database foundation
 
-Owner: Harsh, Dimple, Kavya · Tasks: S0-HAR-1, S1-DIM-4, S1-KAV-4 · Issues: #9, #38, #37 · Requirements: FR-01, NFR-01, idea § 10
+Owner: Harsh, Dimple, Kavya, Nishith · Tasks: S0-HAR-1, S1-DIM-4, S1-KAV-4, S1-NIT-4, S2-KAV-3 · Issues: #9, #38, #37, #36, #161 · Requirements: FR-01, FR-02, FR-17, NFR-01, idea § 10
 
 This change supplies PostgreSQL-oriented SQLAlchemy 2 models, session factories,
-Alembic migrations (initial revision `0001_database_foundation`, hot-query indexes
-revision `0002_hot_query_indexes`, and guest session revision `0003_guest_sessions`),
-guest session repository, fictional seed data, and isolated unit tests.
+Alembic migrations (revisions `0001_database_foundation` through `0005_user_profile`),
+repositories, fictional seed data, and isolated unit tests.
 
 ## Current status and team handoff
 
@@ -48,6 +47,7 @@ replace this bootstrap workflow with the agreed application configuration.
 erDiagram
     USERS o|--o{ ASSESSMENTS : owns
     USERS o|--o{ GUEST_SESSIONS : claims
+    USERS ||--o| PROFILES : has
     GUEST_SESSIONS o|--o{ ASSESSMENTS : tracks
     CONSENTS ||--o| ASSESSMENTS : authorizes
     ASSESSMENTS ||--o{ MESSAGES : contains
@@ -63,9 +63,10 @@ provide the UUID. The only server state default is `START`.
 | `users` | `email`, nullable `password_hash` | Unique, nonblank lowercase/trimmed email. Non-null hash cannot be blank. |
 | `consents` | `policy_version` | Nonblank version; existence represents affirmative acceptance. |
 | `guest_sessions` | `token_hash`, `expires_at`, nullable `claimed_at`, nullable `claimed_by_user_id` | Unique 64-char hash; expires after created; nullable FK to `users` with `SET NULL`. |
+| `profiles` | `user_id`, nullable `age_band`, nullable `biological_sex`, `chronic_conditions`, `updated_at` | Unique FK to `users` (ON DELETE CASCADE); coarse `age_band` check; `biological_sex` check. |
 | `assessments` | nullable `user_id`, nullable `guest_session_id`, `consent_id`, `state` | Valid FKs (`user_id` RESTRICT, `guest_session_id` SET NULL); required unique consent; allowed state check. |
 | `messages` | `assessment_id`, `position`, `role`, `content` | Valid FK; unique position per assessment; nonnegative position; user/assistant role; nonblank text. |
-| `symptoms` | `assessment_id`, `name` | Valid FK; unique normalized nonblank name per assessment. |
+| `symptoms` | `assessment_id`, `name`, `details` | Valid FK; unique normalized nonblank name per assessment; structured JSONB details. |
 
 State values follow the sprint plan: `START`, `SYMPTOM_COLLECTION`, `CLARIFYING`,
 `CONFIRMING`, `READY`, `ANALYZING`, `COMPLETED`. The database checks membership;
@@ -209,3 +210,14 @@ alembic upgrade head
 3. **Registered Patient (Clarifying):** Assessment in `CLARIFYING` state with targeted follow-up dialogue.
 
 All demo data uses reserved `.invalid` emails (`demo-patient@example.invalid`, `demo-patient2@example.invalid`), fixed deterministic UUIDs, and explicitly fictional text. Seeding is idempotent and safe to run repeatedly.
+
+---
+
+## User Profiles & Clinical Context (S2-KAV-3, FR-02, idea § 10)
+
+Per idea § 10 and FR-02, users may optionally save minimal clinical context to inform triage analysis without compiling an expansive medical dossier:
+- **Data Minimization:** Coarse age bands (`child`, `teen`, `young_adult`, `adult`, `senior`) are used instead of exact dates of birth, strictly limiting personal identifying data per the DPDP Act 2023.
+- **Clinical Sex:** Biological sex is captured solely for clinical risk calibration (`female`, `male`, `other`, `prefer_not_to_say`) with an optional `sex` alias.
+- **Chronic Conditions:** Self-reported conditions (e.g. `["Diabetes", "Asthma"]`) are stored as structured JSON/JSONB text arrays.
+- **Cascading Lifecycle:** The `profiles` table maintains a 1-to-1 foreign key to `users.id` with `ON DELETE CASCADE`. If an account is deleted, the health profile is purged immediately.
+
