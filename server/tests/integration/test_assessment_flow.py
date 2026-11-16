@@ -15,23 +15,71 @@ Responsibilities:
 Owner: Mohit (testing) · Task: S1-MOH-2 · Requirements: FR-03, FR-17, DR-01, DR-02
 """
 
+from collections.abc import Iterator
+from pathlib import Path
+from typing import Any
 from uuid import UUID
 
 import pytest
-from fastapi import status
+from fastapi import FastAPI, status
 from httpx import AsyncClient
+from sqlalchemy import create_engine
+from sqlalchemy.orm import sessionmaker
+from sqlalchemy.pool import StaticPool
 
+import app.models  # noqa: F401
+from app.api.deps import get_db_engine, get_session_factory
+from app.models.base import Base
+from app.models.consent import Consent
 from app.schemas.result import DEFAULT_DISCLAIMER
+from app.services.privacy.consent import CURRENT_POLICY_VERSION
+from tests.conftest import FAKE_CONSENT_ID
 
 # ---------------------------------------------------------------------------
-# Helpers
+# Helpers & Fixtures
 # ---------------------------------------------------------------------------
 
 VALID_CONSENT_ID = "f81d4fae-7dec-11d0-a765-00a0c91e6bf6"
 VALID_SYMPTOM_MESSAGE = "I have a test headache and mild test fatigue since yesterday"
 
 
-def _assert_camel_case_id_field(data: dict) -> None:
+@pytest.fixture(autouse=True)
+def setup_test_database(app: FastAPI, tmp_path: Path) -> Iterator[None]:
+    """Provide an isolated database with verified consents for integration tests."""
+    engine = create_engine(
+        f"sqlite:///{tmp_path / 'integration-test.db'}",
+        connect_args={"check_same_thread": False},
+        poolclass=StaticPool,
+    )
+    Base.metadata.create_all(engine)
+    session_factory = sessionmaker(bind=engine, expire_on_commit=False)
+    with session_factory.begin() as session:
+        session.add(
+            Consent(
+                id=FAKE_CONSENT_ID,
+                policy_version=CURRENT_POLICY_VERSION,
+            )
+        )
+        session.add(
+            Consent(
+                id=UUID(VALID_CONSENT_ID),
+                policy_version=CURRENT_POLICY_VERSION,
+            )
+        )
+
+    app.state.db_engine = engine
+    app.state.session_factory = session_factory
+    app.dependency_overrides[get_session_factory] = lambda: session_factory
+    app.dependency_overrides[get_db_engine] = lambda: engine
+    try:
+        yield
+    finally:
+        app.dependency_overrides.pop(get_session_factory, None)
+        app.dependency_overrides.pop(get_db_engine, None)
+        engine.dispose()
+
+
+def _assert_camel_case_id_field(data: dict[str, Any]) -> None:
     """Assert the response does NOT expose snake_case fields (wire format check)."""
     # The Pydantic alias_generator converts snake_case to camelCase on the wire
     assert "consent_id" not in data, "Wire format must use consentId, not consent_id"
@@ -46,8 +94,8 @@ def _assert_camel_case_id_field(data: dict) -> None:
 @pytest.mark.anyio
 async def test_full_assessment_api_flow_happy_path(
     async_client: AsyncClient,
-    assessment_create_payload: dict,
-    send_message_payload: dict,
+    assessment_create_payload: dict[str, Any],
+    send_message_payload: dict[str, Any],
 ) -> None:
     """Integration: complete assessment lifecycle returns valid result with disclaimer.
 
@@ -134,7 +182,7 @@ async def test_full_assessment_api_flow_happy_path(
 @pytest.mark.anyio
 async def test_create_assessment_returns_201_and_start_state(
     async_client: AsyncClient,
-    assessment_create_payload: dict,
+    assessment_create_payload: dict[str, Any],
 ) -> None:
     """POST /assessments with valid payload returns 201 and START state."""
     resp = await async_client.post(
@@ -179,7 +227,7 @@ async def test_create_assessment_invalid_consent_uuid_returns_422(
 @pytest.mark.anyio
 async def test_get_assessment_returns_200(
     async_client: AsyncClient,
-    assessment_create_payload: dict,
+    assessment_create_payload: dict[str, Any],
 ) -> None:
     """GET /assessments/{id} returns 200 with assessment data."""
     create = await async_client.post(
@@ -212,7 +260,7 @@ async def test_get_assessment_invalid_uuid_returns_422(
 @pytest.mark.anyio
 async def test_send_message_empty_content_returns_422(
     async_client: AsyncClient,
-    assessment_create_payload: dict,
+    assessment_create_payload: dict[str, Any],
 ) -> None:
     """POST /messages with empty content returns 422 VALIDATION_ERROR."""
     create = await async_client.post(
@@ -232,7 +280,7 @@ async def test_send_message_empty_content_returns_422(
 @pytest.mark.anyio
 async def test_send_message_at_4000_chars_accepted(
     async_client: AsyncClient,
-    assessment_create_payload: dict,
+    assessment_create_payload: dict[str, Any],
 ) -> None:
     """POST /messages with content of exactly 4000 chars returns 200."""
     create = await async_client.post(
@@ -251,7 +299,7 @@ async def test_send_message_at_4000_chars_accepted(
 @pytest.mark.anyio
 async def test_send_message_over_4000_chars_rejected(
     async_client: AsyncClient,
-    assessment_create_payload: dict,
+    assessment_create_payload: dict[str, Any],
 ) -> None:
     """POST /messages with content > 4000 chars returns 422 VALIDATION_ERROR."""
     create = await async_client.post(
@@ -266,3 +314,120 @@ async def test_send_message_over_4000_chars_rejected(
     )
     assert resp.status_code == status.HTTP_422_UNPROCESSABLE_ENTITY
     assert resp.json()["code"] == "VALIDATION_ERROR"
+
+
+# ---------------------------------------------------------------------------
+# 5. Medical-safety rules
+# ---------------------------------------------------------------------------
+
+
+@pytest.mark.anyio
+async def test_result_always_contains_mandatory_disclaimer(
+    async_client: AsyncClient,
+    assessment_create_payload: dict[str, Any],
+) -> None:
+    """GET /result response always contains the exact mandatory disclaimer (DR-01)."""
+    create = await async_client.post(
+        "/api/v1/assessments",
+        json=assessment_create_payload,
+    )
+    aid = create.json()["id"]
+    await async_client.post(
+        f"/api/v1/assessments/{aid}/messages",
+        json={"content": VALID_SYMPTOM_MESSAGE},
+    )
+    await async_client.post(f"/api/v1/assessments/{aid}/analyze")
+    resp = await async_client.get(f"/api/v1/assessments/{aid}/result")
+
+    assert resp.status_code == status.HTTP_200_OK
+    data = resp.json()
+    assert data.get("disclaimer") == DEFAULT_DISCLAIMER, (
+        "Mandatory disclaimer missing or incorrect in result response"
+        " (AI_RULES §2 rule 8)"
+    )
+
+
+@pytest.mark.anyio
+async def test_result_conditions_use_categorical_confidence_not_percentages(
+    async_client: AsyncClient,
+    assessment_create_payload: dict[str, Any],
+) -> None:
+    """Conditions must use categorical labels, never raw scores (AI_RULES §2 rule 3)."""
+    create = await async_client.post(
+        "/api/v1/assessments",
+        json=assessment_create_payload,
+    )
+    aid = create.json()["id"]
+    await async_client.post(
+        f"/api/v1/assessments/{aid}/messages",
+        json={"content": VALID_SYMPTOM_MESSAGE},
+    )
+    await async_client.post(f"/api/v1/assessments/{aid}/analyze")
+    resp = await async_client.get(f"/api/v1/assessments/{aid}/result")
+
+    data = resp.json()
+    allowed_labels = {"LIKELY", "POSSIBLE", "LESS_LIKELY"}
+    for condition in data.get("conditions", []):
+        assert "score" not in condition, (
+            "Raw score must not appear in condition response"
+        )
+        assert "probability" not in condition, "Probability must not be exposed"
+        assert condition.get("confidence") in allowed_labels, (
+            f"Confidence must be in {allowed_labels}, got {condition.get('confidence')}"
+        )
+
+
+@pytest.mark.anyio
+async def test_urgent_result_exposes_emergency_number_112(
+    async_client: AsyncClient,
+) -> None:
+    """URGENT result must include emergencyNumber='112' (FR-15, AI_RULES §2 rule 5)."""
+    from app.api.v1._assessment_stubs import STUB_URGENT_ASSESSMENT_ID
+
+    resp = await async_client.get(
+        f"/api/v1/assessments/{STUB_URGENT_ASSESSMENT_ID}/result"
+    )
+    assert resp.status_code == status.HTTP_200_OK
+    data = resp.json()
+    assert data["riskLevel"] == "URGENT"
+    assert data["referral"]["emergencyNumber"] == "112", (
+        "Emergency number 112 must be first in URGENT referral (AI_RULES §2 rule 5)"
+    )
+    assert data["referral"]["required"] is True
+
+
+# ---------------------------------------------------------------------------
+# 6. Health endpoint sanity check
+# ---------------------------------------------------------------------------
+
+
+@pytest.mark.anyio
+async def test_health_endpoint_returns_ok(async_client: AsyncClient) -> None:
+    """GET /api/v1/health returns 200 with status=ok and version field."""
+    resp = await async_client.get("/api/v1/health")
+    assert resp.status_code == status.HTTP_200_OK
+    data = resp.json()
+    assert data["status"] == "ok"
+    assert "version" in data
+    assert isinstance(data["version"], str)
+
+
+# ---------------------------------------------------------------------------
+# 7. HTTP method guards
+# ---------------------------------------------------------------------------
+
+
+@pytest.mark.anyio
+async def test_delete_assessment_returns_405(
+    async_client: AsyncClient,
+    assessment_create_payload: dict[str, Any],
+) -> None:
+    """DELETE /assessments/{id} returns 405 Method Not Allowed."""
+    create = await async_client.post(
+        "/api/v1/assessments",
+        json=assessment_create_payload,
+    )
+    aid = create.json()["id"]
+
+    resp = await async_client.delete(f"/api/v1/assessments/{aid}")
+    assert resp.status_code == status.HTTP_405_METHOD_NOT_ALLOWED
