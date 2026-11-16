@@ -537,6 +537,6 @@ successful deletion response. Neither route takes an account ID from the caller.
 The routes use the shared authentication and the same CSRF check as the
 auth routes. Missing or mismatched CSRF tokens return 401.
 
-Integration for #173: mount the router only when it has a database-backed
-`DataRightsRepository` adapter. Confirm export and deletion scope with #190
-and verify transactional deletion against #163.
+The export route returns persisted account information, profile, and owned
+assessments with consent, messages, and symptoms. The deletion route is
+registered only when the application has the transactional #163 adapter.
