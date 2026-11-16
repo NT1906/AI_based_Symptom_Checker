@@ -51,6 +51,11 @@ async function agreeToConsent(user: ReturnType<typeof userEvent.setup>) {
 
 describe("ConsentStep", () => {
   beforeEach(() => {
+    server.use(
+      http.get("/api/v1/consents/current-policy", () =>
+        HttpResponse.json({ policyVersion: "1.0.0" }),
+      ),
+    );
     // Reset Zustand store between tests
     useConsentStore.setState({
       consentId: null,
@@ -109,20 +114,20 @@ describe("ConsentStep", () => {
     expect(apiHit).toBe(false);
   });
 
-  it("missing endpoint (404): continues with a session-only consent", async () => {
+  it("does not record consent when the server notice is newer", async () => {
     server.use(
-      http.post("/api/v1/consents", () =>
-        HttpResponse.json({ detail: "Not Found" }, { status: 404 }),
+      http.get("/api/v1/consents/current-policy", () =>
+        HttpResponse.json({ policyVersion: "2.0.0" }),
       ),
     );
-
     const user = userEvent.setup();
     const { onConsented } = renderConsentStep();
 
     await agreeToConsent(user);
 
-    await waitFor(() => expect(onConsented).toHaveBeenCalledOnce());
-    expect(useConsentStore.getState().consentId).toMatch(/^local-/);
+    expect(await screen.findByRole("alert")).toHaveTextContent(/privacy notice has changed/i);
+    expect(onConsented).not.toHaveBeenCalled();
+    expect(useConsentStore.getState().consentId).toBeNull();
   });
 
   it("API error: shows error message and does NOT call onConsented", async () => {
