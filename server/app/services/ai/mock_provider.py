@@ -8,8 +8,10 @@ Responsibilities:
     - Allow teammates and CI to run tests without OpenAI API keys.
     - Support deterministic failure simulation for error handling tests.
 
-Owner: Nishith · Tasks: S1-NIT-2, S2-NIT-1
-Requirements: FR-03, FR-04, FR-17, FR-19, FR-20, NFR-05, NFR-07
+Owner: Nishith · Tasks: S1-NIT-2, S2-NIT-1, S2-NIT-2
+Requirements: (
+    FR-03, FR-04, FR-17, FR-18, FR-19, FR-20, NFR-05, NFR-07, idea "out of scope"
+)
 """
 
 import json
@@ -19,6 +21,7 @@ import re
 from typing import Any
 
 from app.services.ai.gateway import AiError, AiTimeoutError, AiValidationError
+from app.services.ai.intent import IntentClassifier
 from app.services.ai.missing_info import (
     SITE_SENSITIVE_SYMPTOMS,
     detect_missing_information,
@@ -30,6 +33,7 @@ from app.services.ai.schemas import (
     DurationUnitEnum,
     ExtractedSymptom,
     ExtractionResult,
+    IntentResult,
     MissingFieldEnum,
     QuestionTypeEnum,
     SeverityEnum,
@@ -271,6 +275,32 @@ class MockAiProvider:
 
     def __init__(self, default_latency_ms: float = 0.0) -> None:
         self.default_latency_ms = default_latency_ms
+        self._intent_classifier = IntentClassifier()
+
+    async def classify_intent(self, message: str) -> IntentResult:
+        """Classify user message intent using deterministic rules.
+
+        Detects prompt injections, off-topic requests, and curated glossary questions.
+
+        Args:
+            message: Raw user text.
+
+        Returns:
+            Validated IntentResult with detected intent and safe refusal/glossary text.
+
+        Raises:
+            AiTimeoutError: If __SIMULATE_TIMEOUT__ is present in input.
+            AiValidationError: If __SIMULATE_VALIDATION_ERROR__ is present in input.
+            AiError: If __SIMULATE_ERROR__ is present in input.
+        """
+        if "__SIMULATE_TIMEOUT__" in message:
+            raise AiTimeoutError("Simulated AI gateway timeout exceeded budget.")
+        if "__SIMULATE_VALIDATION_ERROR__" in message:
+            raise AiValidationError("Simulated malformed JSON response from model.")
+        if "__SIMULATE_ERROR__" in message:
+            raise AiError("Simulated upstream provider connection drop.")
+
+        return self._intent_classifier.classify(message)
 
     async def extract_symptoms(
         self,
