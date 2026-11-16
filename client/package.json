@@ -13,7 +13,7 @@
     "test:watch": "vitest",
     "format": "prettier --write .",
     "format:check": "prettier --check .",
-    "gen:api": "openapi-ts -i openapi.json -o src/types"
+    "gen:api": "openapi-ts -i openapi.json -o src/types && node scripts/add-generated-headers.mjs"
   },
   "dependencies": {
     "@tanstack/react-query": "^5.104.2",

@@ -23,7 +23,7 @@ Licences were checked against the source pages on 3 Nov 2026.
 | **Fitzpatrick17k** (Groh et al., 2021), [repo](https://github.com/mattgroh/fitzpatrick17k) | Only the images of mapped classes (supplement). Images come from their original URLs (Atlas Dermatologico, DermaAmin), not from a mirror | **[CC BY-NC-SA 3.0](http://creativecommons.org/licenses/by-nc-sa/3.0/)**. Original images were collected from [Atlas Dermatologico](http://atlasdermatologico.com.br/) and [DermaAmin](https://www.dermaamin.com/site/) | Commit `9865ce9` of `fitzpatrick17k.csv`, plus its SHA-256 |
 | DermNet | Not used | CC BY-NC-ND 3.0: "no derivatives" rules out the cropping and augmentation that training needs | — |
 
-What we owe the sources, carried into the model card (S3-NIS-3) and the Hugging Face repo (S2-NIS-5):
+What we owe the sources, carried into the model card (S2-NIS-10) and the Hugging Face repo (S2-NIS-5):
 
 - **Credit both datasets.** Link SCIN's licence, mark our images as modified (resized and cropped), and keep SCIN's disclaimer of warranties.
 - **Release the model under share-alike, non-commercial terms,** because of the CC BY-NC-SA data.
@@ -110,7 +110,7 @@ Images left out:
   - `urticaria`: 23 dark images. `acne`: 47.
   - The skin-tone gap metric (cv-plan §6) and the rebalancing in S2-NIS-4 handle this, and the model card reports it.
 - **`unclear` is 75% of the images.** Training uses class weights (`inverse_sqrt_frequency`), and S1-NIS-6 may subsample it.
-- **No non-skin photos yet.** cv-plan §2 lists a small set of non-skin photos for `unclear`; they are added with the robustness set (S3-NIS-1).
+- **No non-skin photos yet.** cv-plan §2 lists a small set of non-skin photos for `unclear`; they are added with the robustness set (S2-NIS-8).
 
 ## 7. How to run
 
