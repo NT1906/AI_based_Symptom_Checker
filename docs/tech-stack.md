@@ -123,7 +123,7 @@ Migrations run automatically at container start (`alembic upgrade head`). Migrat
 - Never store symptoms, messages or results in `localStorage`, `IndexedDB` or the Cache API. Only the assessment ID goes in `sessionStorage`.
 - Offline screen: "You're offline. If this is an emergency, call **112**."
 - A new version shows an "Update available" toast. No silent reloads mid-assessment.
-- CI requires `dist/manifest.webmanifest` and `dist/sw.js` in the client build. Sprint 3 target: Lighthouse PWA and performance ≥ 90.
+- CI requires `dist/manifest.webmanifest` and `dist/sw.js` in the client build. Target (S2-RUT-7): Lighthouse PWA and performance ≥ 90.
 
 ## 6. ML lifecycle (CV and condition model)
 

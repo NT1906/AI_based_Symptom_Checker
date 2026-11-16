@@ -142,7 +142,7 @@ Measured on the frozen test set, plus each skin-tone group separately. The basel
 | **Skin-tone gap**: largest macro-F1 difference between `light`, `medium` and `dark` | Fairness (NFR-07); dark skin is under-represented in most dermatology data | ≤ 0.10 |
 | Expected calibration error (ECE) | The abstain threshold only works if probabilities are honest | ≤ 0.10 (temperature scaling allowed) |
 | Selective accuracy vs coverage | How often we answer, and how right we are when we do | accuracy ≥ 0.80 at the chosen threshold |
-| Robustness set: blurry, dark, irrelevant and edge images | Must come out `unclear`, not a confident class (S3-NIS-1) | ≥ 90% `unclear` |
+| Robustness set: blurry, dark, irrelevant and edge images | Must come out `unclear`, not a confident class (S2-NIS-8) | ≥ 90% `unclear` |
 
 If the skin-tone gap target is missed, S2-NIS-4 rebalances by skin-tone group before anything else. The model card always reports the gap, even when the target is met.
 
@@ -153,8 +153,8 @@ If the skin-tone gap target is missed, S2-NIS-4 rebalances by skin-tone group be
 | Budget | Limit | Checked in |
 |---|---|---|
 | Model file | ≤ **25 MB** (target ≤ 8 MB after INT8) | S2-NIS-5 |
-| Inference, including preprocessing | ≤ **1 s** per image on the production CPU (Render free tier or VPS), p95 over 100 runs | S3-NIS-4 |
-| Memory | Whole API process < **512 MB** RAM; the CV session ≤ 150 MB of it | S3-NIS-4 |
+| Inference, including preprocessing | ≤ **1 s** per image on the production CPU (Render free tier or VPS), p95 over 100 runs | S2-NIS-11 |
+| Memory | Whole API process < **512 MB** RAM; the CV session ≤ 150 MB of it | S2-NIS-11 |
 
 Export path (S2-NIS-5):
 1. PyTorch → ONNX, opset 17, dynamic batch axis.
@@ -194,6 +194,6 @@ The model is **not clinically validated** and is for an informational triage aid
 | S2-NIS-4 | §6: augmentation, class and skin-tone balancing, tuning to the v2 targets |
 | S2-NIS-5 | §7: ONNX export, INT8, parity tests, Hugging Face Hub + model card |
 | S2-NIS-6 | §1, §7: `OnnxImageAnalyzer`, quality checks, abstain threshold, preprocessing parity |
-| S3-NIS-1 / 3 / 4 | Final evaluation incl. robustness and fairness; model cards; production CPU performance |
+| S2-NIS-8 / 10 / 11 | Final evaluation incl. robustness and fairness; model cards; production CPU performance |
 
 **Kaggle notebook:** created in S1-NIS-6 ([#29](https://github.com/NT1906/AI_based_Symptom_Checker/issues/29)), when there is training code to run. Its link is added to [`ml/cv/README.md`](../ml/cv/README.md) in that PR.
