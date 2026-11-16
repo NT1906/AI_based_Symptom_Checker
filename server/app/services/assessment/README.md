@@ -1,6 +1,6 @@
 # Assessment Service Module
 
-**Owner:** Darshil (Assessment Orchestration) · **Task:** S1-DAR-2, S1-DAR-3, S1-DAR-4, S2-DAR-5 · **Requirements:** FR-03, FR-04, FR-05, FR-06, FR-07, FR-16, FR-17, FR-19, FR-20, FR-21, FR-25, DR-05
+**Owner:** Darshil (Assessment Orchestration) · **Task:** S1-DAR-2, S1-DAR-3, S1-DAR-4, S2-DAR-1, S2-DAR-2, S2-DAR-3, S2-DAR-4 · **Requirements:** idea §3, idea §10, FR-02, FR-03, FR-04, FR-05, FR-06, FR-07, FR-16, FR-17, FR-19, FR-20, FR-21, FR-25, DR-05, NFR-05
 
 The Assessment Service orchestrates the conversational symptom assessment lifecycle. It provides:
 1. **Assessment State Machine**: Strictly governs valid states and enforces medical-safety guards throughout the user experience.
@@ -8,6 +8,8 @@ The Assessment Service orchestrates the conversational symptom assessment lifecy
 3. **Clarification Turn Limiting & Low-Confidence Flagging**: Strictly enforces a maximum of 3 clarification questions (FR-04, FR-19). If ambiguity remains after 3 turns, forces transition to CONFIRMING and marks the session with `is_low_confidence=True` (FR-20).
 4. **Clinical Analysis & Triage Results**: Executes the clinical prediction and risk evaluation pipeline upon symptom confirmation (`generate_result()`), applying the safety-wording guard before user delivery (FR-05, FR-06, FR-07, DR-05).
 5. **Symptom Confirmation, Editing & Session Restart**: Enables user review and modification (add, remove, edit severity/duration, bulk update) of recognized symptoms before analysis (`confirm_symptoms()`, `update_symptoms()`), stepping back to chat (`step_back_to_chat()`), and cleanly starting over (`restart_assessment()`) per FR-16, FR-21, and FR-25.
+6. **Guest Assessment Claiming**: Allows anonymous guests to transfer assessment history into a registered user account upon sign-up (`claim_assessment()`, `claim_guest_session()`) per idea §10.
+7. **Idempotent Message Processing & Transactions**: Eliminates double answers on client retry, handles rapid concurrent submissions via per-session async locks, and enforces atomic transactions across database and in-memory session changes (NFR-05).
 
 ---
 
@@ -134,7 +136,64 @@ Before triage analysis, the application reflects back extracted symptoms for use
 
 ---
 
-## 7. Running Unit Tests
+---
+
+## 7. Guest Assessment Claiming (S2-DAR-1)
+
+Per **idea §10** and `docs/database.md`:
+The application allows anonymous guests to start and complete assessments with zero registration friction (`user_id = None`, optionally bound to a `guest_session_id`). When the user registers or logs in:
+
+- **`claim_assessment(assessment_id, user_id, guest_session_id=None, db_session=None)`**: Transfers ownership of an individual assessment to the new account (`assessment.user_id = user_id`). Verifies the assessment was not already claimed (HTTP 409 `ALREADY_CLAIMED`) and optionally verifies matching `guest_session_id` (HTTP 403 `GUEST_SESSION_MISMATCH`). Synchronizes with SQLAlchemy database session when provided.
+- **`claim_guest_session(guest_session_id, user_id, db_session=None)`**: Bulk transfers all assessments associated with an anonymous guest session to the newly registered account, updating `guest_sessions.claimed_at` and `guest_sessions.claimed_by_user_id`. Prevents double-claiming already claimed sessions.
+
+---
+
+## 8. Image Findings Integration (S2-DAR-2)
+
+Per **idea §3**:
+For visibly assessable conditions (e.g. eczema, hives, rashes), optional photos are analyzed into canonical visual symptoms via Nisarg's `ImageAnalyzer` (S1-NIS-4). Visual findings join the assessment state seamlessly:
+
+- **`merge_image_findings(assessment_id, findings)`**: Ingests an `ImageAnalysis` or list of `ExtractedSymptom` records.
+  - Clear analyses map to recognized visual symptoms with `Severity.UNKNOWN` and provenance `SymptomSource.IMAGE_FINDING`.
+  - Unclear photos (`ImageLabel.UNCLEAR`) are gracefully ignored, and the assessment continues with text symptoms only.
+  - Image findings are deduplicated with pre-existing text symptoms; confirmed symptoms retain their confirmed status and specific severity.
+- **`process_image(assessment_id, image_bytes)`**: Ingests validated, sanitized in-memory image bytes, executes the configured `ImageAnalyzer`, and merges visual findings into the assessment session. Analyzer errors (`ImageAnalysisError`) are caught gracefully to carry on with text without interrupting the assessment.
+- **Safety**: Photos are analyzed in memory only (never written to disk or logged). Triage risk is always computed deterministically from combined confirmed symptoms (AI_RULES.md §2).
+
+---
+
+## 9. Clinical Profile Context (S2-DAR-3)
+
+Per **FR-02** and **idea §10**:
+Users with registered accounts may optionally supply coarse demographic and chronic health details to provide clinical context for assessments without building an invasive medical dossier.
+
+- **`ProfileContext`**: Data model capturing optional coarse `AgeBand` (`child`, `teen`, `young_adult`, `adult`, `senior`), `BiologicalSex` (`female`, `male`, `other`, `prefer_not_to_say`), and self-reported `chronic_conditions` (e.g. Asthma, Diabetes).
+- **Session Integration**: `AssessmentSession` and `AssessmentContext` support storing optional profile context attached at session initialization (`create_assessment()`), updated mid-assessment (`set_profile_context()`), or inspected (`get_profile_context()`).
+- **Analysis Integration**: `generate_result(assessment_id, profile=...)` accepts optional profile context to contextualize clinical triage and passes it forward into downstream analysis.
+- **Privacy Compliance**: Profile collection is strictly optional, minimal, and fully compliant with data minimization under the DPDP Act 2023.
+
+---
+
+## 10. Idempotent Message Processing & Transactions (S2-DAR-4)
+
+Per **NFR-05** (Resilience) and `docs/database.md`:
+Network retries and rapid client resubmissions must never create duplicate answers, corrupt conversation ordering, or advance lifecycle states multiple times.
+
+- **Idempotency Deduplication**:
+  - **Explicit Key (`idempotency_key` / `client_message_id`)**: `process_message()` checks the session's idempotency cache. If a turn with the matching key was already completed, it returns the cached `ProcessResult` immediately without invoking AI extraction or appending duplicate messages.
+  - **Turn/Content-based Retry Detection**: If no explicit key is provided, the orchestrator inspects the last completed dialogue turn. If the incoming message text matches the immediately preceding user message, it treats the request as a retry and returns the existing response.
+- **Concurrency Safety**:
+  - Per-session asynchronous locking (`async with session.lock`) prevents race conditions between rapid concurrent submissions, ensuring only one intake pipeline runs at a time and any concurrent duplicates wait to receive the cached result.
+- **Transactional Integrity**:
+  - **In-Memory**: A complete state snapshot is captured before intake begins. Any unexpected processing failure automatically rolls back messages, symptoms, and state machine context to the snapshot.
+  - **Database Persistence**: When an active SQLAlchemy `db_session` is supplied, user messages, symptoms, assistant replies, and assessment state updates are executed inside a savepoint transaction (`db_session.begin_nested()`). Failures trigger a clean rollback.
+- **Cache Management**:
+  - `get_idempotent_result(assessment_id, key)`: Inspects cached results.
+  - `clear_idempotency_cache(assessment_id)`: Flushes cached keys (automatically invoked during `restart_assessment()`).
+
+---
+
+## 11. Running Unit Tests
 
 From `server/`:
 

@@ -1,0 +1,7 @@
+# Training dependencies for condition model v2 (ml/prediction/). Never installed in the server image.
+# Owner: Nisarg (prediction) · Task: S2-NIS-3 · Requirements: FR-05, NFR-07
+numpy>=2.0,<3
+scikit-learn>=1.6,<2
+skl2onnx>=1.18,<2
+onnx>=1.17,<2
+onnxruntime>=1.20,<2

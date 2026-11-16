@@ -24,6 +24,8 @@ class Condition(SchemaBase):
         icd10_code: Standard ICD-10 clinical coding classification, if available.
         specialty: Recommended medical specialty for clinical evaluation.
         description: Brief informational summary of the condition.
+        why: Plain-language contributing factors, e.g. "Because you reported
+            fever and joint pain." (FR-24, S2-NIS-2).
     """
 
     name: str = Field(..., min_length=1, max_length=256, description="Condition name")
@@ -46,6 +48,11 @@ class Condition(SchemaBase):
         default=None,
         max_length=1000,
         description="Overview",
+    )
+    why: str | None = Field(
+        default=None,
+        max_length=500,
+        description="Plain-language contributing factors (FR-24)",
     )
 
     @field_validator("name")

@@ -137,7 +137,7 @@ echo <read:packages PAT> | docker login ghcr.io -u NT1906 --password-stdin   # o
 
 **Domain:** point an A record (e.g. `api.yourdomain.com`) at the VPS IP. With no domain, use `<ip-with-dashes>.sslip.io` (e.g. `203-0-113-7.sslip.io`), which Let's Encrypt accepts. Put it in `.env` as `API_DOMAIN`.
 
-**Database:** keep Neon (`DATABASE_URL` → Neon), or self-host: set `POSTGRES_PASSWORD`, point `DATABASE_URL` at `postgresql+psycopg://symptom_checker:<pw>@db:5432/symptom_checker`, and run `docker compose -f docker-compose.prod.yml --profile local-db up -d db` once. Self-hosted DB means **you** own backups (task S3-HAR-2).
+**Database:** keep Neon (`DATABASE_URL` → Neon), or self-host: set `POSTGRES_PASSWORD`, point `DATABASE_URL` at `postgresql+psycopg://symptom_checker:<pw>@db:5432/symptom_checker`, and run `docker compose -f docker-compose.prod.yml --profile local-db up -d db` once. Self-hosted DB means **you** own backups (task S2-HAR-6).
 
 ### 4.2 Connect CD
 
@@ -182,4 +182,4 @@ One VPS can host both environments: use two folders (`/opt/symptom-checker-stagi
 - `docker compose -f docker-compose.prod.yml ps` / `logs -f api`: status and logs
 - Security updates: `unattended-upgrades` enabled; reboot monthly
 - Disk: `docker system df`; `deploy.sh` prunes old images after each successful deploy
-- Monitoring: UptimeRobot on `https://<API_DOMAIN>/api/v1/health` (task S3-RUT-1)
+- Monitoring: UptimeRobot on `https://<API_DOMAIN>/api/v1/health` (task S2-RUT-5)
