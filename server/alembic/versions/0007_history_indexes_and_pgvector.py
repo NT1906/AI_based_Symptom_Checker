@@ -6,7 +6,7 @@ Revises: 0006_audit_log
 """
 
 import sqlalchemy as sa
-from alembic import context, op
+from alembic import op
 from pgvector.sqlalchemy import Vector
 
 revision: str = "0007_history_indexes_and_pgvector"
@@ -18,34 +18,8 @@ depends_on: str | None = None
 def upgrade() -> None:
     """Create vector extension, symptom_embeddings table, and history indexes."""
     bind = op.get_bind()
-    has_vector = False
-    if context.is_offline_mode():
+    if bind is None or bind.dialect.name == "postgresql":
         op.execute("CREATE EXTENSION IF NOT EXISTS vector;")
-        has_vector = True
-    elif bind is not None and bind.dialect.name == "postgresql":
-        try:
-            ext_exists = bind.execute(
-                sa.text("SELECT 1 FROM pg_extension WHERE extname = 'vector'")
-            ).scalar()
-            if ext_exists:
-                has_vector = True
-            else:
-                avail = bind.execute(
-                    sa.text(
-                        "SELECT 1 FROM pg_available_extensions WHERE name = 'vector'"
-                    )
-                ).scalar()
-                if avail:
-                    op.execute("CREATE EXTENSION IF NOT EXISTS vector;")
-                    has_vector = True
-        except Exception:
-            has_vector = False
-
-    embedding_type = (
-        Vector(384)
-        if (has_vector or (bind is not None and bind.dialect.name != "postgresql"))
-        else sa.ARRAY(sa.Float)
-    )
 
     op.create_table(
         "symptom_embeddings",
@@ -58,7 +32,7 @@ def upgrade() -> None:
         sa.Column("symptom_id", sa.String(length=64), nullable=False),
         sa.Column("phrase", sa.String(length=256), nullable=False),
         sa.Column("model_revision", sa.String(length=64), nullable=False),
-        sa.Column("embedding", embedding_type, nullable=False),
+        sa.Column("embedding", Vector(384), nullable=False),
         sa.Column(
             "created_at",
             sa.DateTime(timezone=True),
