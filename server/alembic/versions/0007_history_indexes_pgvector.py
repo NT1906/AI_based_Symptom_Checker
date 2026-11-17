@@ -1,7 +1,7 @@
 """Add symptom_embeddings table with pgvector and history query composite index.
 
 Owner: Nishith (Database) · Task: S2-NIT-4 · Requirements: NFR-01, FR-02, FR-03, FR-18, DR-02
-Revision ID: 0007_history_indexes_and_pgvector
+Revision ID: 0007_history_indexes_pgvector
 Revises: 0006_audit_log
 """
 
@@ -9,7 +9,7 @@ import sqlalchemy as sa
 from alembic import op
 from pgvector.sqlalchemy import Vector
 
-revision: str = "0007_history_indexes_and_pgvector"
+revision: str = "0007_history_indexes_pgvector"
 down_revision: str | None = "0006_audit_log"
 branch_labels: str | None = None
 depends_on: str | None = None

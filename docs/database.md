@@ -3,7 +3,7 @@
 Owner: Harsh, Dimple, Kavya, Nishith · Tasks: S0-HAR-1, S1-DIM-4, S1-KAV-4, S1-NIT-4, S2-KAV-3, S2-NIT-3, S2-NIT-4 · Issues: #9, #38, #37, #36, #161, #159, #160 · Requirements: FR-01, FR-02, FR-03, FR-17, FR-18, NFR-01, NFR-10, DR-02, idea § 10
 
 This change supplies PostgreSQL-oriented SQLAlchemy 2 models, session factories,
-Alembic migrations (revisions `0001_database_foundation` through `0007_history_indexes_and_pgvector`),
+Alembic migrations (revisions `0001_database_foundation` through `0007_history_indexes_pgvector`),
 repositories, fictional seed data, and isolated unit tests.
 
 ## Current status and team handoff
@@ -283,7 +283,7 @@ erDiagram
 
 Owner: Nishith · Task: S2-NIT-4 · Issue: #160 · Requirements: NFR-01, FR-02, FR-03, FR-18, DR-02
 
-Revision `0007_history_indexes_and_pgvector` delivers two major database tier capabilities:
+Revision `0007_history_indexes_pgvector` delivers two major database tier capabilities:
 
 ### 1. History Query Indexing (FR-02, NFR-01)
 - Adds composite covering index `ix_assessments_user_id_state_created_at` on `(user_id, state, created_at)`.
