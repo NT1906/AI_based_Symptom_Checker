@@ -100,7 +100,27 @@ Password hashes are opaque and nullable. Auth must reject password login for a
 NULL hash; seed accounts deliberately have no login credential. Hashing and
 validation belong to the auth module. Never store plaintext passwords.
 
-No image column, doctor directory, profile fields, prediction scores, or medical
+## History queries, pagination, and ownership filters (S2-KAV-4, FR-02)
+
+Per FR-02, authenticated users can review their assessment history with efficient,
+paginated querying and strict data ownership isolation:
+- **Covering Index Optimization:** Queries on `user_id` ordered by `created_at` DESC
+  are covered by the composite index `ix_assessments_user_id_created_at`.
+- **Query-Level IDOR Protection:** Ownership filters operate directly in SQL
+  `WHERE` clauses (`WHERE assessments.id = :id AND assessments.user_id = :user_id`),
+  ensuring cross-user assessment records are never leaked or loaded into memory.
+- **Unified Ownership Resolver:** `get_assessment_by_ownership` verifies access for
+  either registered accounts or unclaimed guest sessions.
+- **Rich Filtering & Lookahead:** `query_assessment_history` provides filtering by
+  single or multiple states, timestamp bounds (`created_after`, `created_before`),
+  configurable ordering direction, and optional relation eager loading (`selectinload`
+  for messages, symptoms, and consent) to eliminate N+1 queries.
+- **Accurate Pagination:** `count_assessments_by_user` enables exact page calculations
+  matching active state and date filters.
+- **Safe Account Erasure:** `delete_assessment_for_user` and `delete_assessments_for_user`
+  enforce strict user boundaries during individual or bulk data deletion (DR-06).
+
+No image column, doctor directory, prediction scores, or medical
 recommendations are introduced. Structured symptom JSONB is S1-HAR-2.
 
 ## Windows local setup (existing Docker database)

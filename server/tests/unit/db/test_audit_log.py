@@ -14,10 +14,14 @@ Responsibilities:
 Owner: Nishith (Database) · Task: S2-NIT-3 · Requirements: NFR-10, DR-06
 """
 
+from uuid import UUID
+
 import pytest
 from sqlalchemy import Engine
+from sqlalchemy.orm import Session
 
 from app.db.session import create_session_factory
+from app.models.assessment import Assessment
 from app.models.consent import Consent
 from app.models.user import User
 from app.repositories.assessment_repository import create_assessment
@@ -32,7 +36,7 @@ from app.repositories.audit_log_repository import (
 from app.repositories.guest_session_repository import create_guest_session
 
 
-def _create_user(session, email: str = "audit-user@example.invalid") -> User:
+def _create_user(session: Session, email: str = "audit-user@example.invalid") -> User:
     """Helper to persist a registered user account."""
     user = User(email=email, password_hash=None)
     session.add(user)
@@ -40,7 +44,9 @@ def _create_user(session, email: str = "audit-user@example.invalid") -> User:
     return user
 
 
-def _create_assessment_record(session, user_id=None):
+def _create_assessment_record(
+    session: Session, user_id: UUID | None = None
+) -> Assessment:
     """Helper to persist an assessment with required consent."""
     consent = Consent(policy_version="test-consent-v1.0")
     session.add(consent)
