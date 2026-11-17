@@ -23,7 +23,6 @@ from sqlalchemy.orm import Session
 from app.db.session import create_session_factory
 from app.models.assessment import Assessment
 from app.models.consent import Consent
-from app.models.guest_session import GuestSession
 from app.models.message import Message
 from app.models.symptom import Symptom
 from app.models.user import User
