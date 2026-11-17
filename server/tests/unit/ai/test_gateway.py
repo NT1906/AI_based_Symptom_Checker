@@ -4,6 +4,7 @@ Owner: Nishith · Tasks: S1-NIT-3, S2-NIT-5
 Requirements: FR-04, FR-19, FR-20, NFR-05, NFR-08
 """
 
+from collections.abc import Iterator
 from pathlib import Path
 
 import pytest
@@ -16,6 +17,20 @@ from app.services.ai.gemini_provider import GeminiProvider
 from app.services.ai.mock_provider import MockAiProvider
 from app.services.ai.openai_provider import OpenAiProvider
 from app.services.privacy.gateway import PrivacyAiGateway
+
+
+@pytest.fixture(autouse=True)
+def _reset_caches() -> Iterator[None]:
+    """Clear settings and gateway caches before and after every test.
+
+    Runs teardown after monkeypatch restores os.environ so mutated AI_PROVIDER
+    values never leak into downstream test modules.
+    """
+    get_settings.cache_clear()
+    get_ai_gateway.cache_clear()
+    yield
+    get_settings.cache_clear()
+    get_ai_gateway.cache_clear()
 
 
 def test_mock_provider_implements_ai_gateway_protocol() -> None:

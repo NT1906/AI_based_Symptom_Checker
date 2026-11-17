@@ -251,14 +251,14 @@ async def test_fallback_gateway_cancels_hanging_primary_and_succeeds_via_fallbac
         target_symptom="chest_pain",
         missing_field=MissingFieldEnum.ONSET,
     )
-    # Primary hangs 5s, total budget is 0.4s (primary slice 0.2s, fallback gets 0.2s)
+    # Primary hangs 5s, total budget is 0.6s (primary slice 0.24s, fallback gets ~0.36s)
     primary = _StubGateway(clarify_delay=5.0)
     fallback = _StubGateway(clarify_result=fallback_res, clarify_delay=0.01)
     gateway = FallbackAiGateway(
         primary,
         fallback,
-        latency_budget_seconds=0.4,
-        primary_budget_ratio=0.5,
+        latency_budget_seconds=0.6,
+        primary_budget_ratio=0.4,
         min_fallback_seconds=0.05,
     )
 
@@ -274,14 +274,14 @@ async def test_fallback_gateway_cancels_hanging_primary_and_succeeds_via_fallbac
 @pytest.mark.asyncio
 async def test_fallback_gateway_skips_fallback_when_budget_insufficient() -> None:
     """Skip fallback and fail fast if remaining budget is below minimum threshold."""
-    primary = _StubGateway(extract_delay=0.18, extract_error=AiError("late failure"))
+    primary = _StubGateway(extract_delay=0.15, extract_error=AiError("late failure"))
     fallback = _StubGateway()
     gateway = FallbackAiGateway(
         primary,
         fallback,
-        latency_budget_seconds=0.2,
-        primary_budget_ratio=0.95,
-        min_fallback_seconds=0.1,
+        latency_budget_seconds=0.25,
+        primary_budget_ratio=0.8,
+        min_fallback_seconds=0.15,
     )
 
     with pytest.raises(AiTimeoutError, match="fallback skipped"):
