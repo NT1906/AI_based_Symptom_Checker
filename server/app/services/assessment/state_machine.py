@@ -383,7 +383,6 @@ class AssessmentStateMachine:
                     current_state=self._current_state.value,
                     target_state=target_state.value,
                     guard=guard_name,
-                    reason=reason_msg,
                 )
                 raise StateGuardViolationError(
                     current_state=self._current_state,
