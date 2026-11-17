@@ -121,12 +121,11 @@ export function DoctorReferral({
           </div>
 
           <p className="text-xs text-slate-600 sm:text-sm leading-relaxed dark:text-slate-400">
-            Based on your reported symptoms and assessment patterns, clinical guidance
-            recommends consulting a{" "}
+            Based on what you reported, you may want to see a{" "}
             <strong className="font-semibold text-teal-700 dark:text-teal-400">
               {effectiveSpecialty}
-            </strong>{" "}
-            for comprehensive evaluation.
+            </strong>
+            . This is a suggestion, not a diagnosis.
           </p>
 
           {/* Secondary specialties, if available */}
