@@ -6,8 +6,10 @@ Responsibilities:
     - Export AssessmentOrchestrator for message processing and AI coordination.
     - Export domain exceptions for state transitions and guard validation.
     - Export constants governing assessment progression rules.
+    - Export RESULT_DEADLINE_SECONDS (5.0 s) for NFR-01 / S2-DAR-8 performance SLA.
 
-Owner: Darshil (assessment) · Task: S1-DAR-2 · Requirements: FR-03, FR-17
+Owner: Darshil (assessment) · Task: S1-DAR-2, S2-DAR-8
+Requirements: FR-03, FR-17, NFR-01
 """
 
 from app.services.assessment.exceptions import (
@@ -17,6 +19,7 @@ from app.services.assessment.exceptions import (
     StateGuardViolationError,
 )
 from app.services.assessment.orchestrator import (
+    RESULT_DEADLINE_SECONDS,
     AssessmentOrchestrator,
     AssessmentSession,
     merge_symptoms,
@@ -35,6 +38,7 @@ from app.services.assessment.state_machine import (
 
 __all__ = [
     "MAX_CLARIFICATION_TURNS",
+    "RESULT_DEADLINE_SECONDS",
     "AssessmentAccessDeniedError",
     "AssessmentContext",
     "AssessmentOrchestrator",
