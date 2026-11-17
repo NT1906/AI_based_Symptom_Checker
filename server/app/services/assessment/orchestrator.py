@@ -13,6 +13,8 @@ Responsibilities:
     - Guard assessment ownership and block cross-user access (NFR-03, S2-DAR-6).
     - Enforce strict input validation, length limits, and null byte
       rejection (NFR-03, S2-DAR-7).
+    - Enforce p95 result latency ≤ 5 s budget for generate_result() (NFR-01,
+      S2-DAR-8): emit result_generated log with elapsed_ms; warn on overrun.
     - Provide restart_assessment() to cleanly reset an assessment session (FR-25).
     - Claim anonymous guest assessments into registered accounts (idea §10).
     - Step back to chat from CONFIRMING or READY for conversational edits.
@@ -21,11 +23,12 @@ Responsibilities:
     - Run real analysis in generate_result() via condition predictor, risk engine,
       and result composer with safety-wording validation (FR-05, FR-06, FR-07, DR-05).
 
-Owner: Darshil (assessment) · Task: S2-DAR-6, S2-DAR-7
-Requirements: NFR-03, NFR-05, FR-02
+Owner: Darshil (assessment) · Task: S2-DAR-6, S2-DAR-7, S2-DAR-8
+Requirements: NFR-01, NFR-03, NFR-05, FR-02
 """
 
 import asyncio
+import time
 from collections.abc import Sequence
 from dataclasses import dataclass, field
 from datetime import UTC, datetime
@@ -87,6 +90,11 @@ from app.services.assessment.state_machine import (
 )
 
 logger = get_logger(__name__)
+
+# NFR-01 / S2-DAR-8: p95 result latency SLA.  generate_result() must complete
+# within this budget on staging.  Exceeding it emits a WARNING so it appears
+# in the structured log and can be caught by alerts.
+RESULT_DEADLINE_SECONDS: float = 5.0
 
 
 def merge_symptoms(
@@ -2412,6 +2420,8 @@ class AssessmentOrchestrator:
         sm = session.state_machine
         sm.start_analysis()
 
+        _t0 = time.monotonic()
+
         reported = [
             ReportedSymptom(id=s.name, severity=s.severity) for s in session.symptoms
         ]
@@ -2435,6 +2445,23 @@ class AssessmentOrchestrator:
             sm.transition_to_error(reason="Safety wording check failed.")
             session.updated_at = datetime.now(UTC)
             raise
+
+        _elapsed = time.monotonic() - _t0
+        _elapsed_ms = round(_elapsed * 1000)
+        if _elapsed > RESULT_DEADLINE_SECONDS:
+            logger.warning(
+                "result_latency_budget_exceeded",
+                assessment_id=str(assessment_id),
+                elapsed_ms=_elapsed_ms,
+                budget_ms=int(RESULT_DEADLINE_SECONDS * 1000),
+            )
+        else:
+            logger.info(
+                "result_generated",
+                assessment_id=str(assessment_id),
+                elapsed_ms=_elapsed_ms,
+                budget_ms=int(RESULT_DEADLINE_SECONDS * 1000),
+            )
 
         sm.complete_analysis()
         session.updated_at = datetime.now(UTC)

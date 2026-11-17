@@ -1,6 +1,6 @@
 # Assessment Service Module
 
-**Owner:** Darshil (Assessment Orchestration) · **Task:** S1-DAR-2, S1-DAR-3, S1-DAR-4, S2-DAR-1, S2-DAR-2, S2-DAR-3, S2-DAR-4, S2-DAR-6 · **Requirements:** idea §3, idea §10, FR-02, FR-03, FR-04, FR-05, FR-06, FR-07, FR-16, FR-17, FR-19, FR-20, FR-21, FR-25, DR-05, NFR-03, NFR-05
+**Owner:** Darshil (Assessment Orchestration) · **Task:** S1-DAR-2, S1-DAR-3, S1-DAR-4, S2-DAR-1, S2-DAR-2, S2-DAR-3, S2-DAR-4, S2-DAR-6, S2-DAR-7, S2-DAR-8 · **Requirements:** idea §3, idea §10, FR-02, FR-03, FR-04, FR-05, FR-06, FR-07, FR-16, FR-17, FR-19, FR-20, FR-21, FR-25, DR-05, NFR-01, NFR-03, NFR-05
 
 The Assessment Service orchestrates the conversational symptom assessment lifecycle. It provides:
 1. **Assessment State Machine**: Strictly governs valid states and enforces medical-safety guards throughout the user experience.
@@ -10,6 +10,7 @@ The Assessment Service orchestrates the conversational symptom assessment lifecy
 5. **Symptom Confirmation, Editing & Session Restart**: Enables user review and modification (add, remove, edit severity/duration, bulk update) of recognized symptoms before analysis (`confirm_symptoms()`, `update_symptoms()`), stepping back to chat (`step_back_to_chat()`), and cleanly starting over (`restart_assessment()`) per FR-16, FR-21, and FR-25.
 6. **Guest Assessment Claiming**: Allows anonymous guests to transfer assessment history into a registered user account upon sign-up (`claim_assessment()`, `claim_guest_session()`) per idea §10.
 7. **Idempotent Message Processing & Transactions**: Eliminates double answers on client retry, handles rapid concurrent submissions via per-session async locks, and enforces atomic transactions across database and in-memory session changes (NFR-05).
+8. **Performance SLA & Result Latency Budget**: Guarantees that `generate_result()` computes triage classification within `RESULT_DEADLINE_SECONDS = 5.0` s (p95 latency ≤ 5 s on staging per NFR-01). Structured logs emit elapsed time on completion and warn on budget overruns.
 
 ---
 
@@ -214,7 +215,20 @@ Every assessment resource is strictly scoped to its owner. Cross-user access is 
 
 ---
 
-## 12. Running Unit Tests
+## 12. Performance SLA & Latency Budget (S2-DAR-8)
+
+Per **NFR-01** (Performance & Responsiveness), the clinical assessment result generation pipeline must guarantee p95 latency ≤ 5 seconds on staging:
+
+- **Latency Budget**: `RESULT_DEADLINE_SECONDS = 5.0` s defined and exported from the package.
+- **Timing Instrumentation**: `generate_result()` captures wall-clock monotonic timing `_t0 = time.monotonic()` around condition prediction, risk calculation, and result composition.
+- **Structured Telemetry**:
+  - Normal execution: `logger.info("result_generated", assessment_id=..., elapsed_ms=..., budget_ms=5000)`.
+  - Overrun warning: If execution exceeds 5.0 s, `logger.warning("result_latency_budget_exceeded", assessment_id=..., elapsed_ms=..., budget_ms=5000)` alerts the system for latency regressions.
+- **Benchmarks & Unit Tests**: Verified via `tests/unit/assessment/test_performance_p95.py` across single symptoms, multi-symptom loads (10 symptoms), maximum batch loads (50 symptoms), and 20-sample p95 quantile estimates completing within budget.
+
+---
+
+## 13. Running Unit Tests
 
 From `server/`:
 
