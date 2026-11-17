@@ -127,3 +127,56 @@ rejected. Disclaimer presence and risk decisions are not validated.
 
 Tests (from server/):
     python -m pytest tests/unit/privacy/test_safety_guard.py -q
+
+## Scheduled guest purge (#175)
+
+`run_guest_purge(session_factory, purge_expired_guests, now=...)` runs one
+transaction, commits on success, and rolls back on callback/count/commit failure.
+The callback contract is `(Session, aware_utc_datetime) -> int`. Only a
+non-negative integer is accepted. Retries use a new transaction and timestamp.
+The callback must be synchronous and must not commit independently.
+
+`python -m app.services.privacy.guest_purge_job --help` shows the one-shot
+entry point. Its required `--purge` argument is a trusted
+`app.repositories.<module>:<public_function>` chosen by the deployment owner
+after #163 merges. There is deliberately no guessed default or no-op fallback.
+An unavailable callback exits 1 before opening the database. It uses existing
+`get_settings()` configuration, closes the engine, and logs only the committed
+aggregate count or exception class. Invalid usage exits 2.
+
+### Database handoff to #163
+
+Dimple's callback owns expiry filtering, deletion ordering, claim-vs-purge
+concurrency and idempotency. It must preserve claimed/registered history and
+remove the expired unclaimed guest's messages, symptoms and assessments in the
+same transaction. Audit/consent retention must follow the agreed policy.
+Database tests must prove this behaviour with real foreign keys and concurrent
+claims before deployment. The runner tests use fictional callbacks and do not
+prove that stored guest data is deleted.
+
+### Scheduler handoff
+
+Rutva/Nisarg should configure a single external scheduled process using the
+same image revision, secrets and database as the API, with `server/` as cwd.
+Run the command above with `--purge` set to the confirmed #163 callback.
+No extra scheduler package, API-startup loop or environment setting is added.
+Do not run one scheduler per API worker or enable overlapping invocations.
+
+Suggested interval is 15 minutes, with failure alerts and retry on the next
+scheduled run. The actual data lifetime is the configured guest TTL plus up
+to one scheduling interval, job runtime and any outage. Agree this grace period
+with the privacy owner before promising deletion within exactly 24 hours.
+Deployment owner must set a runtime limit appropriate to the reviewed batch
+size and preserve rollback on termination. Database-level race handling remains
+the #163 callback's responsibility.
+
+### Acceptance evidence still required
+
+- Install the real #163 callback and confirm its callable path.
+- Configure and observe the actual scheduler on staging.
+- Expire synthetic guest data, verify child-row deletion, retained claimed
+  history, safe retry and failure alerting. Record deployed SHA and counts only.
+
+Until these steps pass, #175 is integration-pending and must stay open.
+Run unit checks with
+`python -m pytest tests/unit/privacy/test_guest_purge*.py -q`.

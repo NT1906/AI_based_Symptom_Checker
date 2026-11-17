@@ -15,6 +15,10 @@ Responsibilities:
       rejection (NFR-03, S2-DAR-7).
     - Enforce p95 result latency ≤ 5 s budget for generate_result() (NFR-01,
       S2-DAR-8): emit result_generated log with elapsed_ms; warn on overrun.
+    - Map extracted symptom names to canonical IDs via SymptomResolver before
+      passing to predictor and risk engine (DR-02, FR-03, FR-06, S2-DAR-9).
+    - Keep unresolved symptom names in session for user confirmation while
+      excluding them from risk engine and predictor inputs, logging name length only.
     - Provide restart_assessment() to cleanly reset an assessment session (FR-25).
     - Claim anonymous guest assessments into registered accounts (idea §10).
     - Step back to chat from CONFIRMING or READY for conversational edits.
@@ -23,8 +27,8 @@ Responsibilities:
     - Run real analysis in generate_result() via condition predictor, risk engine,
       and result composer with safety-wording validation (FR-05, FR-06, FR-07, DR-05).
 
-Owner: Darshil (assessment) · Task: S2-DAR-6, S2-DAR-7, S2-DAR-8
-Requirements: NFR-01, NFR-03, NFR-05, FR-02
+Owner: Darshil (assessment) · Task: S2-DAR-6, S2-DAR-7, S2-DAR-8, S2-DAR-9
+Requirements: NFR-01, NFR-03, NFR-05, FR-02, DR-02, FR-03, FR-06
 """
 
 import asyncio
@@ -79,6 +83,7 @@ from app.services.privacy.safety_guard import (
     UnsafeWordingError,
     assert_safe_wording,
 )
+from app.services.retrieval import SymptomResolver
 from app.services.assessment.exceptions import (
     AssessmentAccessDeniedError,
     AssessmentServiceError,
@@ -229,6 +234,7 @@ class AssessmentOrchestrator:
         result_composer: ResultComposer | None = None,
         condition_model: ConditionModel | None = None,
         image_analyzer: ImageAnalyzer | None = None,
+        resolver: SymptomResolver | None = None,
     ) -> None:
         """Initialize the AssessmentOrchestrator.
 
@@ -242,6 +248,8 @@ class AssessmentOrchestrator:
                 Defaults to BaselineConditionModel.
             image_analyzer: Optional provider conforming to ImageAnalyzer protocol.
                 Defaults to mock image analyzer.
+            resolver: Optional resolver conforming to SymptomResolver.
+                Defaults to SymptomResolver with exact knowledge vocabulary.
         """
         self._ai_gateway = ai_gateway or get_ai_gateway()
         self._result_composer = result_composer or ResultComposer(
@@ -251,7 +259,13 @@ class AssessmentOrchestrator:
             condition_model or BaselineConditionModel()
         )
         self._image_analyzer = image_analyzer or build_image_analyzer("mock")
+        self._resolver = resolver or SymptomResolver()
         self._sessions: dict[UUID, AssessmentSession] = {}
+
+    @property
+    def resolver(self) -> SymptomResolver:
+        """Return the symptom resolver used for canonical ID mapping."""
+        return self._resolver
 
     def create_assessment(
         self,
@@ -1095,12 +1109,23 @@ class AssessmentOrchestrator:
                     )
                     return result
 
-                # Step 3: Merge newly extracted symptoms into assessment state
+                # Step 3: Resolve extracted symptom names and merge into state
+                resolved_extracted: list[ExtractedSymptom] = []
+                for ext in extraction.symptoms:
+                    resolved = self._resolver.resolve(ext.name)
+                    if resolved is not None:
+                        resolved_extracted.append(
+                            ext.model_copy(update={"name": resolved.symptom_id})
+                        )
+                    else:
+                        logger.info("symptom_unresolved", name_length=len(ext.name))
+                        resolved_extracted.append(ext)
+
                 merged_symptoms = merge_symptoms(
                     existing=[
                         Symptom.model_validate(s.model_dump()) for s in session.symptoms
                     ],
-                    extracted_symptoms=extraction.symptoms,
+                    extracted_symptoms=resolved_extracted,
                 )
                 session.symptoms = [
                     SymptomRead.model_validate(s.model_dump()) for s in merged_symptoms
@@ -2372,7 +2397,8 @@ class AssessmentOrchestrator:
         1. Transitions state machine from READY to ANALYZING.
         2. Incorporates optional user profile context (age band, chronic conditions)
            into the analysis pipeline (FR-02, S2-DAR-3).
-        3. Maps confirmed symptoms to ReportedSymptom domain representations.
+        3. Maps confirmed symptoms to canonical IDs via SymptomResolver (S2-DAR-9,
+           DR-02, FR-03, FR-06). Excludes unresolved symptoms from model inputs.
         4. Predicts ranked conditions via the configured condition model.
         5. Evaluates clinical risk level deterministically via the risk engine.
         6. Composes AssessmentResult with safety-wording guard validation.
@@ -2422,11 +2448,19 @@ class AssessmentOrchestrator:
 
         _t0 = time.monotonic()
 
-        reported = [
-            ReportedSymptom(id=s.name, severity=s.severity) for s in session.symptoms
-        ]
-        symptom_ids = [s.name for s in session.symptoms]
-        predictions = self._condition_model.predict(symptom_ids)
+        reported: list[ReportedSymptom] = []
+        symptom_ids: list[str] = []
+        for s in session.symptoms:
+            resolved = self._resolver.resolve(s.name)
+            if resolved is not None:
+                canonical_id = resolved.symptom_id
+                reported.append(ReportedSymptom(id=canonical_id, severity=s.severity))
+                symptom_ids.append(canonical_id)
+            else:
+                logger.info("symptom_unresolved", name_length=len(s.name))
+
+        deduped_symptom_ids = list(dict.fromkeys(symptom_ids))
+        predictions = self._condition_model.predict(deduped_symptom_ids)
         decision = assess_risk(reported, predictions)
 
         try:
@@ -2553,9 +2587,20 @@ class AssessmentOrchestrator:
         if not extracted:
             return session.symptoms
 
+        resolved_extracted: list[ExtractedSymptom] = []
+        for ext in extracted:
+            resolved = self._resolver.resolve(ext.name)
+            if resolved is not None:
+                resolved_extracted.append(
+                    ext.model_copy(update={"name": resolved.symptom_id})
+                )
+            else:
+                logger.info("symptom_unresolved", name_length=len(ext.name))
+                resolved_extracted.append(ext)
+
         merged = merge_symptoms(
             existing=[Symptom.model_validate(s.model_dump()) for s in session.symptoms],
-            extracted_symptoms=extracted,
+            extracted_symptoms=resolved_extracted,
             default_source=SymptomSource.IMAGE_FINDING,
         )
 

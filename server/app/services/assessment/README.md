@@ -1,6 +1,6 @@
 # Assessment Service Module
 
-**Owner:** Darshil (Assessment Orchestration) · **Task:** S1-DAR-2, S1-DAR-3, S1-DAR-4, S2-DAR-1, S2-DAR-2, S2-DAR-3, S2-DAR-4, S2-DAR-6, S2-DAR-7, S2-DAR-8 · **Requirements:** idea §3, idea §10, FR-02, FR-03, FR-04, FR-05, FR-06, FR-07, FR-16, FR-17, FR-19, FR-20, FR-21, FR-25, DR-05, NFR-01, NFR-03, NFR-05
+**Owner:** Darshil (Assessment Orchestration) · **Task:** S1-DAR-2, S1-DAR-3, S1-DAR-4, S2-DAR-1, S2-DAR-2, S2-DAR-3, S2-DAR-4, S2-DAR-6, S2-DAR-7, S2-DAR-8, S2-DAR-9 · **Requirements:** idea §3, idea §10, FR-02, FR-03, FR-04, FR-05, FR-06, FR-07, FR-16, FR-17, FR-19, FR-20, FR-21, FR-25, DR-02, DR-05, NFR-01, NFR-03, NFR-05
 
 The Assessment Service orchestrates the conversational symptom assessment lifecycle. It provides:
 1. **Assessment State Machine**: Strictly governs valid states and enforces medical-safety guards throughout the user experience.
@@ -11,6 +11,7 @@ The Assessment Service orchestrates the conversational symptom assessment lifecy
 6. **Guest Assessment Claiming**: Allows anonymous guests to transfer assessment history into a registered user account upon sign-up (`claim_assessment()`, `claim_guest_session()`) per idea §10.
 7. **Idempotent Message Processing & Transactions**: Eliminates double answers on client retry, handles rapid concurrent submissions via per-session async locks, and enforces atomic transactions across database and in-memory session changes (NFR-05).
 8. **Performance SLA & Result Latency Budget**: Guarantees that `generate_result()` computes triage classification within `RESULT_DEADLINE_SECONDS = 5.0` s (p95 latency ≤ 5 s on staging per NFR-01). Structured logs emit elapsed time on completion and warn on budget overruns.
+9. **Canonical Symptom ID Mapping (S2-DAR-9)**: Injects `SymptomResolver` to map free-text extracted symptom names (e.g. "Chest pain", "tummy ache", "seene me dard") to canonical symptom IDs (`chest_pain`, `abdominal_pain`) before reaching the condition predictor and deterministic risk engine (DR-02, FR-03, FR-06). Unresolved names remain in session for user confirmation but are safely excluded from risk evaluation.
 
 ---
 
@@ -228,7 +229,28 @@ Per **NFR-01** (Performance & Responsiveness), the clinical assessment result ge
 
 ---
 
-## 13. Running Unit Tests
+## 13. Canonical Symptom ID Mapping (S2-DAR-9)
+
+Per **DR-02**, **FR-03**, and **FR-06**, free-text symptom names extracted by the AI or visual findings must be mapped to canonical symptom IDs before reaching the condition predictor and the deterministic risk engine:
+
+- **The Safety Gap**: LLM extractors may return colloquial, capitalized, or hyphenated variants (e.g. `"Chest pain"` or `"chest-pain"` instead of canonical `"chest_pain"`). Unmapped names prevent deterministic red-flag rules from firing, creating a clinical safety risk.
+- **SymptomResolver Integration**: The orchestrator injects `SymptomResolver` (S2-NIS-7):
+  - Normalizes symptom names via exact dictionary lookup (display names, lay terms, transliterations).
+  - Matches approximate terms via pgvector semantic embeddings (`MatchMethod.SEMANTIC`).
+  - Degrades gracefully to exact-only if embedding or database components are unavailable.
+- **Intake & Execution Pipeline**:
+  - `process_message()`: Resolves extracted AI symptoms before merging into the assessment session.
+  - `merge_image_findings()`: Resolves visual finding symptom names to canonical IDs.
+  - `generate_result()`: Maps all confirmed symptoms to canonical IDs before evaluating condition predictions and risk engine red flags.
+- **Unresolved Symptom Policy**:
+  - Symptoms that do not match canonical vocabulary remain in `session.symptoms` so the patient still sees their reported symptoms on the confirmation screen.
+  - Unresolved symptoms are excluded from predictor and risk engine inputs to avoid misleading scoring.
+  - Unresolved symptoms emit a privacy-compliant telemetry log: `logger.info("symptom_unresolved", name_length=len(name))` (recording name length only, never the raw text).
+- **Test Coverage**: Verified in `tests/unit/assessment/test_canonical_symptom_mapping.py` covering exact matches, colloquial lay terms, Hindi phrases, semantic embeddings, and privacy logging.
+
+---
+
+## 14. Running Unit Tests
 
 From `server/`:
 
