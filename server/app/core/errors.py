@@ -26,6 +26,8 @@ from app.core.request_id import (
     generate_request_id,
 )
 
+from app.middleware.security_headers import SECURITY_HEADERS
+
 logger = get_logger(__name__)
 
 
@@ -329,7 +331,7 @@ async def unhandled_exception_handler(request: Request, exc: Exception) -> JSONR
         method=request.method,
         request_id=request_id,
     )
-    headers = {REQUEST_ID_HEADER: request_id}
+    headers = {**SECURITY_HEADERS, REQUEST_ID_HEADER: request_id}
     return JSONResponse(
         status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
         content=ErrorResponse(
