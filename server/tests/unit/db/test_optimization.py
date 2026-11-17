@@ -1,6 +1,6 @@
 """Unit tests for hot-query indexes, lifecycle, and realistic demo seed data.
 
-Owner: Dimple · Task: S1-DIM-4 · Requirements: NFR-01
+Owner: Dimple, Nishith · Tasks: S1-DIM-4, S2-NIT-4 · Requirements: NFR-01, FR-02
 """
 
 from pathlib import Path
@@ -47,6 +47,12 @@ def test_hot_query_indexes_present_in_schema(engine: Engine) -> None:
             "user_id",
             "created_at",
         )
+        assert "ix_assessments_user_id_state_created_at" in assessment_indexes
+        assert assessment_indexes["ix_assessments_user_id_state_created_at"] == (
+            "user_id",
+            "state",
+            "created_at",
+        )
 
         message_indexes = {
             ix["name"]: tuple(ix["column_names"])
@@ -61,6 +67,15 @@ def test_hot_query_indexes_present_in_schema(engine: Engine) -> None:
         }
         assert "ix_symptoms_assessment_id" in symptom_indexes
         assert symptom_indexes["ix_symptoms_assessment_id"] == ("assessment_id",)
+
+        embedding_indexes = {
+            ix["name"]: tuple(ix["column_names"])
+            for ix in inspector.get_indexes("symptom_embeddings")
+        }
+        assert "ix_symptom_embeddings_model_revision" in embedding_indexes
+        assert embedding_indexes["ix_symptom_embeddings_model_revision"] == (
+            "model_revision",
+        )
 
 
 def test_migration_0002_downgrade_and_upgrade(engine: Engine) -> None:
@@ -89,6 +104,30 @@ def test_migration_0002_downgrade_and_upgrade(engine: Engine) -> None:
         assert "ix_assessments_user_id" in reapplied_indexes
         assert "ix_assessments_created_at" in reapplied_indexes
         assert "ix_assessments_user_id_created_at" in reapplied_indexes
+
+
+def test_migration_0007_downgrade_and_upgrade(engine: Engine) -> None:
+    """Revision 0007 drops symptom_embeddings and history index cleanly."""
+    config = Config(str(SERVER / "alembic.ini"))
+    with engine.begin() as connection:
+        config.attributes["connection"] = connection
+        command.downgrade(config, "0006_audit_log")
+
+    with engine.connect() as connection:
+        inspector = inspect(connection)
+        assert "symptom_embeddings" not in inspector.get_table_names()
+        downgraded_indexes = {ix["name"] for ix in inspector.get_indexes("assessments")}
+        assert "ix_assessments_user_id_state_created_at" not in downgraded_indexes
+
+    with engine.begin() as connection:
+        config.attributes["connection"] = connection
+        command.upgrade(config, "head")
+
+    with engine.connect() as connection:
+        inspector = inspect(connection)
+        assert "symptom_embeddings" in inspector.get_table_names()
+        reapplied_indexes = {ix["name"] for ix in inspector.get_indexes("assessments")}
+        assert "ix_assessments_user_id_state_created_at" in reapplied_indexes
 
 
 def test_realistic_demo_seeding_happy_path(engine: Engine) -> None:
