@@ -1,6 +1,6 @@
 # API Contract: AI-Based Symptom Checker
 
-> **Owner:** Darshil (Assessment Orchestration & Schemas) · **Task:** S0-DAR-1 · **Status:** Sprint 0 Contract Baseline
+> **Owner:** Darshil (Assessment Orchestration & Schemas) · **Task:** S0-DAR-1, S2-DAR-6 · **Status:** Frozen (Sprint 2 Contract Freeze, Release Ready)
 
 This document defines the REST API contract for the AI-Based Symptom Checker backend. All client applications (React PWA), server routers, and mock providers must adhere to these specifications.
 
@@ -488,7 +488,65 @@ Content-Type: application/json
 }
 ```
 
-## Account assessment history (FR-02)
+---
+
+## 4. Security, Authorization & Ownership Boundaries (NFR-03)
+
+Every assessment resource is strictly scoped to its owner. Insecure Direct Object References (IDOR) and cross-user data leakage are systematically blocked at both the service and API layers.
+
+### 4.1 Ownership Rules & Invariants
+
+1. **Registered User Assessment (`userId != null`):**
+   - Must be accessed exclusively by the authenticated user matching `userId`.
+   - Access attempts by other registered users or unauthenticated callers return `403 Forbidden` (`ASSESSMENT_ACCESS_DENIED`).
+2. **Anonymous Guest Assessment (`userId == null`, `guestSessionId != null`):**
+   - Must be accessed exclusively with the corresponding `guestSessionId` token (`X-Guest-Session-ID` header or session cookie).
+   - Mismatched guest sessions return `403 Forbidden` (`GUEST_SESSION_MISMATCH`).
+   - A registered user attempting to access an unclaimed guest assessment without presenting the valid guest token is blocked until claimed.
+3. **Claiming Boundary (`POST /api/v1/assessments/{id}/claim`):**
+   - Transfers ownership of an unclaimed assessment from an anonymous guest session to the authenticated user.
+   - Once claimed, previous guest session tokens are revoked and can no longer read or modify the assessment.
+   - Double-claiming by a different user returns `409 Conflict` (`ALREADY_CLAIMED`).
+
+### 4.2 Error Responses for Authorization Failures
+
+#### Cross-User or Unauthenticated Access (`403 Forbidden`)
+```json
+{
+  "code": "ASSESSMENT_ACCESS_DENIED",
+  "message": "Access denied: you do not own this assessment.",
+  "details": {
+    "assessmentId": "b8a1c920-7f22-4b89-a212-3c8192a01d5e"
+  }
+}
+```
+
+#### Guest Session Mismatch (`403 Forbidden`)
+```json
+{
+  "code": "GUEST_SESSION_MISMATCH",
+  "message": "Access denied: guest session identifier does not match this assessment.",
+  "details": {
+    "assessmentId": "b8a1c920-7f22-4b89-a212-3c8192a01d5e"
+  }
+}
+```
+
+### 4.3 Structured Audit Logging
+All unauthorized access attempts trigger immediate security audit logs:
+```json
+{
+  "event": "unauthorized_access",
+  "assessment_id": "b8a1c920-7f22-4b89-a212-3c8192a01d5e",
+  "expected_user_id": "3fa85f64-5717-4562-b3fc-2c963f66afa6",
+  "provided_user_id": "7ca92f11-1234-4562-b3fc-9c841e22bda1",
+  "reason": "cross_user_access_attempt"
+}
+```
+
+---
+
+## 5. Account Assessment History (FR-02)
 
 `GET /api/v1/history` returns the authenticated account's assessment
 summaries in newest-first order. Pass `limit` (1–100, default 20) and `offset` (zero-based, default 0). The response is
@@ -502,3 +560,24 @@ owned assessment. Unknown, guest-owned and other users' assessments return
 
 The routes use the same session cookie or bearer authentication as
 `GET /api/v1/auth/me`.
+
+---
+
+## 6. Active Consent Policy (DR-08)
+
+`GET /api/v1/consents/current-policy` returns `{"policyVersion":"1.0.0"}`.
+An outdated or unknown policy version submitted to `POST /api/v1/consents`
+returns HTTP 409, code `CONSENT_REQUIRED`, and the active version in
+`details.policyVersion`. The response omits a consent ID and the server
+does not insert a row. A successful acceptance still returns HTTP 201
+with `consentId`.
+
+`POST /api/v1/assessments` returns the same 409 when the submitted
+consent ID does not exist or refers to an earlier policy. A new assessment
+requires a consent ID recorded for the active version. Historical consent
+remains available as acceptance evidence.
+
+The client compares stored consent with the active version before entering
+chat. A mismatch returns the user to the consent flow. During a rollout, an
+older client cannot submit acceptance for a notice it does not display.
+Deploy the updated notice and its version together.

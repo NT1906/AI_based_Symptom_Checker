@@ -10,8 +10,10 @@
  */
 
 import { useState } from "react";
+import { useQuery } from "@tanstack/react-query";
 import { Navigate, useNavigate } from "react-router-dom";
 import { ConsentStep } from "../components/consent/ConsentStep";
+import { getCurrentPolicyVersion } from "../services/consentApi";
 import { useConsentStore } from "../stores/consentStore";
 import { FeatureCardHover } from "../components/feature/FeatureCardHover";
 
@@ -37,18 +39,29 @@ const BODY_AREAS = ["Head & Neck", "Chest", "Abdomen", "Limbs & Joints", "Skin"]
  * Landing page shown to every new session.
  *
  * Flow: disclaimer accepted → consent modal → assessment chat.
- * If the user already has a consentId in the store, they skip straight to chat.
+ * A session with consent for the active policy can resume the chat.
  *
  * @returns The landing page element.
  */
 export default function LandingPage() {
   const navigate = useNavigate();
   const consentId = useConsentStore((s) => s.consentId);
+  const policyVersion = useConsentStore((s) => s.policyVersion);
+  const activePolicy = useQuery({
+    queryKey: ["current-consent-policy"],
+    queryFn: getCurrentPolicyVersion,
+    enabled: Boolean(consentId),
+  });
   const [step, setStep] = useState<LandingStep>("disclaimer");
 
   // Why: hooks must run in the same order on every render, so the redirect for an
   // already-consented session comes after them and uses <Navigate>, not navigate().
-  if (consentId) {
+  if (
+    consentId &&
+    activePolicy.isSuccess &&
+    !activePolicy.isFetching &&
+    policyVersion === activePolicy.data
+  ) {
     return <Navigate to="/chat" replace />;
   }
 

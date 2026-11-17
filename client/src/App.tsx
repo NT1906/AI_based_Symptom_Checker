@@ -2,6 +2,10 @@
  * @file Symptom checker application shell.
  * Owner: Rutva · Task: S0-RUT-1 · Requirements: NFR-08, NFR-09
  */
+import { useQuery } from "@tanstack/react-query";
+import { Navigate } from "react-router-dom";
+import { getCurrentPolicyVersion } from "./services/consentApi";
+import { useConsentStore } from "./stores/consentStore";
 import { useAssessmentStore } from "./stores/assessmentStore";
 
 /**
@@ -11,6 +15,23 @@ import { useAssessmentStore } from "./stores/assessmentStore";
  */
 function App() {
   const messages = useAssessmentStore((state) => state.messages);
+
+  const consentId = useConsentStore((state) => state.consentId);
+  const policyVersion = useConsentStore((state) => state.policyVersion);
+  const activePolicy = useQuery({
+    queryKey: ["current-consent-policy"],
+    queryFn: getCurrentPolicyVersion,
+    enabled: Boolean(consentId),
+  });
+  if (!consentId || activePolicy.isError) {
+    return <Navigate to="/" replace />;
+  }
+  if (activePolicy.isPending || activePolicy.isFetching) {
+    return <p role="status">Checking the privacy notice…</p>;
+  }
+  if (policyVersion !== activePolicy.data) {
+    return <Navigate to="/" replace />;
+  }
 
   return (
     <main className="mx-auto flex min-h-screen w-full max-w-4xl flex-col px-6 py-12">
