@@ -17,6 +17,7 @@ from pydantic import Field
 from app.api.deps import (
     AnalyzeResponse,
     AssessmentServiceDep,
+    AuditServiceDep,
     SendMessageResponse,
     SessionFactoryDep,
 )
@@ -319,18 +320,34 @@ async def update_symptoms(
 async def analyze_assessment(
     id: Annotated[UUID, Path(description="Unique assessment identifier")],
     service: AssessmentServiceDep,
+    audit_service: AuditServiceDep,
 ) -> AnalyzeResponse:
     """Trigger clinical triage analysis on confirmed symptoms.
 
     Args:
         id: Unique assessment identifier.
         service: Injected assessment domain service.
+        audit_service: Injected audit domain service (S2-VIV-4).
 
     Returns:
         AnalyzeResponse: Evaluation status indicating results are available.
     """
     logger.info("assessment_analysis_triggered", assessment_id=str(id))
-    return await service.analyze_assessment(id)
+    resp = await service.analyze_assessment(id)
+    try:
+        audit_service.record_analysis(
+            assessment_id=id,
+            risk_engine_version="2026.1",
+            condition_model_version="baseline_v1",
+        )
+    except Exception as exc:
+        logger.warning(
+            "audit_log_record_failed",
+            action="ANALYSIS",
+            assessment_id=str(id),
+            error=str(exc),
+        )
+    return resp
 
 
 @router.get(
@@ -346,18 +363,46 @@ async def analyze_assessment(
 async def get_assessment_result(
     id: Annotated[UUID, Path(description="Unique assessment identifier")],
     service: AssessmentServiceDep,
+    audit_service: AuditServiceDep,
 ) -> AssessmentResult:
     """Retrieve final evaluation result for a completed assessment.
 
     Args:
         id: Unique assessment identifier.
         service: Injected assessment domain service.
+        audit_service: Injected audit domain service (S2-VIV-4).
 
     Returns:
         AssessmentResult: Clinical triage result with mandatory disclaimer.
     """
     logger.info("assessment_result_fetch", assessment_id=str(id))
-    return await service.generate_result(id)
+    result = await service.generate_result(id)
+    try:
+        risk_level_str = (
+            result.risk_level.value
+            if hasattr(result.risk_level, "value")
+            else str(result.risk_level)
+        )
+        audit_service.record_recommendation(
+            assessment_id=id,
+            risk_level=risk_level_str,
+            risk_engine_version=result.model_version,
+            condition_model_version=result.model_version,
+            details={
+                "conditions_count": len(result.conditions),
+                "referral_required": (
+                    result.referral.required if result.referral else False
+                ),
+            },
+        )
+    except Exception as exc:
+        logger.warning(
+            "audit_log_record_failed",
+            action="RECOMMENDATION",
+            assessment_id=str(id),
+            error=str(exc),
+        )
+    return result
 
 
 @images_router.post(

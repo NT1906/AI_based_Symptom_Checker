@@ -46,6 +46,7 @@ from app.services.ai.gateway import AiGateway
 from app.services.auth.schemas import UserRead
 from app.services.auth.security import decode_access_token, validate_csrf_token
 from app.services.auth.service import AuthService
+from app.services.audit.service import AuditService
 from app.services.profile.service import ProfileService
 
 
@@ -437,6 +438,44 @@ def get_profile_service(session_factory: SessionFactoryDep) -> ProfileService:
 
 
 ProfileServiceDep = Annotated[ProfileService, Depends(get_profile_service)]
+
+
+def get_audit_service(
+    request: Request,
+    settings: SettingsDep,
+) -> AuditService:
+    """Provide audit domain service instance.
+
+    Uses overridden session_factory if present in dependency_overrides,
+    or falls back to application state session_factory when available.
+    In test environments without an explicit session_factory override,
+    defaults to in-memory mode to prevent connection timeouts.
+
+    Args:
+        request: Current HTTP request.
+        settings: Injected application settings.
+
+    Returns:
+        AuditService: Initialized audit domain service.
+    """
+    if get_session_factory in request.app.dependency_overrides:
+        override_factory = request.app.dependency_overrides[get_session_factory]()
+        if isinstance(override_factory, sessionmaker):
+            return AuditService(session_factory=override_factory)
+
+    if (
+        settings.app_env == "test"
+        and get_session_factory not in request.app.dependency_overrides
+    ):
+        return AuditService(session_factory=None)
+
+    factory = getattr(request.app.state, "session_factory", None)
+    if isinstance(factory, sessionmaker):
+        return AuditService(session_factory=factory)
+    return AuditService(session_factory=None)
+
+
+AuditServiceDep = Annotated[AuditService, Depends(get_audit_service)]
 
 
 async def verify_csrf_token(
