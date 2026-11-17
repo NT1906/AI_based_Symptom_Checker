@@ -21,8 +21,6 @@ export interface SymptomTooltipProps {
   children?: ReactNode;
   /** Optional custom definition string overriding glossary default. */
   customDefinition?: string;
-  /** Optional custom when-to-seek-care guidance. */
-  customWhenToSeekCare?: string;
   /** Optional CSS class name for container. */
   className?: string;
 }
@@ -30,8 +28,9 @@ export interface SymptomTooltipProps {
 /**
  * Accessible symptom definition tooltip component.
  *
- * Displays plain-language definitions and safe "when to seek care" guidance
- * from the curated symptom glossary (FR-18). Provides full keyboard navigation
+ * Displays a plain-language definition from the curated symptom glossary
+ * (FR-18). It gives no "when to seek care" advice: urgency comes only from the
+ * deterministic risk engine, so the two can never disagree (AI_RULES.md §2.4). Provides full keyboard navigation
  * (Enter/Space to toggle, Escape to dismiss, focus trap handling).
  *
  * @param props Symptom identifier, optional overrides, and children.
@@ -41,7 +40,6 @@ export function SymptomTooltip({
   symptom,
   children,
   customDefinition,
-  customWhenToSeekCare,
   className = "",
 }: SymptomTooltipProps) {
   const [isOpen, setIsOpen] = useState(false);
@@ -51,7 +49,6 @@ export function SymptomTooltip({
 
   const entry = getSymptomDefinition(symptom);
   const definition = customDefinition || entry?.plainDefinition;
-  const seekCare = customWhenToSeekCare || entry?.whenToSeekCare;
 
   // Handle outside clicks to close
   useEffect(() => {
@@ -131,14 +128,6 @@ export function SymptomTooltip({
 
           {/* Plain Language Definition */}
           <span className="block leading-relaxed">{definition}</span>
-
-          {/* When to Seek Care Notice */}
-          {seekCare && (
-            <span className="mt-2 block rounded-md bg-amber-50/80 p-2 text-[11px] leading-relaxed text-amber-900 dark:bg-amber-950/40 dark:text-amber-200">
-              <strong className="font-semibold">When to seek care: </strong>
-              {seekCare}
-            </span>
-          )}
 
           {/* Safe Non-Diagnostic Disclaimer */}
           <span className="mt-2 block border-t border-slate-100 pt-1.5 text-[10px] text-slate-400 dark:border-slate-800">

@@ -33,15 +33,16 @@ describe("SymptomTooltip Component", () => {
       ).toBeInTheDocument();
     });
 
-    it("displays 'when to seek care' emergency guidance in popover", async () => {
+    it("shows the definition and disclaimer but no seek-care advice", async () => {
       render(<SymptomTooltip symptom="chest_pain" />);
 
       const trigger = screen.getByRole("button", { name: "Definition for Chest pain or pressure" });
       await userEvent.click(trigger);
 
-      expect(
-        screen.getByText(/Treat new, severe, or crushing chest pain as a potential medical emergency/i),
-      ).toBeInTheDocument();
+      const tooltip = screen.getByRole("tooltip");
+      expect(tooltip).toHaveTextContent(/Not a medical diagnosis/i);
+      // Urgency comes only from the risk engine, never from the tooltip.
+      expect(tooltip).not.toHaveTextContent(/seek|emergency|112/i);
     });
 
     it("closes tooltip when close button is clicked", async () => {
@@ -114,6 +115,12 @@ describe("SymptomTooltip Component", () => {
       expect(getSymptomDefinition("skin_rash")?.bodySystem).toBe("skin");
       expect(getSymptomDefinition("Headache")?.id).toBe("headache");
       expect(getSymptomDefinition("nonexistent_12345")).toBeNull();
+    });
+
+    it("never matches a partial name to a different symptom", () => {
+      expect(getSymptomDefinition("pain")).toBeNull();
+      expect(getSymptomDefinition("coughing blood")).toBeNull();
+      expect(getSymptomDefinition("")).toBeNull();
     });
   });
 });
