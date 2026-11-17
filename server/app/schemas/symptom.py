@@ -3,28 +3,35 @@
 Responsibilities:
     - Validate symptom structures, durations, and clinical severities.
     - Provide Create, Update, and Read contract models for symptom API endpoints.
-    - Enforce non-empty normalized symptom naming.
+    - Enforce non-empty normalized symptom naming, null byte rejection, and bounds.
+    - Prevent mass assignment and unbounded list updates (NFR-03).
 
-Owner: Darshil (orchestration) · Task: S0-DAR-1 · Requirements: N/A
+Owner: Darshil (orchestration) · Task: S0-DAR-1, S2-DAR-7 · Requirements: NFR-03
 """
 
 from uuid import UUID, uuid4
 
-from pydantic import Field, field_validator
+from pydantic import Field, field_validator, model_validator
 
-from app.schemas.base import SchemaBase
+from app.schemas.base import RequestSchemaBase, SchemaBase
 from app.schemas.enums import DurationUnit, Severity, SymptomSource
 
 
-class Duration(SchemaBase):
+class Duration(RequestSchemaBase):
     """Structured duration of a symptom.
 
     Attributes:
-        value: Non-negative duration length.
+        value: Non-negative duration length (capped at 36500.0, NaN/Inf forbidden).
         unit: Duration time unit (HOUR, DAY, WEEK, MONTH, YEAR).
     """
 
-    value: float = Field(..., ge=0.0, description="Duration numeric value")
+    value: float = Field(
+        ...,
+        ge=0.0,
+        le=36500.0,
+        allow_inf_nan=False,
+        description="Duration numeric value (non-negative, max 36500)",
+    )
     unit: DurationUnit = Field(default=DurationUnit.DAY, description="Duration unit")
 
 
@@ -69,7 +76,7 @@ class Symptom(SchemaBase):
     @field_validator("name")
     @classmethod
     def validate_name_not_blank(cls, value: str) -> str:
-        """Ensure symptom name is stripped and non-empty.
+        """Ensure symptom name is stripped, non-empty, and contains no null bytes.
 
         Args:
             value: Raw symptom name string.
@@ -78,16 +85,33 @@ class Symptom(SchemaBase):
             Normalized stripped symptom name.
 
         Raises:
-            ValueError: If name is blank or only whitespace.
+            ValueError: If name contains null bytes or is blank.
         """
+        if "\x00" in value:
+            raise ValueError("Symptom name cannot contain null bytes")
         cleaned = value.strip().lower()
         if not cleaned:
             raise ValueError("Symptom name cannot be blank")
         return cleaned
 
+    @field_validator("body_location")
+    @classmethod
+    def validate_body_location(cls, value: str | None) -> str | None:
+        """Strip and validate optional body location."""
+        if value is None:
+            return None
+        if "\x00" in value:
+            raise ValueError("Body location cannot contain null bytes")
+        cleaned = value.strip()
+        return cleaned if cleaned else None
 
-class SymptomCreate(SchemaBase):
-    """Schema for adding a new symptom to an assessment."""
+
+class SymptomCreate(RequestSchemaBase):
+    """Schema for adding a new symptom to an assessment.
+
+    Enforces mass-assignment protection (extra='forbid'), null byte rejection,
+    and string length limits.
+    """
 
     name: str = Field(..., min_length=1, max_length=128, description="Symptom name")
     severity: Severity = Field(default=Severity.UNKNOWN, description="Symptom severity")
@@ -105,15 +129,32 @@ class SymptomCreate(SchemaBase):
     @field_validator("name")
     @classmethod
     def normalize_name(cls, value: str) -> str:
-        """Strip and normalize symptom name to lowercase."""
+        """Strip and normalize symptom name to lowercase, rejecting null bytes."""
+        if "\x00" in value:
+            raise ValueError("Symptom name cannot contain null bytes")
         cleaned = value.strip().lower()
         if not cleaned:
             raise ValueError("Symptom name cannot be blank")
         return cleaned
 
+    @field_validator("body_location")
+    @classmethod
+    def normalize_body_location(cls, value: str | None) -> str | None:
+        """Strip and validate optional body location."""
+        if value is None:
+            return None
+        if "\x00" in value:
+            raise ValueError("Body location cannot contain null bytes")
+        cleaned = value.strip()
+        return cleaned if cleaned else None
 
-class SymptomUpdate(SchemaBase):
-    """Schema for editing or confirming an existing symptom."""
+
+class SymptomUpdate(RequestSchemaBase):
+    """Schema for editing or confirming an existing symptom.
+
+    Enforces mass-assignment protection (extra='forbid'), null byte rejection,
+    and requires at least one field to update.
+    """
 
     id: UUID | None = Field(
         default=None,
@@ -131,16 +172,68 @@ class SymptomUpdate(SchemaBase):
     @field_validator("name")
     @classmethod
     def normalize_optional_name(cls, value: str | None) -> str | None:
-        """Strip and normalize optional symptom name."""
+        """Strip and normalize optional symptom name, rejecting null bytes."""
         if value is None:
             return None
+        if "\x00" in value:
+            raise ValueError("Symptom name cannot contain null bytes")
         cleaned = value.strip().lower()
         if not cleaned:
             raise ValueError("Symptom name cannot be blank")
         return cleaned
+
+    @field_validator("body_location")
+    @classmethod
+    def normalize_optional_body_location(cls, value: str | None) -> str | None:
+        """Strip and validate optional body location."""
+        if value is None:
+            return None
+        if "\x00" in value:
+            raise ValueError("Body location cannot contain null bytes")
+        cleaned = value.strip()
+        return cleaned if cleaned else None
+
+    @model_validator(mode="after")
+    def validate_has_at_least_one_field(self) -> "SymptomUpdate":
+        """Ensure that update payload is not completely empty."""
+        if (
+            self.id is None
+            and self.name is None
+            and self.severity is None
+            and self.duration is None
+            and self.body_location is None
+            and self.source is None
+        ):
+            raise ValueError("SymptomUpdate must specify at least one field to update")
+        return self
+
+
+class UpdateSymptomsRequest(RequestSchemaBase):
+    """Request payload to confirm, add, or update recorded symptoms (NFR-03).
+
+    Enforces bounds on the batch size (1 to 50 symptoms per update) and
+    mass-assignment protection (extra='forbid').
+    """
+
+    symptoms: list[SymptomUpdate] = Field(
+        ...,
+        min_length=1,
+        max_length=50,
+        description="List of updated, added, or confirmed symptoms (1-50 items)",
+    )
 
 
 class SymptomRead(Symptom):
     """Response schema returning full symptom details."""
 
     pass
+
+
+__all__ = [
+    "Duration",
+    "Symptom",
+    "SymptomCreate",
+    "SymptomRead",
+    "SymptomUpdate",
+    "UpdateSymptomsRequest",
+]

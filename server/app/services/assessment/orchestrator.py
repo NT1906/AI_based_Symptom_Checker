@@ -11,6 +11,8 @@ Responsibilities:
     - Pass profile context (age, chronic conditions) into analysis (FR-02, S2-DAR-3).
     - Guarantee idempotent message processing and transactions (NFR-05, S2-DAR-4).
     - Guard assessment ownership and block cross-user access (NFR-03, S2-DAR-6).
+    - Enforce strict input validation, length limits, and null byte
+      rejection (NFR-03, S2-DAR-7).
     - Provide restart_assessment() to cleanly reset an assessment session (FR-25).
     - Claim anonymous guest assessments into registered accounts (idea §10).
     - Step back to chat from CONFIRMING or READY for conversational edits.
@@ -19,7 +21,8 @@ Responsibilities:
     - Run real analysis in generate_result() via condition predictor, risk engine,
       and result composer with safety-wording validation (FR-05, FR-06, FR-07, DR-05).
 
-Owner: Darshil (assessment) · Task: S2-DAR-6 · Requirements: NFR-03, NFR-05, FR-02
+Owner: Darshil (assessment) · Task: S2-DAR-6, S2-DAR-7
+Requirements: NFR-03, NFR-05, FR-02
 """
 
 import asyncio
@@ -889,6 +892,12 @@ class AssessmentOrchestrator:
                 status_code=status.HTTP_404_NOT_FOUND,
             )
 
+        if message and "\x00" in message:
+            raise AssessmentServiceError(
+                message="Message content cannot contain null bytes.",
+                code="INVALID_MESSAGE_CONTENT",
+                status_code=status.HTTP_422_UNPROCESSABLE_ENTITY,
+            )
         cleaned = message.strip() if message else ""
         if not cleaned:
             raise AssessmentServiceError(
@@ -900,6 +909,12 @@ class AssessmentOrchestrator:
             raise AssessmentServiceError(
                 message="Message exceeds maximum allowed length of 4000 characters.",
                 code="MESSAGE_TOO_LONG",
+                status_code=status.HTTP_422_UNPROCESSABLE_ENTITY,
+            )
+        if idempotency_key and "\x00" in idempotency_key:
+            raise AssessmentServiceError(
+                message="Idempotency key cannot contain null bytes.",
+                code="INVALID_IDEMPOTENCY_KEY",
                 status_code=status.HTTP_422_UNPROCESSABLE_ENTITY,
             )
 
@@ -1568,6 +1583,13 @@ class AssessmentOrchestrator:
                 status_code=status.HTTP_404_NOT_FOUND,
             )
 
+        if symptoms is not None and len(symptoms) > 50:
+            raise AssessmentServiceError(
+                message="Cannot confirm more than 50 symptoms at once.",
+                code="TOO_MANY_SYMPTOMS",
+                status_code=status.HTTP_422_UNPROCESSABLE_ENTITY,
+            )
+
         sm = session.state_machine
         if sm.current_state in (
             AssessmentState.SYMPTOM_COLLECTION,
@@ -1666,6 +1688,13 @@ class AssessmentOrchestrator:
                 status_code=status.HTTP_404_NOT_FOUND,
             )
 
+        if len(symptoms) > 50:
+            raise AssessmentServiceError(
+                message="Cannot update more than 50 symptoms in a single request.",
+                code="TOO_MANY_SYMPTOMS",
+                status_code=status.HTTP_422_UNPROCESSABLE_ENTITY,
+            )
+
         self._ensure_editable_state(session)
         self._apply_symptoms_payload(session, symptoms)
         session.updated_at = datetime.now(UTC)
@@ -1721,10 +1750,36 @@ class AssessmentOrchestrator:
 
         self._ensure_editable_state(session)
 
+        if "\x00" in symptom.name:
+            raise AssessmentServiceError(
+                message="Symptom name cannot contain null bytes.",
+                code="INVALID_SYMPTOM_NAME",
+                status_code=status.HTTP_422_UNPROCESSABLE_ENTITY,
+            )
+        if symptom.body_location and "\x00" in symptom.body_location:
+            raise AssessmentServiceError(
+                message="Body location cannot contain null bytes.",
+                code="INVALID_BODY_LOCATION",
+                status_code=status.HTTP_422_UNPROCESSABLE_ENTITY,
+            )
+
         cleaned_name = symptom.name.strip().lower()
+        if not cleaned_name:
+            raise AssessmentServiceError(
+                message="Symptom name cannot be blank.",
+                code="INVALID_SYMPTOM_NAME",
+                status_code=status.HTTP_422_UNPROCESSABLE_ENTITY,
+            )
+
         existing = next(
             (s for s in session.symptoms if s.name.lower() == cleaned_name), None
         )
+        if existing is None and len(session.symptoms) >= 50:
+            raise AssessmentServiceError(
+                message="Cannot add more than 50 symptoms to an assessment.",
+                code="SYMPTOM_LIMIT_EXCEEDED",
+                status_code=status.HTTP_422_UNPROCESSABLE_ENTITY,
+            )
         if existing is not None:
             if symptom.severity != Severity.UNKNOWN:
                 existing.severity = symptom.severity
@@ -1789,6 +1844,20 @@ class AssessmentOrchestrator:
                 user_id=user_id,
                 guest_session_id=guest_session_id,
             )
+
+        if isinstance(symptom_id, str):
+            if "\x00" in symptom_id:
+                raise AssessmentServiceError(
+                    message="Symptom identifier cannot contain null bytes.",
+                    code="INVALID_SYMPTOM_IDENTIFIER",
+                    status_code=status.HTTP_422_UNPROCESSABLE_ENTITY,
+                )
+            if not symptom_id.strip():
+                raise AssessmentServiceError(
+                    message="Symptom identifier cannot be blank.",
+                    code="INVALID_SYMPTOM_IDENTIFIER",
+                    status_code=status.HTTP_422_UNPROCESSABLE_ENTITY,
+                )
 
         session = self._sessions.get(assessment_id)
         if session is None:
@@ -1877,6 +1946,19 @@ class AssessmentOrchestrator:
             )
 
         self._ensure_editable_state(session)
+
+        if symptom_update.name and "\x00" in symptom_update.name:
+            raise AssessmentServiceError(
+                message="Symptom name cannot contain null bytes.",
+                code="INVALID_SYMPTOM_NAME",
+                status_code=status.HTTP_422_UNPROCESSABLE_ENTITY,
+            )
+        if symptom_update.body_location and "\x00" in symptom_update.body_location:
+            raise AssessmentServiceError(
+                message="Body location cannot contain null bytes.",
+                code="INVALID_BODY_LOCATION",
+                status_code=status.HTTP_422_UNPROCESSABLE_ENTITY,
+            )
 
         if symptom_update.id is None and not symptom_update.name:
             raise AssessmentServiceError(
