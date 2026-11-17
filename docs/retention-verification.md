@@ -2,7 +2,7 @@
 
 Owner: Harsh · Task: S2-HAR-6 · Issue: #209 · Requirements: NFR-04, DR-06
 
-Reviewed on 17 November 2026 against `develop` revision `e25e37c`.
+Reviewed on 17 November 2026 against `develop` revision `b3cd7c9`.
 This is a source inventory and staging test plan. Staging results are pending.
 Do not close #209 or represent this report as compliance certification.
 
@@ -15,8 +15,10 @@ Do not close #209 or represent this report as compliance certification.
   implementation in the reviewed repositories. A merged #173 does not prove
   end-to-end erasure.
 - #163 is still open. The reviewed repositories contain no production TTL
-  purge callback. #175's separately prepared scheduler runner uses injected
-  callbacks and has not been deployed. Expiry timestamps alone do not erase rows.
+  purge callback. PR #270 merged the #175 scheduler runner into `develop` and
+  automatically closed #175. That runner still requires an injected database
+  callback; scheduler deployment has not been observed. Issue closure alone
+  does not demonstrate deletion. Expiry timestamps alone do not erase rows.
 - Audit storage and profiles are now real models, not proposed features.
   Migration head in this source tree is `0006_audit_log`; the staging database
   migration revision has not been observed.
@@ -30,7 +32,7 @@ registered in `app.models.Base.metadata` at the reviewed revision.
 | --- | --- | --- | --- |
 | `users` | email, password_hash | Account authentication | Account lifetime/request scope needs owner approval. No live erasure evidence. Password hash excluded from export. |
 | `profiles` | user_id, age_band, biological_sex, chronic_conditions, updated_at | Optional assessment context | User FK is CASCADE. Full account erasure remains unimplemented. Profile fields are exported. |
-| `guest_sessions` | token_hash, expires_at, claimed_at, claimed_by_user_id | Anonymous ownership and claim tracking | Default TTL described as 24 h. Real expiry cleanup pending #163/#175. Token hash is excluded from export. |
+| `guest_sessions` | token_hash, expires_at, claimed_at, claimed_by_user_id | Anonymous ownership and claim tracking | Default TTL described as 24 h. Runner merged in #270; real expiry cleanup awaits #163 integration and scheduler deployment. Token hash is excluded from export. |
 | `assessments` | user_id, guest_session_id, consent_id, state | Assessment ownership and workflow | Account data on request, unclaimed guest data at expiry are project targets. User/consent FKs are RESTRICT. Guest FK is SET NULL, so deleting a guest alone leaves assessments. |
 | `messages` | assessment_id, position, role, content | Conversation context | Raw user text can contain personal data. Assessment FK is RESTRICT. Delete children before assessments. Export is owner-scoped. |
 | `symptoms` | assessment_id, name, details JSON | Structured symptom information | Assessment FK is RESTRICT. Remove with applicable assessment; JSON may contain health data. |
@@ -77,6 +79,38 @@ Official sources checked on 17 November 2026
 - [DPDP Act, 2023, India Code](https://www.indiacode.nic.in/bitstream/123456789/22037/1/a2023-22.pdf)
 - [G.S.R. 843(E), phased commencement](https://www.meity.gov.in/static/uploads/2025/11/c56ceae6c383460ca69577428d36828b.pdf)
 - [MeitY DPDP Rules, 2025 publication page](https://www.meity.gov.in/documents/act-and-policies/digital-personal-data-protection-rules-2025-gDOxUjMtQWa)
+
+## Reproducible local evidence
+
+Run from `server/` using synthetic fixtures and mock providers.
+
+```bash
+python -m pytest tests/unit/privacy tests/unit/db -q
+```
+
+Observed on the reviewed revision plus this documentation-only branch:
+**295 passed**, no skipped tests. This includes export, data-rights mocks,
+guest-purge runner/CLI, consent, history, logging, foreign-key and repository
+tests. These are local tests, not observed staging deletion.
+
+Inspect the real app's OpenAPI registration without connecting to a database:
+
+```bash
+python - <<'PY'
+from app.main import create_app
+paths = create_app().openapi()["paths"]
+print("export_registered:", "get" in paths.get("/api/v1/privacy/export", {}))
+print("delete_registered:", "delete" in paths.get("/api/v1/privacy/data", {}))
+PY
+```
+
+Observed output is `export_registered: True`, `delete_registered: False`.
+An absent deletion route must not be recorded as a passing authorization or
+deletion test merely because it returns 404. Validate route existence before
+the staging cases below.
+
+Inspection of `app.models.Base.metadata.tables` confirms the eight tables
+listed above. This is source metadata, not a live database catalog inventory.
 
 ## Staging verification procedure
 
