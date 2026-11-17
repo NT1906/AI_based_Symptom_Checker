@@ -6,7 +6,8 @@ Responsibilities:
     - Define schemas for missing-information detection and clarification questions.
     - Validate AI outputs at the service boundary.
 
-Owner: Nishith · Task: S1-NIT-2 · Requirements: FR-04, FR-19, FR-20, NFR-05
+Owner: Nishith · Tasks: S1-NIT-2, S2-NIT-2
+Requirements: FR-04, FR-18, FR-19, FR-20, NFR-05, idea "out of scope"
 """
 
 from enum import StrEnum
@@ -254,4 +255,85 @@ class ClarificationResult(BaseModel):
     missing_field: MissingFieldEnum | str | None = Field(
         default=None,
         description="Specific missing clinical attribute triggering this question",
+    )
+
+
+class IntentEnum(StrEnum):
+    """Classification of user message intent."""
+
+    SYMPTOM_REPORT = "SYMPTOM_REPORT"
+    GLOSSARY_QUERY = "GLOSSARY_QUERY"
+    PROMPT_INJECTION = "PROMPT_INJECTION"
+    OFF_TOPIC = "OFF_TOPIC"
+
+
+class GlossaryResponse(BaseModel):
+    """Curated plain-language glossary explanation for a requested symptom.
+
+    Attributes:
+        symptom_name: Human-readable canonical name of the symptom.
+        definition: Plain-language, non-diagnostic definition.
+        when_to_seek_care: Guidance on when clinical consultation is advised.
+        disclaimer: Mandatory patient-safety disclaimer.
+    """
+
+    model_config = ConfigDict(frozen=True)
+
+    symptom_name: str = Field(
+        min_length=1,
+        max_length=128,
+        description="Canonical display name of the symptom",
+    )
+    definition: str = Field(
+        min_length=1,
+        max_length=1024,
+        description="Empathetic, lay-language symptom definition",
+    )
+    when_to_seek_care: str = Field(
+        min_length=1,
+        max_length=1024,
+        description="Guidance on when to seek clinical care",
+    )
+    disclaimer: str = Field(
+        min_length=1,
+        max_length=500,
+        description="Mandatory medical-safety informational triage disclaimer",
+    )
+
+
+class IntentResult(BaseModel):
+    """Structured result of deterministic intent classification.
+
+    Attributes:
+        intent: Identified primary intent category.
+        glossary_query: Canonical or colloquial symptom term if glossary query.
+        glossary_response: Curated definition if resolved from the glossary.
+        refusal_message: Polite, curated response for off-topic or injection.
+        confidence: Intent classification confidence score (default 1.0).
+    """
+
+    model_config = ConfigDict(frozen=True)
+
+    intent: IntentEnum = Field(
+        description="Classified intent of the incoming message",
+    )
+    glossary_query: str | None = Field(
+        default=None,
+        max_length=256,
+        description="Extracted symptom term for glossary resolution",
+    )
+    glossary_response: GlossaryResponse | None = Field(
+        default=None,
+        description="Curated glossary content if resolved",
+    )
+    refusal_message: str | None = Field(
+        default=None,
+        max_length=500,
+        description="Curated, non-diagnostic response for non-symptom intents",
+    )
+    confidence: float = Field(
+        default=1.0,
+        ge=0.0,
+        le=1.0,
+        description="Confidence of intent classification",
     )
