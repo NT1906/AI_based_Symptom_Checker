@@ -6,7 +6,7 @@ Responsibilities:
     - Enforce architectural layering: routers consume interfaces, not
       concrete implementations.
 
-Owner: Vivek (api) · Task: S1-VIV-3 · Requirements: —
+Owner: Vivek (api) · Task: S1-VIV-3, S2-VIV-1, S2-VIV-2 · Requirements: FR-01, NFR-03
 """
 
 from typing import Annotated, Protocol, runtime_checkable
@@ -30,6 +30,7 @@ from app.api.v1._assessment_stubs import (
     make_urgent_result_stub,
 )
 from app.core.config import Settings, get_settings
+from app.core.errors import UnauthorizedError
 from app.schemas.assessment import (
     AssessmentCreate,
     AssessmentRead,
@@ -42,6 +43,10 @@ from app.schemas.result import AssessmentResult
 from app.schemas.symptom import SymptomRead, SymptomUpdate
 from app.services.ai.factory import get_ai_gateway
 from app.services.ai.gateway import AiGateway
+from app.services.auth.schemas import UserRead
+from app.services.auth.security import decode_access_token, validate_csrf_token
+from app.services.auth.service import AuthService
+from app.services.profile.service import ProfileService
 
 
 # ---------------------------------------------------------------------------
@@ -329,3 +334,147 @@ EngineDep = Annotated[Engine, Depends(get_db_engine)]
 SessionFactoryDep = Annotated[sessionmaker[Session], Depends(get_session_factory)]
 AiGatewayDep = Annotated[AiGateway, Depends(get_ai_gateway_dep)]
 AssessmentServiceDep = Annotated[AssessmentService, Depends(get_assessment_service)]
+
+
+def get_auth_service(
+    session_factory: SessionFactoryDep,
+    settings: SettingsDep,
+) -> AuthService:
+    """Provide authentication domain service instance.
+
+    Args:
+        session_factory: Injected SQLAlchemy sessionmaker factory.
+        settings: Injected application configuration.
+
+    Returns:
+        AuthService: Initialized authentication domain service.
+    """
+    return AuthService(session_factory=session_factory, settings=settings)
+
+
+async def get_current_user(
+    request: Request,
+    auth_service: Annotated[AuthService, Depends(get_auth_service)],
+    settings: SettingsDep,
+) -> UserRead:
+    """Extract and validate the authenticated user from the session cookie.
+
+    Args:
+        request: Incoming HTTP request containing session cookies.
+        auth_service: Injected authentication domain service.
+        settings: Application settings with cookie and JWT config.
+
+    Returns:
+        UserRead: Authenticated user account representation.
+
+    Raises:
+        UnauthorizedError: If cookie is missing, JWT is invalid/expired,
+            or user not found.
+    """
+    token = request.cookies.get(settings.auth_cookie_name)
+    if not token:
+        # Fallback to Authorization header Bearer token if present
+        auth_header = request.headers.get("Authorization")
+        if auth_header and auth_header.startswith("Bearer "):
+            token = auth_header[7:].strip()
+
+    if not token:
+        raise UnauthorizedError("Authentication session cookie missing")
+
+    payload = decode_access_token(token, settings)
+    user_id_str = payload.get("sub")
+    if not user_id_str:
+        raise UnauthorizedError("Authentication token missing subject claim")
+
+    try:
+        user_id = UUID(user_id_str)
+    except ValueError as exc:
+        raise UnauthorizedError("Malformed subject identifier in token") from exc
+
+    user = await auth_service.get_user_by_id(user_id)
+    if user is None:
+        raise UnauthorizedError("User account no longer exists")
+
+    return user
+
+
+async def get_optional_current_user(
+    request: Request,
+    auth_service: Annotated[AuthService, Depends(get_auth_service)],
+    settings: SettingsDep,
+) -> UserRead | None:
+    """Optionally resolve the current authenticated user without raising when absent.
+
+    Args:
+        request: Incoming HTTP request.
+        auth_service: Injected authentication domain service.
+        settings: Application settings.
+
+    Returns:
+        UserRead | None: User account if authenticated, None otherwise.
+    """
+    try:
+        return await get_current_user(request, auth_service, settings)
+    except UnauthorizedError:
+        return None
+
+
+AuthServiceDep = Annotated[AuthService, Depends(get_auth_service)]
+CurrentUserDep = Annotated[UserRead, Depends(get_current_user)]
+OptionalUserDep = Annotated[UserRead | None, Depends(get_optional_current_user)]
+
+
+def get_profile_service(session_factory: SessionFactoryDep) -> ProfileService:
+    """Provide profile domain service instance.
+
+    Args:
+        session_factory: Injected SQLAlchemy sessionmaker factory.
+
+    Returns:
+        ProfileService: Initialized profile domain service.
+    """
+    return ProfileService(session_factory=session_factory)
+
+
+ProfileServiceDep = Annotated[ProfileService, Depends(get_profile_service)]
+
+
+async def verify_csrf_token(
+    request: Request,
+    settings: SettingsDep,
+) -> str:
+    """Validate that incoming state-changing request contains matching CSRF tokens.
+
+    Checks that:
+        1. Header `X-CSRF-Token` (or `X-XSRF-Token`) is present.
+        2. Cookie `csrf_token` is present.
+        3. Both tokens match in constant time.
+
+    Args:
+        request: Incoming HTTP request.
+        settings: Application settings with cookie names.
+
+    Returns:
+        str: Validated CSRF token.
+
+    Raises:
+        UnauthorizedError: If CSRF token is missing, blank, or does not match cookie.
+    """
+    header_token = request.headers.get("X-CSRF-Token") or request.headers.get(
+        "X-XSRF-Token"
+    )
+    cookie_token = request.cookies.get(settings.csrf_cookie_name)
+
+    if (
+        not header_token
+        or not cookie_token
+        or not validate_csrf_token(header_token, cookie_token)
+    ):
+        raise UnauthorizedError(
+            "CSRF verification failed: missing or invalid CSRF token"
+        )
+
+    return header_token.strip()
+
+
+CsrfProtectDep = Annotated[str, Depends(verify_csrf_token)]

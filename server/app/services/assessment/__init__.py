@@ -11,6 +11,7 @@ Owner: Darshil (assessment) · Task: S1-DAR-2 · Requirements: FR-03, FR-17
 """
 
 from app.services.assessment.exceptions import (
+    AssessmentAccessDeniedError,
     AssessmentServiceError,
     InvalidStateTransitionError,
     StateGuardViolationError,
@@ -34,6 +35,7 @@ from app.services.assessment.state_machine import (
 
 __all__ = [
     "MAX_CLARIFICATION_TURNS",
+    "AssessmentAccessDeniedError",
     "AssessmentContext",
     "AssessmentOrchestrator",
     "AssessmentServiceError",

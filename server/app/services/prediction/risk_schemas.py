@@ -5,8 +5,10 @@ Responsibilities:
     - Describe a confirmed symptom with its severity (the engine's input).
     - Describe the risk decision and the rules that produced it, for the
       "why" panel (S2-NIS-2) and the audit log (S2-VIV-4).
+    - Name the kinds of uncertainty that raise the risk tier (S2-NIS-1).
 
-Owner: Nisarg (prediction) · Task: S1-NIS-2 · Requirements: FR-06, FR-15, DR-02
+Owner: Nisarg (prediction) · Task: S1-NIS-2, S2-NIS-1 · Requirements: FR-06, FR-15,
+DR-02, NFR-07
 """
 
 from enum import StrEnum
@@ -113,6 +115,21 @@ class RiskRule(StrEnum):
     RED_FLAG = "RED_FLAG"
     CONDITION = "CONDITION"
     NO_CONDITION_MATCH = "NO_CONDITION_MATCH"
+    UNCERTAINTY = "UNCERTAINTY"
+    """Uncertainty raised a lower tier to the uncertainty floor."""
+
+
+class UncertaintyReason(StrEnum):
+    """Why a result is uncertain; each one can only raise the risk tier."""
+
+    LOW_CONFIDENCE = "LOW_CONFIDENCE"
+    """No predicted condition is Likely. The risk engine detects this itself."""
+
+    IMAGE_UNCLEAR = "IMAGE_UNCLEAR"
+    """The user sent a photo, but the image analyzer answered ``unclear``."""
+
+    AI_ERROR = "AI_ERROR"
+    """The AI gateway failed during the conversation, so symptoms may be missing."""
 
 
 class RiskDecision(BaseModel):
@@ -122,8 +139,11 @@ class RiskDecision(BaseModel):
         level: SELF_CARE, CONSULT_DOCTOR or URGENT.
         rule: The rule that decided ``level``.
         red_flags: Every red flag that fired, in dataset order.
-        driving_condition_ids: Conditions whose risk set ``level`` (empty when
-            a red flag or the no-match rule decided).
+        driving_condition_ids: Conditions whose risk set the tier before any
+            uncertainty escalation (empty when a red flag or the no-match rule
+            decided).
+        uncertainty: Every uncertainty reason that applied, in enum order,
+            even when it did not change ``level``.
         engine_version: Version of these rules, recorded in the audit log.
     """
 
@@ -133,4 +153,5 @@ class RiskDecision(BaseModel):
     rule: RiskRule
     red_flags: tuple[RedFlagHit, ...] = ()
     driving_condition_ids: tuple[str, ...] = ()
+    uncertainty: tuple[UncertaintyReason, ...] = ()
     engine_version: str

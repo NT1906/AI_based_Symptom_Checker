@@ -24,6 +24,8 @@ class Condition(SchemaBase):
         icd10_code: Standard ICD-10 clinical coding classification, if available.
         specialty: Recommended medical specialty for clinical evaluation.
         description: Brief informational summary of the condition.
+        why: Plain-language contributing factors, e.g. "Because you reported
+            fever and joint pain." (FR-24, S2-NIS-2).
     """
 
     name: str = Field(..., min_length=1, max_length=256, description="Condition name")
@@ -47,11 +49,16 @@ class Condition(SchemaBase):
         max_length=1000,
         description="Overview",
     )
+    why: str | None = Field(
+        default=None,
+        max_length=500,
+        description="Plain-language contributing factors (FR-24)",
+    )
 
     @field_validator("name")
     @classmethod
     def validate_name_not_blank(cls, value: str) -> str:
-        """Ensure condition name is not whitespace.
+        """Ensure condition name is not whitespace and contains no null bytes.
 
         Args:
             value: Condition name string.
@@ -60,8 +67,10 @@ class Condition(SchemaBase):
             Stripped condition name.
 
         Raises:
-            ValueError: If name is blank.
+            ValueError: If name is blank or contains null bytes.
         """
+        if "\x00" in value:
+            raise ValueError("Condition name cannot contain null bytes")
         cleaned = value.strip()
         if not cleaned:
             raise ValueError("Condition name cannot be blank")

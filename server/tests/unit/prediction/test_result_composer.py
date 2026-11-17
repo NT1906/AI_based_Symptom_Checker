@@ -6,8 +6,14 @@ Covers:
     - Mental-health and assumed-severity additions on urgent results.
     - Every generated sentence goes through the wording guard (and a guard
       failure stops the result); all fixed wording avoids banned phrases.
+    - Uncertainty (S2-NIS-1): an escalated result says why, and an unclear
+      photo or AI error adds its own limitation; the new wording passes the
+      real safety-wording guard.
+    - Contributing factors (S2-NIS-2): every condition gets a "Because you
+      reported …" line that names its matched symptoms and passes the guard.
 
-Owner: Nisarg (prediction) · Task: S1-NIS-3 · Requirements: FR-07, DR-01, DR-04
+Owner: Nisarg (prediction) · Task: S1-NIS-3, S2-NIS-1, S2-NIS-2 · Requirements: FR-07,
+FR-24, DR-01, DR-04
 """
 
 import re
@@ -19,12 +25,15 @@ from app.schemas.result import DEFAULT_DISCLAIMER, AssessmentResult
 from app.services.prediction import result_text as text
 from app.services.prediction.condition_catalog import get_catalog
 from app.services.prediction.condition_predictor import BaselineConditionModel
+from app.services.prediction.schemas import ConditionPrediction
+from app.services.privacy.safety_guard import assert_safe_wording
 from app.services.prediction.result_composer import ResultComposer, WordingGuard
 from app.services.prediction.risk_engine import RISK_ENGINE_VERSION, assess_risk
 from app.services.prediction.risk_schemas import (
     ReportedSymptom,
     RiskDecision,
     RiskRule,
+    UncertaintyReason,
 )
 
 # The banned pattern documented in docs/privacy-and-safety.md §5 (S1-HAR-3).
@@ -189,7 +198,8 @@ def test_every_generated_sentence_goes_through_the_guard() -> None:
 
     result = _compose("chest_pain", "sweating", guard=guard)
 
-    expected = [*result.guidance, *result.limitations, result.referral.reason]
+    whys = [condition.why for condition in result.conditions]
+    expected = [*result.guidance, *result.limitations, result.referral.reason, *whys]
     assert sorted(guard.checked) == sorted(s for s in expected if s)
     # The fixed disclaimer contains "diagnosis" and is not generated text.
     assert result.disclaimer not in guard.checked
@@ -216,9 +226,18 @@ def _all_fixed_sentences() -> list[str]:
         *text.LIMITATIONS_ALWAYS,
         text.NO_MATCH_LIMITATION,
         text.RED_FLAG_LIMITATION,
+        text.UNCERTAINTY_REASON,
+        text.UNCERTAINTY_LIMITATION,
+        text.WHY_TEMPLATE,
+        *text.UNCERTAINTY_LIMITATIONS.values(),
     ]
     return [
-        s.format(specialty="a dermatologist", label="Severe pain", condition="Dengue")
+        s.format(
+            specialty="a dermatologist",
+            label="Severe pain",
+            condition="Dengue",
+            symptoms="fever and joint pain",
+        )
         for s in sentences
     ]
 
@@ -252,3 +271,97 @@ def test_every_dataset_specialty_reads_naturally_in_next_steps() -> None:
         sentence = template.format(specialty=text.with_article(specialty.name))
         assert sentence.startswith("Book a visit with a")
         assert not BANNED.search(sentence)
+
+
+# --- uncertainty (S2-NIS-1) -----------------------------------------------------
+
+
+def _possible_eczema() -> ConditionPrediction:
+    """A Possible self-care skin condition, which the engine escalates."""
+    return ConditionPrediction(
+        condition_id="atopic_dermatitis",
+        name="Atopic dermatitis",
+        icd10_code="L20",
+        specialty="dermatology",
+        base_risk=RiskLevel.SELF_CARE,
+        confidence=ConfidenceLabel.POSSIBLE,
+        rank=1,
+        matched_symptom_ids=("itching",),
+    )
+
+
+def test_escalated_result_explains_the_uncertainty() -> None:
+    predictions = [_possible_eczema()]
+    decision = assess_risk([ReportedSymptom(id="itching")], predictions)
+
+    result = ResultComposer(RecordingGuard()).compose(uuid4(), decision, predictions)
+
+    assert result.risk_level is RiskLevel.CONSULT_DOCTOR
+    assert result.referral.required is True
+    assert result.referral.specialty == "Dermatologist"
+    assert result.referral.reason == text.UNCERTAINTY_REASON
+    assert text.UNCERTAINTY_LIMITATION in result.limitations
+
+
+@pytest.mark.parametrize("reason", list(text.UNCERTAINTY_LIMITATIONS))
+def test_reported_uncertainty_adds_its_limitation_without_escalating(
+    reason: UncertaintyReason,
+) -> None:
+    ids = ["fever", "pain_behind_eyes", "joint_pain"]
+    reported = [ReportedSymptom(id=i, severity=Severity.MODERATE) for i in ids]
+    predictions = BaselineConditionModel().predict(ids)
+    decision = assess_risk(reported, predictions, uncertainty=[reason])
+
+    result = ResultComposer(RecordingGuard()).compose(uuid4(), decision, predictions)
+
+    assert decision.rule is RiskRule.CONDITION  # already CONSULT_DOCTOR
+    assert text.UNCERTAINTY_LIMITATIONS[reason] in result.limitations
+    assert text.UNCERTAINTY_LIMITATION not in result.limitations
+
+
+def test_confident_result_has_no_uncertainty_limitations() -> None:
+    result = _compose("runny_nose", "sneezing", "nasal_congestion")
+
+    uncertainty_text = {
+        text.UNCERTAINTY_LIMITATION,
+        *text.UNCERTAINTY_LIMITATIONS.values(),
+    }
+    assert uncertainty_text.isdisjoint(result.limitations)
+
+
+def test_uncertain_result_passes_the_real_wording_guard() -> None:
+    predictions = [_possible_eczema()]
+    decision = assess_risk(
+        [ReportedSymptom(id="itching")],
+        predictions,
+        uncertainty=list(UncertaintyReason),
+    )
+
+    result = ResultComposer(assert_safe_wording).compose(uuid4(), decision, predictions)
+
+    assert result.risk_level is RiskLevel.CONSULT_DOCTOR
+    assert len(result.limitations) == len(text.LIMITATIONS_ALWAYS) + 3
+
+
+# --- contributing factors (S2-NIS-2) --------------------------------------------
+
+
+def test_every_condition_explains_its_matched_symptoms() -> None:
+    result = _compose("fever", "pain_behind_eyes", "joint_pain")
+
+    assert result.conditions
+    for condition in result.conditions:
+        assert condition.why is not None
+        assert condition.why.startswith("Because you reported ")
+        assert "_" not in condition.why  # display names, never raw IDs
+
+
+def test_why_line_passes_the_real_wording_guard() -> None:
+    ids = ["fever", "pain_behind_eyes", "joint_pain", "headache", "rash"]
+    reported = [ReportedSymptom(id=i, severity=Severity.MODERATE) for i in ids]
+    predictions = BaselineConditionModel().predict(ids)
+    decision = assess_risk(reported, predictions)
+
+    result = ResultComposer(assert_safe_wording).compose(uuid4(), decision, predictions)
+
+    assert all(condition.why for condition in result.conditions)

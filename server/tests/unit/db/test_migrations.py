@@ -34,6 +34,7 @@ def test_migration_matches_models_and_repeated_upgrade(engine: Engine) -> None:
             "assessments",
             "guest_sessions",
             "messages",
+            "profiles",
             "symptoms",
             "alembic_version",
         }
