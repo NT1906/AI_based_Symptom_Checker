@@ -6,7 +6,8 @@ Responsibilities:
     - Provide read and state snapshot schemas for assessment lifecycle endpoints.
     - Export AssessmentState and AssessmentResult for cross-module consumption.
 
-Owner: Darshil (orchestration) · Task: S2-DAR-1 · Requirements: idea §10
+Owner: Darshil (orchestration) · Task: S2-DAR-1, S2-DAR-7
+Requirements: idea §10, NFR-03
 """
 
 from datetime import UTC, datetime
@@ -14,15 +15,18 @@ from uuid import UUID
 
 from pydantic import Field
 
-from app.schemas.base import SchemaBase
+from app.schemas.base import RequestSchemaBase, SchemaBase
 from app.schemas.enums import AssessmentState
 from app.schemas.message import MessageRead
 from app.schemas.result import AssessmentResult
 from app.schemas.symptom import Symptom, SymptomRead
 
 
-class AssessmentCreate(SchemaBase):
-    """Payload to initialize a new assessment with user consent."""
+class AssessmentCreate(RequestSchemaBase):
+    """Payload to initialize a new assessment with user consent.
+
+    Enforces mass-assignment protection (extra='forbid') and validates consentId.
+    """
 
     consent_id: UUID = Field(..., description="Unique consent record identifier")
     user_id: UUID | None = Field(
@@ -80,8 +84,11 @@ class AssessmentStateResponse(SchemaBase):
     )
 
 
-class ClaimAssessmentRequest(SchemaBase):
-    """Payload to claim a guest assessment into a registered user account."""
+class ClaimAssessmentRequest(RequestSchemaBase):
+    """Payload to claim a guest assessment into a registered user account.
+
+    Enforces mass-assignment protection (extra='forbid') and validates credentials.
+    """
 
     user_id: UUID = Field(
         ...,
