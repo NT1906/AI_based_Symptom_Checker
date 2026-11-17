@@ -5,8 +5,8 @@ Responsibilities:
     - Initialize structured logging and register central error handlers.
     - Wire versioned API routers.
 
-Owner: Vivek (api) · Task: S0-VIV-1, S1-VIV-2, S1-VIV-3, S1-VIV-4, S2-VIV-1
-Requirements: NFR-05, NFR-08, NFR-10, FR-01
+Owner: Vivek (api) · Task: S0-VIV-1, S1-VIV-2, S1-VIV-3, S1-VIV-4, S2-VIV-1, S2-VIV-3
+Requirements: NFR-05, NFR-08, NFR-10, FR-01, FR-02
 """
 
 from collections.abc import AsyncIterator
@@ -14,7 +14,15 @@ from contextlib import asynccontextmanager
 
 from fastapi import FastAPI
 
-from app.api.v1 import assessments, auth, consents, health, history
+from app.api.v1 import (
+    assessments,
+    auth,
+    consents,
+    health,
+    history,
+    privacy,
+    profile,
+)
 from app.core.config import get_settings
 from app.core.errors import register_error_handlers
 from app.core.logging import configure_logging, get_logger
@@ -89,6 +97,8 @@ def create_app() -> FastAPI:
     app.include_router(assessments.router, prefix="/api/v1")
     app.include_router(consents.router, prefix="/api/v1")
     app.include_router(history.router, prefix="/api/v1")
+    app.include_router(profile.router, prefix="/api/v1")
+    app.include_router(privacy.router, prefix="/api/v1")
 
     return app
 

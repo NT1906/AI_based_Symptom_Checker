@@ -46,6 +46,7 @@ from app.services.ai.gateway import AiGateway
 from app.services.auth.schemas import UserRead
 from app.services.auth.security import decode_access_token, validate_csrf_token
 from app.services.auth.service import AuthService
+from app.services.profile.service import ProfileService
 
 
 # ---------------------------------------------------------------------------
@@ -421,6 +422,21 @@ async def get_optional_current_user(
 AuthServiceDep = Annotated[AuthService, Depends(get_auth_service)]
 CurrentUserDep = Annotated[UserRead, Depends(get_current_user)]
 OptionalUserDep = Annotated[UserRead | None, Depends(get_optional_current_user)]
+
+
+def get_profile_service(session_factory: SessionFactoryDep) -> ProfileService:
+    """Provide profile domain service instance.
+
+    Args:
+        session_factory: Injected SQLAlchemy sessionmaker factory.
+
+    Returns:
+        ProfileService: Initialized profile domain service.
+    """
+    return ProfileService(session_factory=session_factory)
+
+
+ProfileServiceDep = Annotated[ProfileService, Depends(get_profile_service)]
 
 
 async def verify_csrf_token(

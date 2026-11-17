@@ -58,7 +58,7 @@ class Condition(SchemaBase):
     @field_validator("name")
     @classmethod
     def validate_name_not_blank(cls, value: str) -> str:
-        """Ensure condition name is not whitespace.
+        """Ensure condition name is not whitespace and contains no null bytes.
 
         Args:
             value: Condition name string.
@@ -67,8 +67,10 @@ class Condition(SchemaBase):
             Stripped condition name.
 
         Raises:
-            ValueError: If name is blank.
+            ValueError: If name is blank or contains null bytes.
         """
+        if "\x00" in value:
+            raise ValueError("Condition name cannot contain null bytes")
         cleaned = value.strip()
         if not cleaned:
             raise ValueError("Condition name cannot be blank")

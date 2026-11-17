@@ -22,3 +22,4 @@ This folder contains versioned, immutable prompt templates for the AI Symptom Un
 | `extraction.v2.txt` | Multi-turn symptom extraction attributing standalone replies to target questions, with expanded Hinglish, misspelling, and emergency coverage | v2 | S2-NIT-1 |
 | `clarification.v1.txt` | Targeted follow-up question generator baseline | v1 | S0-NIT-1 |
 | `clarification.v2.txt` | Missing-information detection + targeted non-diagnostic clarification question generator (capped at 3 turns, safety priority ranking) | v2 | S1-NIT-2 |
+| `intent_defence.v1.txt` | Adversarial prompt-injection hardening and off-topic instruction override defence directive | v1 | S2-NIT-2 |

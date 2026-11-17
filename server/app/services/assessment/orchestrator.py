@@ -10,6 +10,9 @@ Responsibilities:
     - Support symptom confirmation, additions, deletions, edits, and bulk updates.
     - Pass profile context (age, chronic conditions) into analysis (FR-02, S2-DAR-3).
     - Guarantee idempotent message processing and transactions (NFR-05, S2-DAR-4).
+    - Guard assessment ownership and block cross-user access (NFR-03, S2-DAR-6).
+    - Enforce strict input validation, length limits, and null byte
+      rejection (NFR-03, S2-DAR-7).
     - Provide restart_assessment() to cleanly reset an assessment session (FR-25).
     - Claim anonymous guest assessments into registered accounts (idea §10).
     - Step back to chat from CONFIRMING or READY for conversational edits.
@@ -18,7 +21,8 @@ Responsibilities:
     - Run real analysis in generate_result() via condition predictor, risk engine,
       and result composer with safety-wording validation (FR-05, FR-06, FR-07, DR-05).
 
-Owner: Darshil (assessment) · Task: S2-DAR-4 · Requirements: NFR-05, FR-02, idea §3/§10
+Owner: Darshil (assessment) · Task: S2-DAR-6, S2-DAR-7
+Requirements: NFR-03, NFR-05, FR-02
 """
 
 import asyncio
@@ -73,6 +77,7 @@ from app.services.privacy.safety_guard import (
     assert_safe_wording,
 )
 from app.services.assessment.exceptions import (
+    AssessmentAccessDeniedError,
     AssessmentServiceError,
     InvalidStateTransitionError,
 )
@@ -354,16 +359,226 @@ class AssessmentOrchestrator:
         self._sessions[assessment_id] = session
         return session
 
-    def get_assessment(self, assessment_id: UUID) -> AssessmentRead | None:
-        """Retrieve assessment summary by identifier.
+    def assert_ownership(
+        self,
+        assessment_id: UUID,
+        user_id: UUID | None = None,
+        guest_session_id: UUID | None = None,
+        db_session: Any | None = None,
+    ) -> None:
+        """Assert that caller owns the target assessment, blocking cross-user access.
+
+        Enforces strict authorization boundaries per NFR-03 and OWASP A01:
+        1. If assessment is owned by a registered user (session.user_id is set):
+           - Caller MUST provide matching user_id.
+           - Anonymous callers and different users are blocked with 403 Forbidden.
+        2. If assessment is an unclaimed guest assessment (session.user_id is None):
+           - If assessment has a guest_session_id, caller MUST provide matching
+             guest_session_id. Mismatched guests or unlinked users are blocked.
+        3. If db_session is supplied, verifies persistence layer ownership attributes.
+
+        Args:
+            assessment_id: Target assessment unique identifier.
+            user_id: Optional authenticated user UUID from session token / cookie.
+            guest_session_id: Optional anonymous guest session UUID from bearer token.
+            db_session: Optional active SQLAlchemy session for DB verification.
+
+        Raises:
+            AssessmentServiceError: If assessment is not found (404).
+            AssessmentAccessDeniedError: If caller is not authorized (403).
+        """
+        session = self._sessions.get(assessment_id)
+        db_assessment = None
+
+        if session is None and db_session is not None:
+            from app.models.assessment import Assessment as DbAssessment
+
+            db_assessment = db_session.get(DbAssessment, assessment_id)
+            if db_assessment is not None:
+                db_context = AssessmentContext(
+                    assessment_id=db_assessment.id,
+                    consent_id=db_assessment.consent_id,
+                    user_id=db_assessment.user_id,
+                    guest_session_id=db_assessment.guest_session_id,
+                )
+                db_sm = AssessmentStateMachine(
+                    initial_state=AssessmentState(db_assessment.state),
+                    context=db_context,
+                )
+                session = self.register_session(
+                    assessment_id=db_assessment.id,
+                    state_machine=db_sm,
+                    consent_id=db_assessment.consent_id,
+                    user_id=db_assessment.user_id,
+                    guest_session_id=db_assessment.guest_session_id,
+                )
+
+        if session is None and db_assessment is None:
+            raise AssessmentServiceError(
+                message=f"Assessment '{assessment_id}' was not found.",
+                code="ASSESSMENT_NOT_FOUND",
+                status_code=status.HTTP_404_NOT_FOUND,
+            )
+
+        if db_session is not None and db_assessment is None:
+            from app.models.assessment import Assessment as DbAssessment
+
+            db_assessment = db_session.get(DbAssessment, assessment_id)
+
+        owner_user_id = (
+            session.user_id
+            if session is not None
+            else (db_assessment.user_id if db_assessment is not None else None)
+        )
+        owner_guest_id = (
+            session.guest_session_id
+            if session is not None
+            else (db_assessment.guest_session_id if db_assessment is not None else None)
+        )
+
+        # 1. Registered user assessment ownership check
+        if owner_user_id is not None:
+            if user_id is None:
+                logger.warning(
+                    "unauthorized_access",
+                    assessment_id=str(assessment_id),
+                    expected_user_id=str(owner_user_id),
+                    provided_user_id=None,
+                    reason="unauthenticated_guest_access_to_user_assessment",
+                )
+                raise AssessmentAccessDeniedError(
+                    assessment_id=assessment_id,
+                    reason="Access denied: assessment belongs to a registered account.",
+                )
+            if user_id != owner_user_id:
+                logger.warning(
+                    "unauthorized_access",
+                    assessment_id=str(assessment_id),
+                    expected_user_id=str(owner_user_id),
+                    provided_user_id=str(user_id),
+                    reason="cross_user_access_attempt",
+                )
+                raise AssessmentAccessDeniedError(
+                    assessment_id=assessment_id,
+                    reason="Access denied: you do not own this assessment.",
+                )
+
+        # 2. Guest assessment ownership check
+        elif owner_guest_id is not None:
+            if guest_session_id is None and user_id is not None:
+                logger.warning(
+                    "unauthorized_access",
+                    assessment_id=str(assessment_id),
+                    expected_guest_session_id=str(owner_guest_id),
+                    provided_user_id=str(user_id),
+                    reason="user_access_unclaimed_guest_without_token",
+                )
+                raise AssessmentAccessDeniedError(
+                    assessment_id=assessment_id,
+                    reason=(
+                        "Access denied: guest session must be claimed before "
+                        "user access."
+                    ),
+                )
+            if guest_session_id is None:
+                logger.warning(
+                    "unauthorized_access",
+                    assessment_id=str(assessment_id),
+                    expected_guest_session_id=str(owner_guest_id),
+                    provided_guest_session_id=None,
+                    reason="anonymous_access_without_guest_token",
+                )
+                raise AssessmentAccessDeniedError(
+                    assessment_id=assessment_id,
+                    reason="Access denied: guest session token is required.",
+                    code="GUEST_SESSION_MISMATCH",
+                )
+            if guest_session_id != owner_guest_id:
+                logger.warning(
+                    "unauthorized_access",
+                    assessment_id=str(assessment_id),
+                    expected_guest_session_id=str(owner_guest_id),
+                    provided_guest_session_id=str(guest_session_id),
+                    reason="guest_session_mismatch",
+                )
+                raise AssessmentAccessDeniedError(
+                    assessment_id=assessment_id,
+                    reason=(
+                        "Access denied: guest session identifier does not "
+                        "match this assessment."
+                    ),
+                    code="GUEST_SESSION_MISMATCH",
+                )
+
+        logger.info(
+            "assessment_access_authorized",
+            assessment_id=str(assessment_id),
+            user_id=str(user_id) if user_id else None,
+            guest_session_id=str(guest_session_id) if guest_session_id else None,
+        )
+
+    def check_ownership(
+        self,
+        assessment_id: UUID,
+        user_id: UUID | None = None,
+        guest_session_id: UUID | None = None,
+        db_session: Any | None = None,
+    ) -> bool:
+        """Check whether caller owns the target assessment without raising exception."""
+        try:
+            self.assert_ownership(
+                assessment_id=assessment_id,
+                user_id=user_id,
+                guest_session_id=guest_session_id,
+                db_session=db_session,
+            )
+            return True
+        except (AssessmentAccessDeniedError, AssessmentServiceError):
+            return False
+
+    def get_assessment(
+        self,
+        assessment_id: UUID,
+        *,
+        user_id: UUID | None = None,
+        guest_session_id: UUID | None = None,
+        db_session: Any | None = None,
+    ) -> AssessmentRead | None:
+        """Retrieve assessment summary by identifier with optional ownership check.
 
         Args:
             assessment_id: Unique assessment identifier.
+            user_id: Optional caller user ID for ownership validation.
+            guest_session_id: Optional caller guest session ID for ownership validation.
+            db_session: Optional active SQLAlchemy database session.
 
         Returns:
             AssessmentRead if session exists, else None.
         """
+        if user_id is not None or guest_session_id is not None:
+            self.assert_ownership(
+                assessment_id=assessment_id,
+                user_id=user_id,
+                guest_session_id=guest_session_id,
+                db_session=db_session,
+            )
+
         session = self._sessions.get(assessment_id)
+        if session is None and db_session is not None:
+            from app.models.assessment import Assessment as DbAssessment
+
+            db_assessment = db_session.get(DbAssessment, assessment_id)
+            if db_assessment is not None:
+                return AssessmentRead(
+                    id=db_assessment.id,
+                    state=AssessmentState(db_assessment.state),
+                    consent_id=db_assessment.consent_id,
+                    user_id=db_assessment.user_id,
+                    guest_session_id=db_assessment.guest_session_id,
+                    created_at=db_assessment.created_at or datetime.now(UTC),
+                    updated_at=getattr(db_assessment, "updated_at", None)
+                    or datetime.now(UTC),
+                )
         if session is None:
             return None
         return AssessmentRead(
@@ -376,18 +591,34 @@ class AssessmentOrchestrator:
             updated_at=session.updated_at,
         )
 
-    def get_messages(self, assessment_id: UUID) -> list[MessageRead]:
-        """Retrieve ordered conversation messages for an assessment.
+    def get_messages(
+        self,
+        assessment_id: UUID,
+        *,
+        user_id: UUID | None = None,
+        guest_session_id: UUID | None = None,
+    ) -> list[MessageRead]:
+        """Retrieve ordered conversation messages with optional ownership check.
 
         Args:
             assessment_id: Unique assessment identifier.
+            user_id: Optional caller user ID for ownership validation.
+            guest_session_id: Optional caller guest session ID for ownership validation.
 
         Returns:
             List of sequential MessageRead records.
 
         Raises:
             AssessmentServiceError: If assessment does not exist.
+            AssessmentAccessDeniedError: If caller fails ownership check.
         """
+        if user_id is not None or guest_session_id is not None:
+            self.assert_ownership(
+                assessment_id=assessment_id,
+                user_id=user_id,
+                guest_session_id=guest_session_id,
+            )
+
         session = self._sessions.get(assessment_id)
         if session is None:
             raise AssessmentServiceError(
@@ -397,18 +628,48 @@ class AssessmentOrchestrator:
             )
         return list(session.messages)
 
-    def get_symptoms(self, assessment_id: UUID) -> list[SymptomRead]:
-        """Retrieve recognized symptoms for an assessment.
+    async def list_messages(
+        self,
+        assessment_id: UUID,
+        *,
+        user_id: UUID | None = None,
+        guest_session_id: UUID | None = None,
+    ) -> list[MessageRead]:
+        """Async alias for get_messages to satisfy AssessmentService protocol."""
+        return self.get_messages(
+            assessment_id,
+            user_id=user_id,
+            guest_session_id=guest_session_id,
+        )
+
+    def get_symptoms(
+        self,
+        assessment_id: UUID,
+        *,
+        user_id: UUID | None = None,
+        guest_session_id: UUID | None = None,
+    ) -> list[SymptomRead]:
+        """Retrieve recognized symptoms for an assessment with optional ownership check.
 
         Args:
             assessment_id: Unique assessment identifier.
+            user_id: Optional caller user ID for ownership validation.
+            guest_session_id: Optional caller guest session ID for ownership validation.
 
         Returns:
             List of SymptomRead records.
 
         Raises:
             AssessmentServiceError: If assessment does not exist.
+            AssessmentAccessDeniedError: If caller fails ownership check.
         """
+        if user_id is not None or guest_session_id is not None:
+            self.assert_ownership(
+                assessment_id=assessment_id,
+                user_id=user_id,
+                guest_session_id=guest_session_id,
+            )
+
         session = self._sessions.get(assessment_id)
         if session is None:
             raise AssessmentServiceError(
@@ -418,11 +679,19 @@ class AssessmentOrchestrator:
             )
         return list(session.symptoms)
 
-    def get_state(self, assessment_id: UUID) -> AssessmentStateResponse:
-        """Retrieve complete state snapshot with clarification and confidence flags.
+    def get_state(
+        self,
+        assessment_id: UUID,
+        *,
+        user_id: UUID | None = None,
+        guest_session_id: UUID | None = None,
+    ) -> AssessmentStateResponse:
+        """Retrieve complete state snapshot with optional ownership check.
 
         Args:
             assessment_id: Unique assessment identifier.
+            user_id: Optional caller user ID for ownership validation.
+            guest_session_id: Optional caller guest session ID for ownership validation.
 
         Returns:
             AssessmentStateResponse containing state, symptoms, clarification
@@ -430,7 +699,15 @@ class AssessmentOrchestrator:
 
         Raises:
             AssessmentServiceError: If assessment does not exist.
+            AssessmentAccessDeniedError: If caller fails ownership check.
         """
+        if user_id is not None or guest_session_id is not None:
+            self.assert_ownership(
+                assessment_id=assessment_id,
+                user_id=user_id,
+                guest_session_id=guest_session_id,
+            )
+
         session = self._sessions.get(assessment_id)
         if session is None:
             raise AssessmentServiceError(
@@ -452,16 +729,29 @@ class AssessmentOrchestrator:
         self,
         assessment_id: UUID,
         profile: ProfileContext,
+        *,
+        user_id: UUID | None = None,
+        guest_session_id: UUID | None = None,
     ) -> None:
         """Attach or update the user clinical profile context for an assessment.
 
         Args:
             assessment_id: Unique assessment identifier.
             profile: ProfileContext containing age band, sex, and chronic conditions.
+            user_id: Optional caller user ID for ownership validation.
+            guest_session_id: Optional caller guest session ID for ownership validation.
 
         Raises:
             AssessmentServiceError: If assessment does not exist (404).
+            AssessmentAccessDeniedError: If caller fails ownership check (403).
         """
+        if user_id is not None or guest_session_id is not None:
+            self.assert_ownership(
+                assessment_id=assessment_id,
+                user_id=user_id,
+                guest_session_id=guest_session_id,
+            )
+
         session = self._sessions.get(assessment_id)
         if session is None:
             raise AssessmentServiceError(
@@ -482,18 +772,31 @@ class AssessmentOrchestrator:
     def get_profile_context(
         self,
         assessment_id: UUID,
+        *,
+        user_id: UUID | None = None,
+        guest_session_id: UUID | None = None,
     ) -> ProfileContext | None:
         """Retrieve the clinical profile context linked to an assessment.
 
         Args:
             assessment_id: Unique assessment identifier.
+            user_id: Optional caller user ID for ownership validation.
+            guest_session_id: Optional caller guest session ID for ownership validation.
 
         Returns:
             ProfileContext if set, else None.
 
         Raises:
             AssessmentServiceError: If assessment does not exist (404).
+            AssessmentAccessDeniedError: If caller fails ownership check (403).
         """
+        if user_id is not None or guest_session_id is not None:
+            self.assert_ownership(
+                assessment_id=assessment_id,
+                user_id=user_id,
+                guest_session_id=guest_session_id,
+            )
+
         session = self._sessions.get(assessment_id)
         if session is None:
             raise AssessmentServiceError(
@@ -511,6 +814,8 @@ class AssessmentOrchestrator:
         idempotency_key: str | None = None,
         client_message_id: UUID | None = None,
         db_session: Any | None = None,
+        user_id: UUID | None = None,
+        guest_session_id: UUID | None = None,
     ) -> ProcessResult:
         """Process user message: store -> AI extraction -> merge -> decide state.
 
@@ -537,14 +842,25 @@ class AssessmentOrchestrator:
             idempotency_key: Optional client idempotency key to prevent double answers.
             client_message_id: Optional client message UUID for deduplication tracking.
             db_session: Optional active SQLAlchemy database session for transaction.
+            user_id: Optional caller user ID for ownership validation.
+            guest_session_id: Optional caller guest session ID for ownership validation.
 
         Returns:
             ProcessResult with recorded messages, next state, and symptoms.
 
         Raises:
             AssessmentServiceError: If assessment is missing or message is blank.
+            AssessmentAccessDeniedError: If caller fails ownership check (403).
             InvalidStateTransitionError: If session state blocks new messages.
         """
+        if user_id is not None or guest_session_id is not None:
+            self.assert_ownership(
+                assessment_id=assessment_id,
+                user_id=user_id,
+                guest_session_id=guest_session_id,
+                db_session=db_session,
+            )
+
         session = self._sessions.get(assessment_id)
         if session is None and db_session is not None:
             from app.models.assessment import Assessment as DbAssessment
@@ -576,6 +892,12 @@ class AssessmentOrchestrator:
                 status_code=status.HTTP_404_NOT_FOUND,
             )
 
+        if message and "\x00" in message:
+            raise AssessmentServiceError(
+                message="Message content cannot contain null bytes.",
+                code="INVALID_MESSAGE_CONTENT",
+                status_code=status.HTTP_422_UNPROCESSABLE_ENTITY,
+            )
         cleaned = message.strip() if message else ""
         if not cleaned:
             raise AssessmentServiceError(
@@ -587,6 +909,12 @@ class AssessmentOrchestrator:
             raise AssessmentServiceError(
                 message="Message exceeds maximum allowed length of 4000 characters.",
                 code="MESSAGE_TOO_LONG",
+                status_code=status.HTTP_422_UNPROCESSABLE_ENTITY,
+            )
+        if idempotency_key and "\x00" in idempotency_key:
+            raise AssessmentServiceError(
+                message="Idempotency key cannot contain null bytes.",
+                code="INVALID_IDEMPOTENCY_KEY",
                 status_code=status.HTTP_422_UNPROCESSABLE_ENTITY,
             )
 
@@ -1035,19 +1363,32 @@ class AssessmentOrchestrator:
         self,
         assessment_id: UUID,
         key: str,
+        *,
+        user_id: UUID | None = None,
+        guest_session_id: UUID | None = None,
     ) -> ProcessResult | None:
         """Retrieve a cached ProcessResult by idempotency key or client message ID.
 
         Args:
             assessment_id: Assessment unique identifier.
             key: Idempotency key, client message ID string, or turn key.
+            user_id: Optional caller user ID for ownership validation.
+            guest_session_id: Optional caller guest session ID for ownership validation.
 
         Returns:
             ProcessResult if previously cached, None otherwise.
 
         Raises:
             AssessmentServiceError: If assessment is not found (404).
+            AssessmentAccessDeniedError: If caller fails ownership check (403).
         """
+        if user_id is not None or guest_session_id is not None:
+            self.assert_ownership(
+                assessment_id=assessment_id,
+                user_id=user_id,
+                guest_session_id=guest_session_id,
+            )
+
         session = self._sessions.get(assessment_id)
         if session is None:
             raise AssessmentServiceError(
@@ -1065,15 +1406,28 @@ class AssessmentOrchestrator:
     def clear_idempotency_cache(
         self,
         assessment_id: UUID,
+        *,
+        user_id: UUID | None = None,
+        guest_session_id: UUID | None = None,
     ) -> None:
         """Clear cached idempotency records for an assessment session.
 
         Args:
             assessment_id: Assessment unique identifier.
+            user_id: Optional caller user ID for ownership validation.
+            guest_session_id: Optional caller guest session ID for ownership validation.
 
         Raises:
             AssessmentServiceError: If assessment is not found (404).
+            AssessmentAccessDeniedError: If caller fails ownership check (403).
         """
+        if user_id is not None or guest_session_id is not None:
+            self.assert_ownership(
+                assessment_id=assessment_id,
+                user_id=user_id,
+                guest_session_id=guest_session_id,
+            )
+
         session = self._sessions.get(assessment_id)
         if session is None:
             raise AssessmentServiceError(
@@ -1189,6 +1543,9 @@ class AssessmentOrchestrator:
         self,
         assessment_id: UUID,
         symptoms: Sequence[Symptom | SymptomUpdate | SymptomRead] | None = None,
+        *,
+        user_id: UUID | None = None,
+        guest_session_id: UUID | None = None,
     ) -> list[SymptomRead]:
         """Confirm the list of recognized symptoms and transition session to READY.
 
@@ -1199,6 +1556,8 @@ class AssessmentOrchestrator:
         Args:
             assessment_id: Unique assessment identifier.
             symptoms: Optional updated or confirmed symptoms list.
+            user_id: Optional caller user ID for ownership validation.
+            guest_session_id: Optional caller guest session ID for ownership validation.
 
         Returns:
             list[SymptomRead]: The confirmed symptoms list.
@@ -1206,14 +1565,29 @@ class AssessmentOrchestrator:
         Raises:
             AssessmentServiceError: If assessment is missing (404) or symptoms list
                 is empty (400).
+            AssessmentAccessDeniedError: If caller fails ownership check (403).
             InvalidStateTransitionError: If session state blocks confirmation (409).
         """
+        if user_id is not None or guest_session_id is not None:
+            self.assert_ownership(
+                assessment_id=assessment_id,
+                user_id=user_id,
+                guest_session_id=guest_session_id,
+            )
+
         session = self._sessions.get(assessment_id)
         if session is None:
             raise AssessmentServiceError(
                 message=f"Assessment '{assessment_id}' was not found.",
                 code="ASSESSMENT_NOT_FOUND",
                 status_code=status.HTTP_404_NOT_FOUND,
+            )
+
+        if symptoms is not None and len(symptoms) > 50:
+            raise AssessmentServiceError(
+                message="Cannot confirm more than 50 symptoms at once.",
+                code="TOO_MANY_SYMPTOMS",
+                status_code=status.HTTP_422_UNPROCESSABLE_ENTITY,
             )
 
         sm = session.state_machine
@@ -1276,6 +1650,9 @@ class AssessmentOrchestrator:
         self,
         assessment_id: UUID,
         symptoms: Sequence[SymptomUpdate | Symptom | SymptomRead],
+        *,
+        user_id: UUID | None = None,
+        guest_session_id: UUID | None = None,
     ) -> list[SymptomRead]:
         """Update, edit, add, or replace symptoms in an active assessment session.
 
@@ -1285,20 +1662,37 @@ class AssessmentOrchestrator:
         Args:
             assessment_id: Unique assessment identifier.
             symptoms: Sequence of symptom models or updates to apply.
+            user_id: Optional caller user ID for ownership validation.
+            guest_session_id: Optional caller guest session ID for ownership validation.
 
         Returns:
             list[SymptomRead]: Current updated symptoms list.
 
         Raises:
             AssessmentServiceError: If assessment is missing (404).
+            AssessmentAccessDeniedError: If caller fails ownership check (403).
             InvalidStateTransitionError: If session state blocks editing (409).
         """
+        if user_id is not None or guest_session_id is not None:
+            self.assert_ownership(
+                assessment_id=assessment_id,
+                user_id=user_id,
+                guest_session_id=guest_session_id,
+            )
+
         session = self._sessions.get(assessment_id)
         if session is None:
             raise AssessmentServiceError(
                 message=f"Assessment '{assessment_id}' was not found.",
                 code="ASSESSMENT_NOT_FOUND",
                 status_code=status.HTTP_404_NOT_FOUND,
+            )
+
+        if len(symptoms) > 50:
+            raise AssessmentServiceError(
+                message="Cannot update more than 50 symptoms in a single request.",
+                code="TOO_MANY_SYMPTOMS",
+                status_code=status.HTTP_422_UNPROCESSABLE_ENTITY,
             )
 
         self._ensure_editable_state(session)
@@ -1315,6 +1709,9 @@ class AssessmentOrchestrator:
         self,
         assessment_id: UUID,
         symptom: Symptom | SymptomCreate | SymptomRead,
+        *,
+        user_id: UUID | None = None,
+        guest_session_id: UUID | None = None,
     ) -> SymptomRead:
         """Add a single symptom to the assessment session.
 
@@ -1325,14 +1722,24 @@ class AssessmentOrchestrator:
         Args:
             assessment_id: Unique assessment identifier.
             symptom: Symptom record to add.
+            user_id: Optional caller user ID for ownership validation.
+            guest_session_id: Optional caller guest session ID for ownership validation.
 
         Returns:
             SymptomRead: The added or updated symptom record.
 
         Raises:
             AssessmentServiceError: If assessment is missing (404).
+            AssessmentAccessDeniedError: If caller fails ownership check (403).
             InvalidStateTransitionError: If session state blocks modifications (409).
         """
+        if user_id is not None or guest_session_id is not None:
+            self.assert_ownership(
+                assessment_id=assessment_id,
+                user_id=user_id,
+                guest_session_id=guest_session_id,
+            )
+
         session = self._sessions.get(assessment_id)
         if session is None:
             raise AssessmentServiceError(
@@ -1343,10 +1750,36 @@ class AssessmentOrchestrator:
 
         self._ensure_editable_state(session)
 
+        if "\x00" in symptom.name:
+            raise AssessmentServiceError(
+                message="Symptom name cannot contain null bytes.",
+                code="INVALID_SYMPTOM_NAME",
+                status_code=status.HTTP_422_UNPROCESSABLE_ENTITY,
+            )
+        if symptom.body_location and "\x00" in symptom.body_location:
+            raise AssessmentServiceError(
+                message="Body location cannot contain null bytes.",
+                code="INVALID_BODY_LOCATION",
+                status_code=status.HTTP_422_UNPROCESSABLE_ENTITY,
+            )
+
         cleaned_name = symptom.name.strip().lower()
+        if not cleaned_name:
+            raise AssessmentServiceError(
+                message="Symptom name cannot be blank.",
+                code="INVALID_SYMPTOM_NAME",
+                status_code=status.HTTP_422_UNPROCESSABLE_ENTITY,
+            )
+
         existing = next(
             (s for s in session.symptoms if s.name.lower() == cleaned_name), None
         )
+        if existing is None and len(session.symptoms) >= 50:
+            raise AssessmentServiceError(
+                message="Cannot add more than 50 symptoms to an assessment.",
+                code="SYMPTOM_LIMIT_EXCEEDED",
+                status_code=status.HTTP_422_UNPROCESSABLE_ENTITY,
+            )
         if existing is not None:
             if symptom.severity != Severity.UNKNOWN:
                 existing.severity = symptom.severity
@@ -1384,12 +1817,17 @@ class AssessmentOrchestrator:
         self,
         assessment_id: UUID,
         symptom_id: UUID | str,
+        *,
+        user_id: UUID | None = None,
+        guest_session_id: UUID | None = None,
     ) -> list[SymptomRead]:
         """Remove a symptom from the assessment session by UUID or symptom name.
 
         Args:
             assessment_id: Unique assessment identifier.
             symptom_id: UUID identifier or string name of the symptom to remove.
+            user_id: Optional caller user ID for ownership validation.
+            guest_session_id: Optional caller guest session ID for ownership validation.
 
         Returns:
             list[SymptomRead]: Remaining symptoms after removal.
@@ -1397,8 +1835,30 @@ class AssessmentOrchestrator:
         Raises:
             AssessmentServiceError: If assessment is missing (404) or symptom
                 not found (404).
+            AssessmentAccessDeniedError: If caller fails ownership check (403).
             InvalidStateTransitionError: If session state blocks modifications (409).
         """
+        if user_id is not None or guest_session_id is not None:
+            self.assert_ownership(
+                assessment_id=assessment_id,
+                user_id=user_id,
+                guest_session_id=guest_session_id,
+            )
+
+        if isinstance(symptom_id, str):
+            if "\x00" in symptom_id:
+                raise AssessmentServiceError(
+                    message="Symptom identifier cannot contain null bytes.",
+                    code="INVALID_SYMPTOM_IDENTIFIER",
+                    status_code=status.HTTP_422_UNPROCESSABLE_ENTITY,
+                )
+            if not symptom_id.strip():
+                raise AssessmentServiceError(
+                    message="Symptom identifier cannot be blank.",
+                    code="INVALID_SYMPTOM_IDENTIFIER",
+                    status_code=status.HTTP_422_UNPROCESSABLE_ENTITY,
+                )
+
         session = self._sessions.get(assessment_id)
         if session is None:
             raise AssessmentServiceError(
@@ -1449,12 +1909,17 @@ class AssessmentOrchestrator:
         self,
         assessment_id: UUID,
         symptom_update: SymptomUpdate,
+        *,
+        user_id: UUID | None = None,
+        guest_session_id: UUID | None = None,
     ) -> SymptomRead:
         """Edit attributes (severity, duration, body location) of an existing symptom.
 
         Args:
             assessment_id: Unique assessment identifier.
             symptom_update: Field updates to apply. Must specify either id or name.
+            user_id: Optional caller user ID for ownership validation.
+            guest_session_id: Optional caller guest session ID for ownership validation.
 
         Returns:
             SymptomRead: The updated symptom record.
@@ -1462,8 +1927,16 @@ class AssessmentOrchestrator:
         Raises:
             AssessmentServiceError: If assessment is missing (404), payload
                 invalid (400), or symptom not found (404).
+            AssessmentAccessDeniedError: If caller fails ownership check (403).
             InvalidStateTransitionError: If session state blocks modifications (409).
         """
+        if user_id is not None or guest_session_id is not None:
+            self.assert_ownership(
+                assessment_id=assessment_id,
+                user_id=user_id,
+                guest_session_id=guest_session_id,
+            )
+
         session = self._sessions.get(assessment_id)
         if session is None:
             raise AssessmentServiceError(
@@ -1473,6 +1946,19 @@ class AssessmentOrchestrator:
             )
 
         self._ensure_editable_state(session)
+
+        if symptom_update.name and "\x00" in symptom_update.name:
+            raise AssessmentServiceError(
+                message="Symptom name cannot contain null bytes.",
+                code="INVALID_SYMPTOM_NAME",
+                status_code=status.HTTP_422_UNPROCESSABLE_ENTITY,
+            )
+        if symptom_update.body_location and "\x00" in symptom_update.body_location:
+            raise AssessmentServiceError(
+                message="Body location cannot contain null bytes.",
+                code="INVALID_BODY_LOCATION",
+                status_code=status.HTTP_422_UNPROCESSABLE_ENTITY,
+            )
 
         if symptom_update.id is None and not symptom_update.name:
             raise AssessmentServiceError(
@@ -1524,6 +2010,9 @@ class AssessmentOrchestrator:
         self,
         assessment_id: UUID,
         to_state: AssessmentState = AssessmentState.START,
+        *,
+        user_id: UUID | None = None,
+        guest_session_id: UUID | None = None,
     ) -> AssessmentStateResponse:
         """Reset an assessment session back to START or SYMPTOM_COLLECTION.
 
@@ -1534,14 +2023,24 @@ class AssessmentOrchestrator:
         Args:
             assessment_id: Unique assessment identifier.
             to_state: Target state to reset to (default: AssessmentState.START).
+            user_id: Optional caller user ID for ownership validation.
+            guest_session_id: Optional caller guest session ID for ownership validation.
 
         Returns:
             AssessmentStateResponse: State snapshot after reset.
 
         Raises:
             AssessmentServiceError: If assessment is not found (404).
+            AssessmentAccessDeniedError: If caller fails ownership check (403).
             InvalidStateTransitionError: If target state is invalid for restart (409).
         """
+        if user_id is not None or guest_session_id is not None:
+            self.assert_ownership(
+                assessment_id=assessment_id,
+                user_id=user_id,
+                guest_session_id=guest_session_id,
+            )
+
         session = self._sessions.get(assessment_id)
         if session is None:
             raise AssessmentServiceError(
@@ -1568,6 +2067,9 @@ class AssessmentOrchestrator:
     async def step_back_to_chat(
         self,
         assessment_id: UUID,
+        *,
+        user_id: UUID | None = None,
+        guest_session_id: UUID | None = None,
     ) -> AssessmentStateResponse:
         """Step back from CONFIRMING or READY to SYMPTOM_COLLECTION.
 
@@ -1575,14 +2077,24 @@ class AssessmentOrchestrator:
 
         Args:
             assessment_id: Unique assessment identifier.
+            user_id: Optional caller user ID for ownership validation.
+            guest_session_id: Optional caller guest session ID for ownership validation.
 
         Returns:
             AssessmentStateResponse: Updated state snapshot.
 
         Raises:
             AssessmentServiceError: If assessment is missing (404).
+            AssessmentAccessDeniedError: If caller fails ownership check (403).
             InvalidStateTransitionError: If session state blocks transition (409).
         """
+        if user_id is not None or guest_session_id is not None:
+            self.assert_ownership(
+                assessment_id=assessment_id,
+                user_id=user_id,
+                guest_session_id=guest_session_id,
+            )
+
         session = self._sessions.get(assessment_id)
         if session is None:
             raise AssessmentServiceError(
@@ -1885,6 +2397,9 @@ class AssessmentOrchestrator:
         assessment_id: UUID,
         self_care_guidance: Sequence[str] = (),
         profile: ProfileContext | None = None,
+        *,
+        user_id: UUID | None = None,
+        guest_session_id: UUID | None = None,
     ) -> AssessmentResult:
         """Trigger analysis and transition session through ANALYZING to COMPLETED.
 
@@ -1905,15 +2420,25 @@ class AssessmentOrchestrator:
                 low-risk results.
             profile: Optional user clinical profile context (age, chronic conditions).
                 If omitted, falls back to profile context attached to the session.
+            user_id: Optional caller user ID for ownership validation.
+            guest_session_id: Optional caller guest session ID for ownership validation.
 
         Returns:
             AssessmentResult with triage risk tier, conditions, and safety disclaimer.
 
         Raises:
             AssessmentServiceError: If assessment is not found.
+            AssessmentAccessDeniedError: If caller fails ownership check (403).
             InvalidStateTransitionError: If session is not in READY state.
             UnsafeWordingError: If generated text violates safety-wording rules.
         """
+        if user_id is not None or guest_session_id is not None:
+            self.assert_ownership(
+                assessment_id=assessment_id,
+                user_id=user_id,
+                guest_session_id=guest_session_id,
+            )
+
         session = self._sessions.get(assessment_id)
         if session is None:
             raise AssessmentServiceError(
@@ -1962,6 +2487,9 @@ class AssessmentOrchestrator:
         self,
         assessment_id: UUID,
         findings: ImageAnalysis | list[ExtractedSymptom],
+        *,
+        user_id: UUID | None = None,
+        guest_session_id: UUID | None = None,
     ) -> list[SymptomRead]:
         """Merge visual findings from an image analysis into assessment symptoms.
 
@@ -1979,15 +2507,25 @@ class AssessmentOrchestrator:
             assessment_id: Unique assessment identifier.
             findings: ImageAnalysis result from an ImageAnalyzer or list of
                 extracted symptoms.
+            user_id: Optional caller user ID for ownership validation.
+            guest_session_id: Optional caller guest session ID for ownership validation.
 
         Returns:
             Updated list of SymptomRead models including any visual symptoms.
 
         Raises:
             AssessmentServiceError: If assessment does not exist (404).
+            AssessmentAccessDeniedError: If caller fails ownership check (403).
             InvalidStateTransitionError: If assessment is in a terminal or
                 non-editable state (COMPLETED, ANALYZING, ERROR).
         """
+        if user_id is not None or guest_session_id is not None:
+            self.assert_ownership(
+                assessment_id=assessment_id,
+                user_id=user_id,
+                guest_session_id=guest_session_id,
+            )
+
         session = self._sessions.get(assessment_id)
         if session is None:
             raise AssessmentServiceError(
@@ -2056,6 +2594,9 @@ class AssessmentOrchestrator:
         self,
         assessment_id: UUID,
         image_bytes: bytes,
+        *,
+        user_id: UUID | None = None,
+        guest_session_id: UUID | None = None,
     ) -> list[SymptomRead]:
         """Analyse image bytes and merge visual findings into assessment state.
 
@@ -2066,14 +2607,24 @@ class AssessmentOrchestrator:
         Args:
             assessment_id: Unique assessment identifier.
             image_bytes: Validated, sanitized image byte payload in memory.
+            user_id: Optional caller user ID for ownership validation.
+            guest_session_id: Optional caller guest session ID for ownership validation.
 
         Returns:
             Updated list of SymptomRead models.
 
         Raises:
             AssessmentServiceError: If assessment is not found (404).
+            AssessmentAccessDeniedError: If caller fails ownership check (403).
             InvalidStateTransitionError: If session state blocks modifications (409).
         """
+        if user_id is not None or guest_session_id is not None:
+            self.assert_ownership(
+                assessment_id=assessment_id,
+                user_id=user_id,
+                guest_session_id=guest_session_id,
+            )
+
         session = self._sessions.get(assessment_id)
         if session is None:
             raise AssessmentServiceError(
@@ -2107,7 +2658,12 @@ class AssessmentOrchestrator:
             )
             return session.symptoms
 
-        return await self.merge_image_findings(assessment_id, analysis)
+        return await self.merge_image_findings(
+            assessment_id,
+            analysis,
+            user_id=user_id,
+            guest_session_id=guest_session_id,
+        )
 
 
 __all__ = [
