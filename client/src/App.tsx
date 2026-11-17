@@ -2,11 +2,13 @@
  * @file Symptom checker application shell.
  * Owner: Rutva · Task: S0-RUT-1 · Requirements: NFR-08, NFR-09
  */
+import { useEffect, useRef, useState } from "react";
 import { useQuery } from "@tanstack/react-query";
 import { Navigate } from "react-router-dom";
+import { restoreUnfinishedAssessment } from "./services/assessmentRecovery";
 import { getCurrentPolicyVersion } from "./services/consentApi";
-import { useConsentStore } from "./stores/consentStore";
 import { useAssessmentStore } from "./stores/assessmentStore";
+import { useConsentStore } from "./stores/consentStore";
 
 /**
  * Renders the symptom-assessment interface and safety information.
@@ -15,22 +17,56 @@ import { useAssessmentStore } from "./stores/assessmentStore";
  */
 function App() {
   const messages = useAssessmentStore((state) => state.messages);
-
   const consentId = useConsentStore((state) => state.consentId);
   const policyVersion = useConsentStore((state) => state.policyVersion);
+
+    const [isRestoring, setIsRestoring] = useState(true);
+  const restoreStarted = useRef(false);
+
   const activePolicy = useQuery({
     queryKey: ["current-consent-policy"],
     queryFn: getCurrentPolicyVersion,
     enabled: Boolean(consentId),
   });
+
+  const canRestore =
+    Boolean(consentId) &&
+    !activePolicy.isPending &&
+    !activePolicy.isFetching &&
+    !activePolicy.isError &&
+    policyVersion === activePolicy.data;
+
+  useEffect(() => {
+    if (!canRestore || restoreStarted.current) return;
+
+    restoreStarted.current = true;
+    let mounted = true;
+
+    restoreUnfinishedAssessment().finally(() => {
+      if (mounted) {
+        setIsRestoring(false);
+      }
+    });
+
+    return () => {
+      mounted = false;
+    };
+  }, [canRestore]);
+
   if (!consentId || activePolicy.isError) {
     return <Navigate to="/" replace />;
   }
+
   if (activePolicy.isPending || activePolicy.isFetching) {
-    return <p role="status">Checking the privacy notice…</p>;
+    return <p role="status">Checking the privacy notice...</p>;
   }
+
   if (policyVersion !== activePolicy.data) {
     return <Navigate to="/" replace />;
+  }
+
+  if (isRestoring) {
+    return <p role="status">Restoring your assessment...</p>;
   }
 
   return (
