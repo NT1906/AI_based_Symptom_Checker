@@ -1,8 +1,8 @@
 """Database repository package.
 
 Owner: Harsh, Kavya, Nishith
-Tasks: S0-HAR-1, S1-KAV-4, S1-NIT-4, S2-KAV-3
-Requirements: FR-01, FR-02, FR-17, idea § 10
+Tasks: S0-HAR-1, S1-KAV-4, S1-NIT-4, S2-KAV-3, S2-NIT-3
+Requirements: FR-01, FR-02, FR-17, NFR-10, idea § 10
 """
 
 from app.repositories.assessment_repository import (
@@ -12,6 +12,14 @@ from app.repositories.assessment_repository import (
     get_assessment_with_details,
     list_assessments_by_user,
     update_assessment_state,
+)
+from app.repositories.audit_log_repository import (
+    count_audit_logs,
+    create_audit_log,
+    get_audit_log_by_id,
+    list_audit_logs,
+    list_audit_logs_by_assessment,
+    list_audit_logs_by_user,
 )
 from app.repositories.guest_session_repository import (
     DEFAULT_SESSION_TTL_HOURS,
@@ -51,8 +59,10 @@ __all__ = [
     "DEFAULT_SESSION_TTL_HOURS",
     "claim_guest_session",
     "clear_profile_by_user_id",
+    "count_audit_logs",
     "count_messages",
     "create_assessment",
+    "create_audit_log",
     "create_guest_session",
     "create_message",
     "create_symptom",
@@ -64,6 +74,7 @@ __all__ = [
     "generate_session_token",
     "get_assessment_by_id",
     "get_assessment_with_details",
+    "get_audit_log_by_id",
     "get_guest_session_by_id",
     "get_guest_session_by_token",
     "get_message_by_id",
@@ -72,6 +83,9 @@ __all__ = [
     "hash_session_token",
     "link_assessment_to_session",
     "list_assessments_by_user",
+    "list_audit_logs",
+    "list_audit_logs_by_assessment",
+    "list_audit_logs_by_user",
     "list_messages_by_assessment",
     "list_symptoms_by_assessment",
     "replace_symptoms_for_assessment",
