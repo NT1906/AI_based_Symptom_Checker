@@ -1,6 +1,6 @@
 /**
  * @file Self-care guidance cards for low-risk clinical assessment outcomes.
- * Owner: Dimple · Task: S2-DIM-2 · Requirements: idea §8, DR-01, DR-05
+ * Owner: Dimple · Task: S2-DIM-2, S2-DIM-5 · Requirements: idea §8, DR-01, DR-05, NFR-06
  *
  * Medical-safety rules (AI_RULES.md §2):
  * - Renders ONLY when risk tier is explicitly SELF_CARE (returns null otherwise).
@@ -134,7 +134,7 @@ export function SelfCareGuidanceCard({
                 promptly.
               </li>
             </ul>
-            <p className="pt-2 text-xs text-slate-500 italic">
+            <p className="pt-2 text-xs text-slate-600 italic">
               {DISCLAIMER_TEXT}
             </p>
           </div>
@@ -179,7 +179,7 @@ export function SelfCareGuidanceCard({
               <span aria-hidden="true">🏠</span>
               <span>Low-Risk Outcome</span>
             </span>
-            <span className="text-xs font-medium text-slate-500">
+            <span className="text-xs font-medium text-slate-600">
               Informational Home Management
             </span>
           </div>

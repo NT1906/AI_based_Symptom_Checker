@@ -1,6 +1,6 @@
 /**
  * @file Public component exports for risk-tier presentation and safety alerts.
- * Owner: Dimple · Tasks: S1-DIM-3, S2-DIM-2 · Requirements: FR-06, FR-15, DR-01, DR-02, idea §8
+ * Owner: Dimple · Tasks: S1-DIM-3, S2-DIM-2, S2-DIM-5 · Requirements: FR-06, FR-15, DR-01, DR-02, NFR-06, idea §8
  */
 
 export { RiskBadge, default as RiskBadgeComponent } from "./RiskBadge";
