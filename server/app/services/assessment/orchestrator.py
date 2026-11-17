@@ -11,6 +11,8 @@ Responsibilities:
     - Pass profile context (age, chronic conditions) into analysis (FR-02, S2-DAR-3).
     - Guarantee idempotent message processing and transactions (NFR-05, S2-DAR-4).
     - Guard assessment ownership and block cross-user access (NFR-03, S2-DAR-6).
+    - Enforce strict input validation, length limits, and null byte
+      rejection (NFR-03, S2-DAR-7).
     - Provide restart_assessment() to cleanly reset an assessment session (FR-25).
     - Claim anonymous guest assessments into registered accounts (idea §10).
     - Step back to chat from CONFIRMING or READY for conversational edits.
@@ -19,7 +21,8 @@ Responsibilities:
     - Run real analysis in generate_result() via condition predictor, risk engine,
       and result composer with safety-wording validation (FR-05, FR-06, FR-07, DR-05).
 
-Owner: Darshil (assessment) · Task: S2-DAR-6 · Requirements: NFR-03, NFR-05, FR-02
+Owner: Darshil (assessment) · Task: S2-DAR-6, S2-DAR-7
+Requirements: NFR-03, NFR-05, FR-02
 """
 
 import asyncio
@@ -289,11 +292,7 @@ class AssessmentOrchestrator:
             updated_at=now,
         )
         self._sessions[aid] = session
-        logger.info(
-            "assessment_created",
-            assessment_id=str(aid),
-            guest_session_id=str(guest_session_id) if guest_session_id else None,
-        )
+        logger.info("assessment_created", assessment_id=str(aid))
         return AssessmentRead(
             id=aid,
             state=sm.current_state,
@@ -439,8 +438,6 @@ class AssessmentOrchestrator:
                 logger.warning(
                     "unauthorized_access",
                     assessment_id=str(assessment_id),
-                    expected_user_id=str(owner_user_id),
-                    provided_user_id=None,
                     reason="unauthenticated_guest_access_to_user_assessment",
                 )
                 raise AssessmentAccessDeniedError(
@@ -451,8 +448,6 @@ class AssessmentOrchestrator:
                 logger.warning(
                     "unauthorized_access",
                     assessment_id=str(assessment_id),
-                    expected_user_id=str(owner_user_id),
-                    provided_user_id=str(user_id),
                     reason="cross_user_access_attempt",
                 )
                 raise AssessmentAccessDeniedError(
@@ -466,8 +461,6 @@ class AssessmentOrchestrator:
                 logger.warning(
                     "unauthorized_access",
                     assessment_id=str(assessment_id),
-                    expected_guest_session_id=str(owner_guest_id),
-                    provided_user_id=str(user_id),
                     reason="user_access_unclaimed_guest_without_token",
                 )
                 raise AssessmentAccessDeniedError(
@@ -481,8 +474,6 @@ class AssessmentOrchestrator:
                 logger.warning(
                     "unauthorized_access",
                     assessment_id=str(assessment_id),
-                    expected_guest_session_id=str(owner_guest_id),
-                    provided_guest_session_id=None,
                     reason="anonymous_access_without_guest_token",
                 )
                 raise AssessmentAccessDeniedError(
@@ -494,8 +485,6 @@ class AssessmentOrchestrator:
                 logger.warning(
                     "unauthorized_access",
                     assessment_id=str(assessment_id),
-                    expected_guest_session_id=str(owner_guest_id),
-                    provided_guest_session_id=str(guest_session_id),
                     reason="guest_session_mismatch",
                 )
                 raise AssessmentAccessDeniedError(
@@ -507,12 +496,7 @@ class AssessmentOrchestrator:
                     code="GUEST_SESSION_MISMATCH",
                 )
 
-        logger.info(
-            "assessment_access_authorized",
-            assessment_id=str(assessment_id),
-            user_id=str(user_id) if user_id else None,
-            guest_session_id=str(guest_session_id) if guest_session_id else None,
-        )
+        logger.info("assessment_access_authorized", assessment_id=str(assessment_id))
 
     def check_ownership(
         self,
@@ -760,10 +744,7 @@ class AssessmentOrchestrator:
         session.state_machine.context.profile = profile
         session.updated_at = datetime.now(UTC)
         logger.info(
-            "assessment_profile_context_updated",
-            assessment_id=str(assessment_id),
-            age_band=profile.age_band.value if profile.age_band else None,
-            chronic_conditions_count=len(profile.chronic_conditions),
+            "assessment_profile_context_updated", assessment_id=str(assessment_id)
         )
 
     def get_profile_context(
@@ -889,6 +870,12 @@ class AssessmentOrchestrator:
                 status_code=status.HTTP_404_NOT_FOUND,
             )
 
+        if message and "\x00" in message:
+            raise AssessmentServiceError(
+                message="Message content cannot contain null bytes.",
+                code="INVALID_MESSAGE_CONTENT",
+                status_code=status.HTTP_422_UNPROCESSABLE_ENTITY,
+            )
         cleaned = message.strip() if message else ""
         if not cleaned:
             raise AssessmentServiceError(
@@ -900,6 +887,12 @@ class AssessmentOrchestrator:
             raise AssessmentServiceError(
                 message="Message exceeds maximum allowed length of 4000 characters.",
                 code="MESSAGE_TOO_LONG",
+                status_code=status.HTTP_422_UNPROCESSABLE_ENTITY,
+            )
+        if idempotency_key and "\x00" in idempotency_key:
+            raise AssessmentServiceError(
+                message="Idempotency key cannot contain null bytes.",
+                code="INVALID_IDEMPOTENCY_KEY",
                 status_code=status.HTTP_422_UNPROCESSABLE_ENTITY,
             )
 
@@ -1568,6 +1561,13 @@ class AssessmentOrchestrator:
                 status_code=status.HTTP_404_NOT_FOUND,
             )
 
+        if symptoms is not None and len(symptoms) > 50:
+            raise AssessmentServiceError(
+                message="Cannot confirm more than 50 symptoms at once.",
+                code="TOO_MANY_SYMPTOMS",
+                status_code=status.HTTP_422_UNPROCESSABLE_ENTITY,
+            )
+
         sm = session.state_machine
         if sm.current_state in (
             AssessmentState.SYMPTOM_COLLECTION,
@@ -1666,6 +1666,13 @@ class AssessmentOrchestrator:
                 status_code=status.HTTP_404_NOT_FOUND,
             )
 
+        if len(symptoms) > 50:
+            raise AssessmentServiceError(
+                message="Cannot update more than 50 symptoms in a single request.",
+                code="TOO_MANY_SYMPTOMS",
+                status_code=status.HTTP_422_UNPROCESSABLE_ENTITY,
+            )
+
         self._ensure_editable_state(session)
         self._apply_symptoms_payload(session, symptoms)
         session.updated_at = datetime.now(UTC)
@@ -1721,10 +1728,36 @@ class AssessmentOrchestrator:
 
         self._ensure_editable_state(session)
 
+        if "\x00" in symptom.name:
+            raise AssessmentServiceError(
+                message="Symptom name cannot contain null bytes.",
+                code="INVALID_SYMPTOM_NAME",
+                status_code=status.HTTP_422_UNPROCESSABLE_ENTITY,
+            )
+        if symptom.body_location and "\x00" in symptom.body_location:
+            raise AssessmentServiceError(
+                message="Body location cannot contain null bytes.",
+                code="INVALID_BODY_LOCATION",
+                status_code=status.HTTP_422_UNPROCESSABLE_ENTITY,
+            )
+
         cleaned_name = symptom.name.strip().lower()
+        if not cleaned_name:
+            raise AssessmentServiceError(
+                message="Symptom name cannot be blank.",
+                code="INVALID_SYMPTOM_NAME",
+                status_code=status.HTTP_422_UNPROCESSABLE_ENTITY,
+            )
+
         existing = next(
             (s for s in session.symptoms if s.name.lower() == cleaned_name), None
         )
+        if existing is None and len(session.symptoms) >= 50:
+            raise AssessmentServiceError(
+                message="Cannot add more than 50 symptoms to an assessment.",
+                code="SYMPTOM_LIMIT_EXCEEDED",
+                status_code=status.HTTP_422_UNPROCESSABLE_ENTITY,
+            )
         if existing is not None:
             if symptom.severity != Severity.UNKNOWN:
                 existing.severity = symptom.severity
@@ -1751,11 +1784,7 @@ class AssessmentOrchestrator:
             s.model_dump() for s in session.symptoms
         ]
         session.updated_at = datetime.now(UTC)
-        logger.info(
-            "symptom_added",
-            assessment_id=str(assessment_id),
-            symptom_name=target.name,
-        )
+        logger.info("symptom_added", assessment_id=str(assessment_id))
         return target
 
     async def remove_symptom(
@@ -1789,6 +1818,20 @@ class AssessmentOrchestrator:
                 user_id=user_id,
                 guest_session_id=guest_session_id,
             )
+
+        if isinstance(symptom_id, str):
+            if "\x00" in symptom_id:
+                raise AssessmentServiceError(
+                    message="Symptom identifier cannot contain null bytes.",
+                    code="INVALID_SYMPTOM_IDENTIFIER",
+                    status_code=status.HTTP_422_UNPROCESSABLE_ENTITY,
+                )
+            if not symptom_id.strip():
+                raise AssessmentServiceError(
+                    message="Symptom identifier cannot be blank.",
+                    code="INVALID_SYMPTOM_IDENTIFIER",
+                    status_code=status.HTTP_422_UNPROCESSABLE_ENTITY,
+                )
 
         session = self._sessions.get(assessment_id)
         if session is None:
@@ -1824,16 +1867,12 @@ class AssessmentOrchestrator:
                 status_code=status.HTTP_404_NOT_FOUND,
             )
 
-        removed = session.symptoms.pop(target_idx)
+        session.symptoms.pop(target_idx)
         session.state_machine.context.symptoms = [
             s.model_dump() for s in session.symptoms
         ]
         session.updated_at = datetime.now(UTC)
-        logger.info(
-            "symptom_removed",
-            assessment_id=str(assessment_id),
-            symptom_name=removed.name,
-        )
+        logger.info("symptom_removed", assessment_id=str(assessment_id))
         return list(session.symptoms)
 
     async def edit_symptom(
@@ -1878,6 +1917,19 @@ class AssessmentOrchestrator:
 
         self._ensure_editable_state(session)
 
+        if symptom_update.name and "\x00" in symptom_update.name:
+            raise AssessmentServiceError(
+                message="Symptom name cannot contain null bytes.",
+                code="INVALID_SYMPTOM_NAME",
+                status_code=status.HTTP_422_UNPROCESSABLE_ENTITY,
+            )
+        if symptom_update.body_location and "\x00" in symptom_update.body_location:
+            raise AssessmentServiceError(
+                message="Body location cannot contain null bytes.",
+                code="INVALID_BODY_LOCATION",
+                status_code=status.HTTP_422_UNPROCESSABLE_ENTITY,
+            )
+
         if symptom_update.id is None and not symptom_update.name:
             raise AssessmentServiceError(
                 message="Symptom edit payload must specify an id or name.",
@@ -1917,11 +1969,7 @@ class AssessmentOrchestrator:
             s.model_dump() for s in session.symptoms
         ]
         session.updated_at = datetime.now(UTC)
-        logger.info(
-            "symptom_edited",
-            assessment_id=str(assessment_id),
-            symptom_name=target.name,
-        )
+        logger.info("symptom_edited", assessment_id=str(assessment_id))
         return target
 
     async def restart_assessment(
@@ -2146,11 +2194,7 @@ class AssessmentOrchestrator:
                 session.guest_session_id = guest_session_id
             session.updated_at = datetime.now(UTC)
 
-        logger.info(
-            "guest_assessment_claimed",
-            assessment_id=str(assessment_id),
-            user_id=str(user_id),
-        )
+        logger.info("guest_assessment_claimed", assessment_id=str(assessment_id))
 
         if session is not None:
             return AssessmentRead(
@@ -2302,12 +2346,7 @@ class AssessmentOrchestrator:
                             )
                         )
 
-        logger.info(
-            "guest_session_claimed",
-            guest_session_id=str(guest_session_id),
-            user_id=str(user_id),
-            count=len(results),
-        )
+        logger.info("guest_session_claimed", count=len(results))
         return results
 
     async def generate_result(

@@ -20,7 +20,11 @@ from pydantic.alias_generators import to_camel
 from starlette.exceptions import HTTPException as StarletteHTTPException
 
 from app.core.logging import get_logger
-from app.core.request_id import REQUEST_ID_HEADER, generate_request_id
+from app.core.request_id import (
+    REQUEST_ID_HEADER,
+    _extract_route_template,
+    generate_request_id,
+)
 
 logger = get_logger(__name__)
 
@@ -224,7 +228,7 @@ async def app_error_handler(request: Request, exc: AppError) -> JSONResponse:
     # user-entered symptoms or personal health data (AI_RULES §2.12, §4.9).
     logger.warning(
         "app_error_occurred",
-        path=request.url.path,
+        route=_extract_route_template(request.scope),
         method=request.method,
         code=exc.code,
         status_code=exc.status_code,
@@ -256,7 +260,7 @@ async def validation_error_handler(
     request_id = _resolve_request_id(request)
     logger.info(
         "request_validation_failed",
-        path=request.url.path,
+        route=_extract_route_template(request.scope),
         method=request.method,
         request_id=request_id,
     )
@@ -321,7 +325,7 @@ async def unhandled_exception_handler(request: Request, exc: Exception) -> JSONR
     request_id = _resolve_request_id(request)
     logger.error(
         "unhandled_exception",
-        path=request.url.path,
+        route=_extract_route_template(request.scope),
         method=request.method,
         request_id=request_id,
     )

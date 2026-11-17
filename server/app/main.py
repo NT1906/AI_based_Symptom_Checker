@@ -20,6 +20,7 @@ from app.api.v1 import (
     consents,
     health,
     history,
+    privacy,
     profile,
 )
 from app.core.config import get_settings
@@ -97,6 +98,7 @@ def create_app() -> FastAPI:
     app.include_router(consents.router, prefix="/api/v1")
     app.include_router(history.router, prefix="/api/v1")
     app.include_router(profile.router, prefix="/api/v1")
+    app.include_router(privacy.router, prefix="/api/v1")
 
     return app
 

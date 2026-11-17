@@ -168,7 +168,7 @@ async def register(
     Returns:
         UserRead: Sanitized user account representation.
     """
-    logger.info("auth_registration_attempt", email=payload.email)
+    logger.info("auth_registration_attempt")
     return await service.register_user(payload)
 
 
@@ -203,7 +203,7 @@ async def login(
     user, access_token, refresh_token = await service.authenticate_user(payload)
     csrf_token = generate_csrf_token()
     _set_auth_cookies(response, access_token, refresh_token, csrf_token, settings)
-    logger.info("auth_login_successful", user_id=str(user.id))
+    logger.info("auth_login_successful")
     return user
 
 
@@ -250,7 +250,7 @@ async def refresh(
     user, new_access, new_refresh = await service.refresh_session(raw_refresh)
     csrf_token = generate_csrf_token()
     _set_auth_cookies(response, new_access, new_refresh, csrf_token, settings)
-    logger.info("auth_session_refreshed", user_id=str(user.id))
+    logger.info("auth_session_refreshed")
     return user
 
 
@@ -354,5 +354,5 @@ async def get_current_user_profile(
     Returns:
         UserRead: Sanitized user account information.
     """
-    logger.info("auth_profile_fetch", user_id=str(current_user.id))
+    logger.info("auth_profile_fetch")
     return current_user
