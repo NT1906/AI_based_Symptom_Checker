@@ -1,8 +1,8 @@
 """Database repository package.
 
 Owner: Harsh, Kavya, Nishith
-Tasks: S0-HAR-1, S1-KAV-4, S1-NIT-4, S2-KAV-3, S2-KAV-4, S2-NIT-3
-Requirements: FR-01, FR-02, FR-17, NFR-10, idea § 10
+Tasks: S0-HAR-1, S1-KAV-4, S1-NIT-4, S2-KAV-3, S2-KAV-4, S2-NIT-3, S2-NIT-4
+Requirements: FR-01, FR-02, FR-03, FR-17, FR-18, DR-02, NFR-01, NFR-10, idea § 10
 """
 
 from app.repositories.assessment_repository import (
@@ -54,6 +54,12 @@ from app.repositories.profile_repository import (
     upsert_profile,
 )
 from app.repositories.seed_repository import seed_fictional_data
+from app.repositories.symptom_embedding_repository import (
+    count_symptom_embeddings,
+    get_symptom_embedding_by_phrase,
+    insert_symptom_embeddings,
+    list_symptom_embeddings_by_revision,
+)
 from app.repositories.symptom_repository import (
     create_symptom,
     delete_symptom,
@@ -71,6 +77,7 @@ __all__ = [
     "count_assessments_by_user",
     "count_audit_logs",
     "count_messages",
+    "count_symptom_embeddings",
     "create_assessment",
     "create_audit_log",
     "create_guest_session",
@@ -96,7 +103,9 @@ __all__ = [
     "get_message_by_id",
     "get_profile_by_user_id",
     "get_symptom",
+    "get_symptom_embedding_by_phrase",
     "hash_session_token",
+    "insert_symptom_embeddings",
     "link_assessment_to_session",
     "list_assessments_by_guest_session",
     "list_assessments_by_user",
@@ -104,6 +113,7 @@ __all__ = [
     "list_audit_logs_by_assessment",
     "list_audit_logs_by_user",
     "list_messages_by_assessment",
+    "list_symptom_embeddings_by_revision",
     "list_symptoms_by_assessment",
     "query_assessment_history",
     "replace_symptoms_for_assessment",
