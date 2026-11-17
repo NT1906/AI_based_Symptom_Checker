@@ -7,7 +7,8 @@ Responsibilities:
     - Translate upstream provider errors into typed AiError subclasses.
     - Load versioned prompt templates adhering to medical-safety invariants.
 
-Owner: Nishith · Tasks: S1-NIT-3, S2-NIT-1 · Requirements: NFR-05, FR-19, NFR-07
+Owner: Nishith · Tasks: S1-NIT-3, S2-NIT-1, S2-NIT-2
+Requirements: NFR-05, FR-18, FR-19, NFR-07, idea "out of scope"
 """
 
 import asyncio
@@ -35,6 +36,7 @@ from app.services.ai.gateway import (
     AiTimeoutError,
     AiValidationError,
 )
+from app.services.ai.intent import IntentClassifier
 from app.services.ai.missing_info import (
     detect_missing_information,
     should_request_clarification,
@@ -43,6 +45,7 @@ from app.services.ai.schemas import (
     ClarificationResult,
     ExtractedSymptom,
     ExtractionResult,
+    IntentResult,
 )
 
 logger = get_logger(__name__)
@@ -52,6 +55,7 @@ T = TypeVar("T")
 PROMPTS_DIR = Path(__file__).resolve().parent / "prompts"
 EXTRACTION_PROMPT_PATH = PROMPTS_DIR / "extraction.v2.txt"
 CLARIFICATION_PROMPT_PATH = PROMPTS_DIR / "clarification.v2.txt"
+INTENT_DEFENCE_PROMPT_PATH = PROMPTS_DIR / "intent_defence.v1.txt"
 
 MAX_CLARIFICATION_TURNS: int = 3
 DEFAULT_TIMEOUT_SECONDS: float = 10.0
@@ -97,6 +101,7 @@ class OpenAiProvider:
         self._max_retries = max_retries
         self._base_backoff_seconds = base_backoff_seconds
         self._client = client or AsyncOpenAI(api_key=resolved_key, timeout=timeout)
+        self._intent_classifier = IntentClassifier()
 
     async def _execute_with_retry(
         self,
@@ -206,6 +211,22 @@ class OpenAiProvider:
 
         raise AiError(f"OpenAI {action_name} failed: {last_exc}")
 
+    async def classify_intent(
+        self,
+        message: str,
+    ) -> IntentResult:
+        """Classify user message intent before extraction using deterministic rules.
+
+        Detects prompt injections, off-topic requests, and curated glossary questions.
+
+        Args:
+            message: Raw user text.
+
+        Returns:
+            Validated IntentResult with detected intent and safe refusal/glossary text.
+        """
+        return self._intent_classifier.classify(message)
+
     async def extract_symptoms(
         self,
         message: str,
@@ -235,10 +256,15 @@ class OpenAiProvider:
             )
 
         prompt_template = EXTRACTION_PROMPT_PATH.read_text(encoding="utf-8")
-        formatted_prompt = prompt_template.replace(
-            "{conversation_history}",
-            conversation_history or "(No previous history)",
-        ).replace("{user_message}", cleaned_msg)
+        system_instruction = INTENT_DEFENCE_PROMPT_PATH.read_text(encoding="utf-8")
+        formatted_prompt = (
+            system_instruction
+            + "\n\n"
+            + prompt_template.replace(
+                "{conversation_history}",
+                conversation_history or "(No previous history)",
+            ).replace("{user_message}", cleaned_msg)
+        )
 
         async def _call() -> ExtractionResult:
             logger.info("openai_extraction_started", model=self._model)
@@ -248,7 +274,7 @@ class OpenAiProvider:
                     {
                         "role": "user",
                         "content": formatted_prompt,
-                    }
+                    },
                 ],
                 response_format=ExtractionResult,
                 timeout=self._timeout,

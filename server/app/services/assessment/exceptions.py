@@ -2,13 +2,15 @@
 
 Responsibilities:
     - Define InvalidStateTransitionError for illegal or unguarded state transitions.
-    - Provide structured error payloads compliant with API contracts (HTTP 409).
+    - Define AssessmentAccessDeniedError for unauthorized cross-user access (NFR-03).
+    - Provide structured error payloads compliant with API contracts (HTTP 409, 403).
     - Support guard violation details for debugging and audit logs.
 
-Owner: Darshil (assessment) · Task: S1-DAR-1 · Requirements: N/A
+Owner: Darshil (assessment) · Task: S1-DAR-1, S2-DAR-6 · Requirements: NFR-03
 """
 
 from typing import Any
+from uuid import UUID
 
 from fastapi import status
 
@@ -138,7 +140,43 @@ class StateGuardViolationError(InvalidStateTransitionError):
         self.guard_name = guard_name
 
 
+class AssessmentAccessDeniedError(AssessmentServiceError):
+    """Raised when caller lacks ownership permission for an assessment (HTTP 403).
+
+    Enforces authorization boundaries to prevent cross-user access (IDOR)
+    per NFR-03 and OWASP A01.
+    """
+
+    def __init__(
+        self,
+        assessment_id: UUID,
+        reason: str = "Access denied: you do not own this assessment.",
+        code: str = "ASSESSMENT_ACCESS_DENIED",
+        details: dict[str, Any] | None = None,
+    ) -> None:
+        """Initialize AssessmentAccessDeniedError with 403 status code.
+
+        Args:
+            assessment_id: Assessment unique identifier.
+            reason: Specific authorization failure explanation.
+            code: Machine-readable error code.
+            details: Optional diagnostic details.
+        """
+        payload: dict[str, Any] = {"assessmentId": str(assessment_id)}
+        if details:
+            payload.update(details)
+
+        super().__init__(
+            message=reason,
+            code=code,
+            status_code=status.HTTP_403_FORBIDDEN,
+            details=payload,
+        )
+        self.assessment_id = assessment_id
+
+
 __all__ = [
+    "AssessmentAccessDeniedError",
     "AssessmentServiceError",
     "InvalidStateTransitionError",
     "StateGuardViolationError",

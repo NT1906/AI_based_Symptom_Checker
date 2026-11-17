@@ -3,13 +3,20 @@
 Responsibilities:
  - Define the abstract AiGateway protocol for dependency injection.
  - Define typed error hierarchy (AiError, AiTimeoutError, AiValidationError).
+ - Define intent classification contract for prompt injection defence,
+   off-topic chat refusal, and glossary lookup (FR-18).
 
-Owner: Nishith · Task: S0-NIT-1 · Requirements: NFR-05
+Owner: Nishith · Tasks: S0-NIT-1, S2-NIT-2
+Requirements: NFR-05, idea "out of scope", FR-18
 """
 
 from typing import Any, Protocol, runtime_checkable
 
-from app.services.ai.schemas import ClarificationResult, ExtractionResult
+from app.services.ai.schemas import (
+    ClarificationResult,
+    ExtractionResult,
+    IntentResult,
+)
 
 
 class AiError(Exception):
@@ -73,6 +80,27 @@ class AiGateway(Protocol):
         Returns:
             ClarificationResult indicating whether to ask and containing the
             question text.
+
+        Raises:
+            AiTimeoutError: If the provider call times out.
+            AiError: For unhandled provider failures.
+        """
+        ...
+
+    async def classify_intent(
+        self,
+        message: str,
+    ) -> IntentResult:
+        """Classify message intent before extraction.
+
+        Detects prompt-injection attempts, off-topic chat requests, and
+        curated symptom glossary inquiries ("what is nausea?").
+
+        Args:
+            message: Raw user text.
+
+        Returns:
+            Validated IntentResult with detected intent and safe refusal/glossary text.
 
         Raises:
             AiTimeoutError: If the provider call times out.
