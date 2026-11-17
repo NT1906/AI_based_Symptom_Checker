@@ -1,4 +1,7 @@
-
+/**
+ * @file Unit tests for the PWA update prompt, including update activation
+ * and dismissal behavior.
+ */
 import { fireEvent, render, screen } from "@testing-library/react";
 import { beforeEach, describe, expect, it, vi } from "vitest";
 import { useRegisterSW } from "virtual:pwa-register/react";

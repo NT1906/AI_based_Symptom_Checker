@@ -1,4 +1,7 @@
-
+/**
+ * @file Unit tests for the PWA installation prompt, including install,
+ * dismissal, and browser event handling.
+ */
 import { act, fireEvent, render, screen } from "@testing-library/react";
 import { afterEach, describe, expect, it, vi } from "vitest";
 import { PWAInstallPrompt } from "./PWAInstallPrompt";
