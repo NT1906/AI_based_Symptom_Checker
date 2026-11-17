@@ -1,9 +1,9 @@
 # Database foundation
 
-Owner: Harsh, Dimple, Kavya, Nishith · Tasks: S0-HAR-1, S1-DIM-4, S1-KAV-4, S1-NIT-4, S2-KAV-3, S2-NIT-3 · Issues: #9, #38, #37, #36, #161, #159 · Requirements: FR-01, FR-02, FR-17, NFR-01, NFR-10, idea § 10
+Owner: Harsh, Dimple, Kavya, Nishith · Tasks: S0-HAR-1, S1-DIM-4, S1-KAV-4, S1-NIT-4, S2-KAV-3, S2-NIT-3, S2-NIT-4 · Issues: #9, #38, #37, #36, #161, #159, #160 · Requirements: FR-01, FR-02, FR-03, FR-17, FR-18, NFR-01, NFR-10, DR-02, idea § 10
 
 This change supplies PostgreSQL-oriented SQLAlchemy 2 models, session factories,
-Alembic migrations (revisions `0001_database_foundation` through `0006_audit_log`),
+Alembic migrations (revisions `0001_database_foundation` through `0007_history_indexes_pgvector`),
 repositories, fictional seed data, and isolated unit tests.
 
 ## Current status and team handoff
@@ -276,5 +276,49 @@ erDiagram
 | `cv_model_version` | `VARCHAR(64)` | Yes | CV image classifier revision if image was analyzed. |
 | `ai_model` | `VARCHAR(64)` | Yes | AI Gateway LLM model identifier. |
 | `details` | `JSONB` / `JSON` | No | Structured non-PII operational context (rules fired, driving conditions, telemetry). Default `{}`. |
+
+---
+
+## History Query Optimization & pgvector Embeddings (S2-NIT-4, S2-NIS-7)
+
+Owner: Nishith · Task: S2-NIT-4 · Issue: #160 · Requirements: NFR-01, FR-02, FR-03, FR-18, DR-02
+
+Revision `0007_history_indexes_pgvector` delivers two major database tier capabilities:
+
+### 1. History Query Indexing (FR-02, NFR-01)
+- Adds composite covering index `ix_assessments_user_id_state_created_at` on `(user_id, state, created_at)`.
+- Accelerates filtered queries in `query_assessment_history` and `list_assessments_by_user` (e.g. `WHERE user_id = :uid AND state = 'COMPLETED' ORDER BY created_at DESC`), enabling index-only scans for assessment history pagination.
+
+### 2. Dense Semantic Vector Retrieval with pgvector (S2-NIS-7, DR-02)
+- Provisions PostgreSQL `vector` extension (`CREATE EXTENSION IF NOT EXISTS vector;`).
+- Adds `symptom_embeddings` table to store 384-dimensional dense sentence embeddings (`all-MiniLM-L6-v2`, L2-normalized) for ~700 items (100 canonical symptoms + 602 lay terms).
+- **Strict Determinism (DR-02):** **No HNSW or IVFFlat index is created.** An exact linear scan over 700 rows executes in < 2 ms and guarantees that repeated nearest-neighbor queries return identical clinical symptom candidates.
+- Pinned model revision tracking via `model_revision` and unique constraint `uq_symptom_embeddings_revision_phrase` on `(model_revision, phrase)`.
+- Index `ix_symptom_embeddings_model_revision` on `(model_revision)` enables instant scoping to the active model commit.
+
+| Column | Type | Nullable | Rationale / Constraint |
+|---|---|---|---|
+| `id` | `BIGSERIAL` | No | Autoincrementing primary key. |
+| `symptom_id` | `VARCHAR(64)` | No | Canonical symptom ID (e.g. `chest_pain`). Check: non-blank. |
+| `phrase` | `VARCHAR(256)` | No | Natural-language lay term or symptom name. Check: non-blank. |
+| `model_revision` | `VARCHAR(64)` | No | Pinned Hugging Face commit hash of embedding model. |
+| `embedding` | `vector(384)` | No | L2-normalized 384-dimensional dense embedding vector. |
+| `created_at` | `TIMESTAMPTZ` | No | Server default `CURRENT_TIMESTAMP`. |
+
+### 3. Neon Staging Migration Review Runbook
+1. **Offline SQL Generation:** Inspect generated DDL without database credentials:
+   ```powershell
+   alembic upgrade head --sql
+   ```
+2. **Online Staging Migration:** On Neon PostgreSQL 16 staging branch:
+   ```powershell
+   alembic upgrade head
+   ```
+3. **Verification:** Confirm `vector` extension and table creation:
+   ```sql
+   SELECT extname, extversion FROM pg_extension WHERE extname = 'vector';
+   SELECT COUNT(*) FROM symptom_embeddings;
+   ```
+
 
 

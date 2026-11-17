@@ -1,8 +1,8 @@
 """Public ORM models; importing registers all tables in shared metadata.
 
 Owner: Harsh, Kavya, Nishith
-Tasks: S0-HAR-1, S1-KAV-4, S2-KAV-3, S2-NIT-3
-Requirements: FR-01, FR-02, NFR-10, idea § 10
+Tasks: S0-HAR-1, S1-KAV-4, S2-KAV-3, S2-NIT-3, S2-NIT-4
+Requirements: FR-01, FR-02, FR-03, FR-18, NFR-01, NFR-10, idea § 10
 """
 
 from app.models.assessment import Assessment
@@ -13,6 +13,7 @@ from app.models.guest_session import GuestSession
 from app.models.message import Message
 from app.models.profile import Profile
 from app.models.symptom import Symptom
+from app.models.symptom_embedding import SymptomEmbedding
 from app.models.user import User
 
 __all__ = [
@@ -24,5 +25,6 @@ __all__ = [
     "Message",
     "Profile",
     "Symptom",
+    "SymptomEmbedding",
     "User",
 ]

@@ -54,7 +54,7 @@ jobs:
     timeout-minutes: 20
     services:
       postgres:
-        image: postgres:16-alpine
+        image: pgvector/pgvector:pg16
         env:
           POSTGRES_DB: symptom_checker_test
           POSTGRES_USER: test_user
