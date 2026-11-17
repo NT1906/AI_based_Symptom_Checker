@@ -50,9 +50,7 @@ def purge_expired_guest_sessions(session: Session) -> int:
     # Collect assessment IDs linked to these expired sessions.
     assessment_ids: list[uuid.UUID] = list(
         session.scalars(
-            select(Assessment.id).where(
-                Assessment.guest_session_id.in_(expired_ids)
-            )
+            select(Assessment.id).where(Assessment.guest_session_id.in_(expired_ids))
         ).all()
     )
 
@@ -61,9 +59,7 @@ def purge_expired_guest_sessions(session: Session) -> int:
     if assessment_ids:
         consent_ids = list(
             session.scalars(
-                select(Assessment.consent_id).where(
-                    Assessment.id.in_(assessment_ids)
-                )
+                select(Assessment.consent_id).where(Assessment.id.in_(assessment_ids))
             ).all()
         )
 
@@ -74,20 +70,14 @@ def purge_expired_guest_sessions(session: Session) -> int:
         session.execute(
             delete(Symptom).where(Symptom.assessment_id.in_(assessment_ids))
         )
-        session.execute(
-            delete(Assessment).where(Assessment.id.in_(assessment_ids))
-        )
+        session.execute(delete(Assessment).where(Assessment.id.in_(assessment_ids)))
 
     # Delete orphaned consent rows now that assessments are gone.
     if consent_ids:
-        session.execute(
-            delete(Consent).where(Consent.id.in_(consent_ids))
-        )
+        session.execute(delete(Consent).where(Consent.id.in_(consent_ids)))
 
     # Finally delete the expired guest sessions themselves.
-    session.execute(
-        delete(GuestSession).where(GuestSession.id.in_(expired_ids))
-    )
+    session.execute(delete(GuestSession).where(GuestSession.id.in_(expired_ids)))
     session.flush()
 
     return len(expired_ids)
@@ -134,9 +124,7 @@ def delete_user_account(session: Session, user_id: uuid.UUID) -> bool:
     if assessment_ids:
         consent_ids = list(
             session.scalars(
-                select(Assessment.consent_id).where(
-                    Assessment.id.in_(assessment_ids)
-                )
+                select(Assessment.consent_id).where(Assessment.id.in_(assessment_ids))
             ).all()
         )
 
@@ -147,14 +135,10 @@ def delete_user_account(session: Session, user_id: uuid.UUID) -> bool:
         session.execute(
             delete(Symptom).where(Symptom.assessment_id.in_(assessment_ids))
         )
-        session.execute(
-            delete(Assessment).where(Assessment.id.in_(assessment_ids))
-        )
+        session.execute(delete(Assessment).where(Assessment.id.in_(assessment_ids)))
 
     if consent_ids:
-        session.execute(
-            delete(Consent).where(Consent.id.in_(consent_ids))
-        )
+        session.execute(delete(Consent).where(Consent.id.in_(consent_ids)))
 
     # Deleting the User ORM object cascades to Profile (cascade="all, delete-orphan").
     session.delete(user)
