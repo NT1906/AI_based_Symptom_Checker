@@ -1,14 +1,20 @@
 /**
  * @file Consent step modal shown before any assessment data is saved.
- * Owner: Dimple · Task: S1-DIM-1 · Requirements: DR-08
+ * Owner: Dimple · Task: S1-DIM-1, S2-DIM-5 · Requirements: DR-08, NFR-06
  *
  * Displays the consent agreement copy and records acceptance via POST /consents
  * before the user can proceed. If the user declines or the call fails they
  * cannot continue — no data is saved without consent (DR-08).
+ *
+ * Implements WCAG 2.1 Level AA modal dialog standards (NFR-06):
+ * - Traps Tab focus inside the dialog container.
+ * - Closes and declines on Escape key press.
+ * - Meets 44px touch targets and high-contrast text requirements.
  */
 
 import { useMutation } from "@tanstack/react-query";
-import { useState } from "react";
+import { useRef, useState } from "react";
+import { useFocusTrap } from "../../lib/useFocusTrap";
 import {
   CURRENT_POLICY_VERSION,
   getCurrentPolicyVersion,
@@ -42,8 +48,14 @@ Always consult a qualified healthcare professional for any medical concern.`;
  * @returns A modal dialog requesting the user's informed consent.
  */
 export function ConsentStep({ onConsented, onDeclined }: ConsentStepProps) {
+  const dialogRef = useRef<HTMLDivElement>(null);
   const [hasChecked, setHasChecked] = useState(false);
   const recordConsent = useConsentStore((s) => s.recordConsent);
+
+  // WAI-ARIA Modal focus trap and Escape key dismissal (WCAG 2.1 AA, NFR-06)
+  useFocusTrap(dialogRef, {
+    onEscape: onDeclined,
+  });
 
   const mutation = useMutation({
     mutationFn: async () => {
@@ -67,6 +79,7 @@ export function ConsentStep({ onConsented, onDeclined }: ConsentStepProps) {
 
   return (
     <div
+      ref={dialogRef}
       role="dialog"
       aria-modal="true"
       aria-labelledby="consent-title"
@@ -77,7 +90,10 @@ export function ConsentStep({ onConsented, onDeclined }: ConsentStepProps) {
         {/* Header */}
         <div className="border-b border-slate-100 bg-slate-50/60 px-6 py-5">
           <div className="flex items-center gap-2">
-            <span className="flex h-7 w-7 items-center justify-center rounded-lg bg-teal-100 text-sm">
+            <span
+              className="flex h-7 w-7 items-center justify-center rounded-lg bg-teal-100 text-sm"
+              aria-hidden="true"
+            >
               🛡️
             </span>
             <span className="rounded-full bg-teal-50 px-2.5 py-0.5 text-[11px] font-bold text-teal-800">
@@ -90,7 +106,7 @@ export function ConsentStep({ onConsented, onDeclined }: ConsentStepProps) {
           >
             Your Consent Is Required
           </h1>
-          <p className="mt-1 text-xs text-slate-500">
+          <p className="mt-1 text-xs text-slate-600">
             Please read and agree to our clinical safety terms before continuing.
           </p>
         </div>
@@ -105,13 +121,13 @@ export function ConsentStep({ onConsented, onDeclined }: ConsentStepProps) {
           </pre>
 
           {/* Checkbox */}
-          <label className="mt-4 flex cursor-pointer items-start gap-3 rounded-lg border border-slate-100 bg-slate-50/50 p-3 transition hover:bg-slate-50">
+          <label className="mt-4 flex min-h-[44px] cursor-pointer items-start gap-3 rounded-lg border border-slate-100 bg-slate-50/50 p-3 transition hover:bg-slate-50">
             <input
               type="checkbox"
               checked={hasChecked}
               onChange={(e) => setHasChecked(e.target.checked)}
               aria-label="I have read and agree to the terms above"
-              className="mt-0.5 h-4 w-4 shrink-0 rounded border-slate-300 text-teal-600 focus:ring-teal-500"
+              className="mt-0.5 h-4 w-4 shrink-0 rounded border-slate-300 text-teal-600 focus:ring-2 focus:ring-teal-500 focus:outline-hidden"
             />
             <span className="text-xs font-semibold text-slate-800">
               I have read and agree to the terms above.
@@ -134,7 +150,7 @@ export function ConsentStep({ onConsented, onDeclined }: ConsentStepProps) {
             type="button"
             onClick={onDeclined}
             disabled={mutation.isPending}
-            className="rounded-lg border border-slate-300 bg-white px-4 py-2 text-xs font-bold text-slate-700 shadow-sm transition hover:bg-slate-50 disabled:opacity-50"
+            className="inline-flex min-h-[44px] items-center justify-center rounded-lg border border-slate-300 bg-white px-4 py-2 text-xs font-bold text-slate-700 shadow-xs transition hover:bg-slate-50 focus-visible:ring-2 focus-visible:ring-teal-600 focus-visible:outline-hidden disabled:opacity-50"
           >
             Decline
           </button>
@@ -143,7 +159,7 @@ export function ConsentStep({ onConsented, onDeclined }: ConsentStepProps) {
             onClick={handleAgree}
             disabled={!hasChecked || mutation.isPending}
             aria-disabled={!hasChecked || mutation.isPending}
-            className="rounded-lg bg-teal-600 px-5 py-2 text-xs font-bold text-white shadow-sm transition hover:bg-teal-700 disabled:cursor-not-allowed disabled:opacity-40"
+            className="inline-flex min-h-[44px] items-center justify-center rounded-lg bg-teal-600 px-5 py-2 text-xs font-bold text-white shadow-xs transition hover:bg-teal-700 focus-visible:ring-2 focus-visible:ring-teal-600 focus-visible:ring-offset-2 focus-visible:outline-hidden disabled:cursor-not-allowed disabled:opacity-40"
           >
             {mutation.isPending ? "Recording…" : "I Agree"}
           </button>

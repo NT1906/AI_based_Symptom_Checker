@@ -1,13 +1,22 @@
 /**
  * @file UrgentCareAlert — full-screen overlay shown for URGENT risk results.
- * Owner: Dimple · Task: S1-DIM-3 · Requirements: FR-06, FR-15, DR-02
+ * Owner: Dimple · Task: S1-DIM-3, S2-DIM-5 · Requirements: FR-06, FR-15, DR-02, NFR-06
  *
  * Per DR-02 and AI_RULES.md §2 rule 5:
  * - 112 (Unified Emergency) is displayed FIRST and LARGEST.
  * - 108 (Ambulance) is listed as the secondary number.
  * - The mandatory disclaimer is shown (AI_RULES.md §2 rule 8).
  * - No diagnosis language is used.
+ *
+ * Implements WCAG 2.1 Level AA modal alertdialog standards (NFR-06):
+ * - Traps Tab focus inside the dialog container.
+ * - Auto-focuses the primary 112 emergency action on mount.
+ * - Closes and dismisses on Escape key press.
+ * - Meets 44px touch targets and high-contrast text requirements.
  */
+
+import { useRef } from "react";
+import { useFocusTrap } from "../../lib/useFocusTrap";
 
 /** Props for the UrgentCareAlert component. */
 export type UrgentCareAlertProps = {
@@ -28,18 +37,31 @@ const EMERGENCY_AMBULANCE = "108" as const;
  * @returns A full-screen alert dialog element.
  */
 export function UrgentCareAlert({ onDismiss }: UrgentCareAlertProps) {
+  const dialogRef = useRef<HTMLDivElement>(null);
+  const primaryEmergencyRef = useRef<HTMLAnchorElement>(null);
+
+  // WAI-ARIA alertdialog focus trap and Escape key dismissal (WCAG 2.1 AA, NFR-06)
+  useFocusTrap(dialogRef, {
+    onEscape: onDismiss,
+    initialFocusRef: primaryEmergencyRef,
+  });
+
   return (
     <div
+      ref={dialogRef}
       role="alertdialog"
       aria-modal="true"
       aria-labelledby="urgent-title"
       aria-describedby="urgent-body"
-      className="fixed inset-0 z-50 flex items-center justify-center bg-red-950/85 p-4 backdrop-blur-md animate-in fade-in duration-200"
+      className="fixed inset-0 z-50 flex items-center justify-center bg-red-950/85 p-4 backdrop-blur-md animate-in fade-in duration-200 motion-reduce:animate-none"
     >
       <div className="w-full max-w-md overflow-hidden rounded-3xl bg-white shadow-2xl ring-1 ring-red-500/20">
         {/* Header with emergency alert tone */}
         <div className="bg-gradient-to-b from-red-600 to-red-700 px-6 py-6 text-center text-white">
-          <div className="mx-auto flex h-14 w-14 items-center justify-center rounded-2xl bg-white/10 text-3xl shadow-inner">
+          <div
+            className="mx-auto flex h-14 w-14 items-center justify-center rounded-2xl bg-white/10 text-3xl shadow-inner"
+            aria-hidden="true"
+          >
             🚨
           </div>
           <h1
@@ -48,14 +70,14 @@ export function UrgentCareAlert({ onDismiss }: UrgentCareAlertProps) {
           >
             Urgent Care Needed
           </h1>
-          <p className="mt-1 text-xs font-medium text-red-100">
+          <p className="mt-1 text-xs font-semibold text-red-50">
             Immediate Clinical Assessment Required
           </p>
         </div>
 
         {/* Body */}
         <div id="urgent-body" className="px-6 py-6 text-center">
-          <p className="text-sm font-medium text-slate-700">
+          <p className="text-sm font-medium text-slate-800">
             Based on the reported symptoms, you may require{" "}
             <strong className="text-red-700">immediate emergency medical attention</strong>.
           </p>
@@ -64,9 +86,10 @@ export function UrgentCareAlert({ onDismiss }: UrgentCareAlertProps) {
           <div className="mt-6 space-y-3">
             {/* 112 — primary, largest */}
             <a
+              ref={primaryEmergencyRef}
               href={`tel:${EMERGENCY_UNIFIED}`}
               aria-label={`Call ${EMERGENCY_UNIFIED} — Unified Emergency (Police, Fire, Ambulance)`}
-              className="group flex w-full items-center justify-center gap-4 rounded-2xl bg-red-600 p-4 text-white shadow-lg shadow-red-600/30 transition-all hover:bg-red-700 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-red-600 active:scale-[0.99]"
+              className="group flex min-h-[56px] w-full items-center justify-center gap-4 rounded-2xl bg-red-600 p-4 text-white shadow-lg shadow-red-600/30 transition-all hover:bg-red-700 focus-visible:outline-hidden focus-visible:ring-2 focus-visible:ring-red-600 focus-visible:ring-offset-2 active:scale-[0.99]"
             >
               <span className="text-3xl font-black tracking-wider">
                 {EMERGENCY_UNIFIED}
@@ -75,7 +98,7 @@ export function UrgentCareAlert({ onDismiss }: UrgentCareAlertProps) {
                 <span className="block text-sm font-bold leading-tight">
                   Unified Emergency
                 </span>
-                <span className="text-[11px] font-medium text-red-100">
+                <span className="text-xs font-medium text-red-100">
                   Police · Fire · Ambulance
                 </span>
               </span>
@@ -85,7 +108,7 @@ export function UrgentCareAlert({ onDismiss }: UrgentCareAlertProps) {
             <a
               href={`tel:${EMERGENCY_AMBULANCE}`}
               aria-label={`Call ${EMERGENCY_AMBULANCE} — Ambulance (Medical Emergencies)`}
-              className="flex w-full items-center justify-center gap-3 rounded-2xl border border-red-200 bg-red-50/80 p-3.5 text-red-800 transition hover:bg-red-100 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-red-400"
+              className="flex min-h-[48px] w-full items-center justify-center gap-3 rounded-2xl border border-red-200 bg-red-50/80 p-3.5 text-red-800 transition hover:bg-red-100 focus-visible:outline-hidden focus-visible:ring-2 focus-visible:ring-red-400 focus-visible:ring-offset-2"
             >
               <span className="text-2xl font-extrabold tracking-wide">
                 {EMERGENCY_AMBULANCE}
@@ -94,20 +117,20 @@ export function UrgentCareAlert({ onDismiss }: UrgentCareAlertProps) {
                 <span className="block text-xs font-bold leading-tight">
                   Ambulance
                 </span>
-                <span className="text-[10px] text-red-600">
+                <span className="text-[11px] font-semibold text-red-700">
                   Medical Emergencies
                 </span>
               </span>
             </a>
           </div>
 
-          <p className="mt-4 text-xs font-medium text-slate-500">
+          <p className="mt-4 text-xs font-medium text-slate-600">
             Or go directly to the nearest emergency room.
           </p>
 
           {/* Mandatory disclaimer (AI_RULES.md §2 rule 8) */}
           <div className="mt-5 rounded-xl border border-slate-200 bg-slate-50 px-4 py-3 text-left">
-            <p className="text-[11px] leading-relaxed text-slate-500">
+            <p className="text-xs leading-relaxed text-slate-600">
               <strong>Medical Disclaimer:</strong> This is not a medical diagnosis. Always consult a qualified healthcare professional.
             </p>
           </div>
@@ -118,7 +141,7 @@ export function UrgentCareAlert({ onDismiss }: UrgentCareAlertProps) {
           <button
             type="button"
             onClick={onDismiss}
-            className="w-full rounded-xl border border-slate-300 bg-white py-2.5 text-xs font-bold text-slate-700 shadow-sm transition hover:bg-slate-50"
+            className="inline-flex min-h-[44px] w-full items-center justify-center rounded-xl border border-slate-300 bg-white py-2.5 text-xs font-bold text-slate-700 shadow-xs transition hover:bg-slate-50 focus-visible:outline-hidden focus-visible:ring-2 focus-visible:ring-slate-600"
           >
             Continue to Full Result
           </button>
