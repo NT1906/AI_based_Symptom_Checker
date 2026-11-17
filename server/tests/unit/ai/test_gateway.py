@@ -1,6 +1,7 @@
 """Unit tests for the AiGateway protocol, provider factory, and prompt files.
 
-Owner: Nishith · Task: S1-NIT-3 · Requirements: FR-04, FR-19, FR-20, NFR-05
+Owner: Nishith · Tasks: S1-NIT-3, S2-NIT-5
+Requirements: FR-04, FR-19, FR-20, NFR-05, NFR-08
 """
 
 from pathlib import Path
@@ -9,7 +10,9 @@ import pytest
 
 from app.core.config import get_settings
 from app.services.ai.factory import get_ai_gateway
+from app.services.ai.fallback_gateway import FallbackAiGateway
 from app.services.ai.gateway import AiError, AiGateway
+from app.services.ai.gemini_provider import GeminiProvider
 from app.services.ai.mock_provider import MockAiProvider
 from app.services.ai.openai_provider import OpenAiProvider
 from app.services.privacy.gateway import PrivacyAiGateway
@@ -40,12 +43,76 @@ def test_factory_returns_openai_provider_when_configured(
     """Factory returns PrivacyAiGateway wrapping OpenAiProvider when configured."""
     monkeypatch.setenv("AI_PROVIDER", "openai")
     monkeypatch.setenv("OPENAI_API_KEY", "test-mock-key")
+    monkeypatch.delenv("GEMINI_API_KEY", raising=False)
+    monkeypatch.delenv("GOOGLE_API_KEY", raising=False)
     get_settings.cache_clear()
     get_ai_gateway.cache_clear()
 
     gateway = get_ai_gateway()
     assert isinstance(gateway, PrivacyAiGateway)
     assert isinstance(gateway._provider, OpenAiProvider)
+
+
+def test_factory_wires_fallback_gateway_when_openai_and_gemini_keys_set(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    """Factory wraps OpenAiProvider -> GeminiProvider in FallbackAiGateway."""
+    monkeypatch.setenv("AI_PROVIDER", "openai")
+    monkeypatch.setenv("OPENAI_API_KEY", "test-openai-key")
+    monkeypatch.setenv("GEMINI_API_KEY", "test-gemini-key")
+    monkeypatch.delenv("AI_FALLBACK_ENABLED", raising=False)
+    get_settings.cache_clear()
+    get_ai_gateway.cache_clear()
+
+    gateway = get_ai_gateway()
+    assert isinstance(gateway, PrivacyAiGateway)
+    assert isinstance(gateway._provider, FallbackAiGateway)
+    assert isinstance(gateway._provider.primary, OpenAiProvider)
+    assert isinstance(gateway._provider.fallback, GeminiProvider)
+
+
+def test_factory_respects_fallback_disabled_flag(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    """AI_FALLBACK_ENABLED=false keeps OpenAiProvider without Gemini failover."""
+    monkeypatch.setenv("AI_PROVIDER", "openai")
+    monkeypatch.setenv("OPENAI_API_KEY", "test-openai-key")
+    monkeypatch.setenv("GEMINI_API_KEY", "test-gemini-key")
+    monkeypatch.setenv("AI_FALLBACK_ENABLED", "false")
+    get_settings.cache_clear()
+    get_ai_gateway.cache_clear()
+
+    gateway = get_ai_gateway()
+    assert isinstance(gateway, PrivacyAiGateway)
+    assert isinstance(gateway._provider, OpenAiProvider)
+
+
+def test_factory_returns_gemini_provider_when_configured(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    """Factory returns PrivacyAiGateway wrapping GeminiProvider when configured."""
+    monkeypatch.setenv("AI_PROVIDER", "gemini")
+    monkeypatch.setenv("GEMINI_API_KEY", "test-gemini-key")
+    get_settings.cache_clear()
+    get_ai_gateway.cache_clear()
+
+    gateway = get_ai_gateway()
+    assert isinstance(gateway, PrivacyAiGateway)
+    assert isinstance(gateway._provider, GeminiProvider)
+
+
+def test_factory_gemini_raises_without_api_key(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    """Factory raises AiError when gemini provider is requested without API key."""
+    monkeypatch.setenv("AI_PROVIDER", "gemini")
+    monkeypatch.delenv("GEMINI_API_KEY", raising=False)
+    monkeypatch.delenv("GOOGLE_API_KEY", raising=False)
+    get_settings.cache_clear()
+    get_ai_gateway.cache_clear()
+
+    with pytest.raises(AiError, match="GEMINI_API_KEY is not configured"):
+        get_ai_gateway()
 
 
 def test_factory_openai_raises_without_api_key(
