@@ -9,6 +9,7 @@ Responsibilities:
 Owner: Vivek (api) · Task: S1-VIV-3, S2-VIV-1, S2-VIV-2 · Requirements: FR-01, NFR-03
 """
 
+import threading
 from typing import Annotated, Protocol, runtime_checkable
 from uuid import UUID
 
@@ -307,23 +308,42 @@ def get_ai_gateway_dep(
     return get_ai_gateway(settings.ai_provider)
 
 
+_assessment_service_lock = threading.Lock()
+
+
 def get_assessment_service(
+    request: Request,
     settings: Annotated[Settings, Depends(get_settings)],
     ai_gateway: Annotated[AiGateway, Depends(get_ai_gateway_dep)],
 ) -> AssessmentService:
-    """Provide assessment service instance for route handlers.
+    """Provide the app's one orchestrator-backed assessment service (S2-NIS-13).
 
-    TODO(#40): Replace DefaultAssessmentService with concrete
-    AssessmentOrchestrator once Darshil's PR is merged to develop.
+    The orchestrator keeps sessions in memory, so every request must share one
+    instance; it is built on first use and kept on ``app.state``.
 
     Args:
+        request: Current HTTP request (gives access to ``app.state``).
         settings: Injected application settings.
-        ai_gateway: Injected AI Gateway provider.
+        ai_gateway: Injected AI Gateway provider, used when first building.
 
     Returns:
         AssessmentService: Service conforming to AssessmentService protocol.
     """
-    return DefaultAssessmentService()
+    state = request.app.state
+    service: AssessmentService | None = getattr(state, "assessment_service", None)
+    if service is None:
+        # Why: imported here because orchestrator_service imports this module.
+        from app.api.orchestrator_service import build_orchestrator_service
+
+        with _assessment_service_lock:
+            service = getattr(state, "assessment_service", None)
+            if service is None:
+                engine = getattr(state, "db_engine", None)
+                service = build_orchestrator_service(
+                    settings, ai_gateway, engine if isinstance(engine, Engine) else None
+                )
+                state.assessment_service = service
+    return service
 
 
 # ---------------------------------------------------------------------------

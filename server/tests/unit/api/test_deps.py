@@ -4,7 +4,8 @@ Responsibilities:
     - Test database engine and session factory retrieval from app.state.
     - Validate failure modes when database engine or session factory are missing.
     - Test AI gateway dependency instantiation.
-    - Verify AssessmentService protocol conformance and default implementation.
+    - Verify AssessmentService protocol conformance, the stub implementation and
+      the shared orchestrator-backed service (S2-NIS-13).
     - Verify engine and session factory lifecycle in application lifespan.
 
 Owner: Vivek (tests) · Task: S1-VIV-3 · Requirements: —
@@ -29,6 +30,7 @@ from app.api.deps import (
     get_db_engine,
     get_session_factory,
 )
+from app.api.orchestrator_service import OrchestratorAssessmentService
 from app.core.config import Settings
 from app.main import lifespan
 from app.schemas.assessment import AssessmentCreate
@@ -101,14 +103,20 @@ def test_get_ai_gateway_dep(test_settings: Settings) -> None:
     assert isinstance(gateway, AiGateway)
 
 
-def test_get_assessment_service_returns_protocol_conforming_instance(
+def test_get_assessment_service_returns_one_shared_orchestrator_service(
     test_settings: Settings,
 ) -> None:
-    """Verify get_assessment_service conforms to AssessmentService protocol."""
+    """The app serves assessments from one orchestrator-backed service (S2-NIS-13)."""
+    app = FastAPI()
+    request = Request({"type": "http", "app": app})
     gateway = get_ai_gateway_dep(test_settings)
-    service = get_assessment_service(test_settings, gateway)
+
+    service = get_assessment_service(request, test_settings, gateway)
+
     assert isinstance(service, AssessmentService)
-    assert isinstance(service, DefaultAssessmentService)
+    assert isinstance(service, OrchestratorAssessmentService)
+    # Sessions live in memory, so every request must get the same instance.
+    assert get_assessment_service(request, test_settings, gateway) is service
 
 
 @pytest.mark.asyncio
