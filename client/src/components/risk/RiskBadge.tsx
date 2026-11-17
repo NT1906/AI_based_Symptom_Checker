@@ -1,6 +1,6 @@
 /**
  * @file RiskBadge — compact visual indicator of an assessment's risk level.
- * Owner: Dimple · Task: S1-DIM-3 · Requirements: FR-06, FR-15, DR-02
+ * Owner: Dimple · Task: S1-DIM-3, S2-DIM-5 · Requirements: FR-06, FR-15, DR-02, NFR-06
  *
  * Renders SELF_CARE, CONSULT_DOCTOR, or URGENT as an accessible colour-coded pill.
  * Colour is never the ONLY signal — each badge includes an icon and text
@@ -18,7 +18,7 @@ export type RiskBadgeProps = {
   className?: string;
 };
 
-/** Display configuration for each risk level. */
+/** Display configuration for each risk level with high-contrast text (>7:1). */
 const RISK_CONFIG: Record<
   RiskLevel,
   { label: string; icon: string; className: string }
@@ -26,17 +26,17 @@ const RISK_CONFIG: Record<
   SELF_CARE: {
     label: "Self-Care",
     icon: "🏠",
-    className: "bg-emerald-50 text-emerald-800 border-emerald-300 ring-emerald-500/10",
+    className: "bg-emerald-50 text-emerald-900 border-emerald-400 ring-emerald-500/10",
   },
   CONSULT_DOCTOR: {
     label: "Consult a Doctor",
     icon: "🩺",
-    className: "bg-amber-50 text-amber-800 border-amber-300 ring-amber-500/10",
+    className: "bg-amber-50 text-amber-950 border-amber-400 ring-amber-500/10",
   },
   URGENT: {
     label: "Urgent Care Needed",
     icon: "🚨",
-    className: "bg-rose-50 text-rose-800 border-rose-300 ring-rose-500/10",
+    className: "bg-rose-50 text-rose-950 border-rose-400 ring-rose-500/10",
   },
 };
 
