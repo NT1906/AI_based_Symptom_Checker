@@ -196,14 +196,14 @@ class OpenAiProvider:
                 logger.error(
                     "openai_client_error",
                     action=action_name,
-                    error=str(exc),
+                    error_type=type(exc).__name__,
                 )
                 raise AiError(f"OpenAI {action_name} client error: {exc}") from exc
             except Exception as exc:
                 logger.error(
                     "openai_unexpected_error",
                     action=action_name,
-                    error=str(exc),
+                    error_type=type(exc).__name__,
                 )
                 raise AiError(
                     f"OpenAI {action_name} unexpected failure: {exc}"
