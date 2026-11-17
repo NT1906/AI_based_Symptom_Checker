@@ -29,6 +29,9 @@ from app.core.logging import configure_logging, get_logger
 from app.core.request_id import RequestIdMiddleware
 from app.core.upload import configure_multipart_spool
 from app.db.session import create_db_engine, create_session_factory
+from app.middleware.rate_limits import RateLimitPolicy, configure_rate_limits
+from app.middleware.scoped_limits import ScopedRateLimitMiddleware
+from app.middleware.security_headers import SecurityHeadersMiddleware
 
 logger = get_logger(__name__)
 
@@ -90,7 +93,13 @@ def create_app() -> FastAPI:
     )
 
     register_error_handlers(app)
+    controls = configure_rate_limits(app, RateLimitPolicy())
+    app.add_middleware(ScopedRateLimitMiddleware, controls=controls)
     app.add_middleware(RequestIdMiddleware)
+    app.add_middleware(
+        SecurityHeadersMiddleware,
+        enable_hsts=settings.app_env in ("staging", "production"),
+    )
 
     app.include_router(health.router, prefix="/api/v1")
     app.include_router(auth.router, prefix="/api/v1")
