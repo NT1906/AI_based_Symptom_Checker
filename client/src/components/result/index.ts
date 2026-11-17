@@ -17,6 +17,10 @@ export {
 } from "./ConditionList";
 
 export {
+  WhyThisResultPanel,
+} from "./WhyThisResultPanel";
+
+export {
   RiskBadge,
   getRiskConfig,
   RISK_CONFIG,
@@ -31,6 +35,7 @@ export type {
   ConditionItem,
   ConfidenceTier,
   ConditionListProps,
+  WhyThisResultPanelProps,
   RiskLevel,
   TriageGuidance,
   ReferralInfo,
