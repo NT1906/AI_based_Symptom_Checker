@@ -53,6 +53,9 @@ export interface TriageGuidance {
   timeframe?: string;
 }
 
+/** Supported external map search providers (FR-08, idea §9). */
+export type MapProvider = "google" | "osm" | "apple";
+
 /** External doctor or clinic referral recommendation based on medical specialty. */
 export interface ReferralInfo {
   /** Primary recommended medical specialty. */
@@ -61,6 +64,28 @@ export interface ReferralInfo {
   secondarySpecialties?: string[];
   /** Suggested external map query string (e.g. "General Physician near me"). */
   mapQuery?: string;
+}
+
+/** Props for the DoctorReferral component (FR-08, idea §9, S2-MAN-2). */
+export interface DoctorReferralProps {
+  /** Referral configuration bundle or primary specialty name. */
+  referral?: ReferralInfo | null;
+  /** Direct primary medical specialty override (e.g. "General Physician", "Dermatologist"). */
+  specialty?: string | null;
+  /** Secondary or complementary specialties. */
+  secondarySpecialties?: string[];
+  /** Custom map search query override (defaults to "<specialty> near me"). */
+  mapQuery?: string | null;
+  /** Preferred external map provider (defaults to "google"). */
+  provider?: MapProvider;
+  /** Optional location hint (e.g. city or postal code). */
+  location?: string | null;
+  /** Custom section title. */
+  title?: string;
+  /** Optional callback invoked when the user clicks an external map search link. */
+  onReferralClick?: (specialty: string, targetUrl: string) => void;
+  /** Optional container CSS class name. */
+  className?: string;
 }
 
 /** Complete assessment result data bundle composed by ResultPage. */
