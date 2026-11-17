@@ -257,7 +257,9 @@ def _load_canonical_vocabulary() -> dict[str, str]:
                             mapping[lay.lower()] = symptom_id
                 break
             except Exception as exc:
-                logger.warning("Failed to load symptoms file at %s: %s", path, exc)
+                logger.warning(
+                    "canonical_vocabulary_load_failed (%s)", type(exc).__name__
+                )
     return mapping
 
 

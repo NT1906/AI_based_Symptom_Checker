@@ -292,11 +292,7 @@ class AssessmentOrchestrator:
             updated_at=now,
         )
         self._sessions[aid] = session
-        logger.info(
-            "assessment_created",
-            assessment_id=str(aid),
-            guest_session_id=str(guest_session_id) if guest_session_id else None,
-        )
+        logger.info("assessment_created", assessment_id=str(aid))
         return AssessmentRead(
             id=aid,
             state=sm.current_state,
@@ -442,8 +438,6 @@ class AssessmentOrchestrator:
                 logger.warning(
                     "unauthorized_access",
                     assessment_id=str(assessment_id),
-                    expected_user_id=str(owner_user_id),
-                    provided_user_id=None,
                     reason="unauthenticated_guest_access_to_user_assessment",
                 )
                 raise AssessmentAccessDeniedError(
@@ -454,8 +448,6 @@ class AssessmentOrchestrator:
                 logger.warning(
                     "unauthorized_access",
                     assessment_id=str(assessment_id),
-                    expected_user_id=str(owner_user_id),
-                    provided_user_id=str(user_id),
                     reason="cross_user_access_attempt",
                 )
                 raise AssessmentAccessDeniedError(
@@ -469,8 +461,6 @@ class AssessmentOrchestrator:
                 logger.warning(
                     "unauthorized_access",
                     assessment_id=str(assessment_id),
-                    expected_guest_session_id=str(owner_guest_id),
-                    provided_user_id=str(user_id),
                     reason="user_access_unclaimed_guest_without_token",
                 )
                 raise AssessmentAccessDeniedError(
@@ -484,8 +474,6 @@ class AssessmentOrchestrator:
                 logger.warning(
                     "unauthorized_access",
                     assessment_id=str(assessment_id),
-                    expected_guest_session_id=str(owner_guest_id),
-                    provided_guest_session_id=None,
                     reason="anonymous_access_without_guest_token",
                 )
                 raise AssessmentAccessDeniedError(
@@ -497,8 +485,6 @@ class AssessmentOrchestrator:
                 logger.warning(
                     "unauthorized_access",
                     assessment_id=str(assessment_id),
-                    expected_guest_session_id=str(owner_guest_id),
-                    provided_guest_session_id=str(guest_session_id),
                     reason="guest_session_mismatch",
                 )
                 raise AssessmentAccessDeniedError(
@@ -510,12 +496,7 @@ class AssessmentOrchestrator:
                     code="GUEST_SESSION_MISMATCH",
                 )
 
-        logger.info(
-            "assessment_access_authorized",
-            assessment_id=str(assessment_id),
-            user_id=str(user_id) if user_id else None,
-            guest_session_id=str(guest_session_id) if guest_session_id else None,
-        )
+        logger.info("assessment_access_authorized", assessment_id=str(assessment_id))
 
     def check_ownership(
         self,
@@ -763,10 +744,7 @@ class AssessmentOrchestrator:
         session.state_machine.context.profile = profile
         session.updated_at = datetime.now(UTC)
         logger.info(
-            "assessment_profile_context_updated",
-            assessment_id=str(assessment_id),
-            age_band=profile.age_band.value if profile.age_band else None,
-            chronic_conditions_count=len(profile.chronic_conditions),
+            "assessment_profile_context_updated", assessment_id=str(assessment_id)
         )
 
     def get_profile_context(
@@ -1806,11 +1784,7 @@ class AssessmentOrchestrator:
             s.model_dump() for s in session.symptoms
         ]
         session.updated_at = datetime.now(UTC)
-        logger.info(
-            "symptom_added",
-            assessment_id=str(assessment_id),
-            symptom_name=target.name,
-        )
+        logger.info("symptom_added", assessment_id=str(assessment_id))
         return target
 
     async def remove_symptom(
@@ -1893,16 +1867,12 @@ class AssessmentOrchestrator:
                 status_code=status.HTTP_404_NOT_FOUND,
             )
 
-        removed = session.symptoms.pop(target_idx)
+        session.symptoms.pop(target_idx)
         session.state_machine.context.symptoms = [
             s.model_dump() for s in session.symptoms
         ]
         session.updated_at = datetime.now(UTC)
-        logger.info(
-            "symptom_removed",
-            assessment_id=str(assessment_id),
-            symptom_name=removed.name,
-        )
+        logger.info("symptom_removed", assessment_id=str(assessment_id))
         return list(session.symptoms)
 
     async def edit_symptom(
@@ -1999,11 +1969,7 @@ class AssessmentOrchestrator:
             s.model_dump() for s in session.symptoms
         ]
         session.updated_at = datetime.now(UTC)
-        logger.info(
-            "symptom_edited",
-            assessment_id=str(assessment_id),
-            symptom_name=target.name,
-        )
+        logger.info("symptom_edited", assessment_id=str(assessment_id))
         return target
 
     async def restart_assessment(
@@ -2228,11 +2194,7 @@ class AssessmentOrchestrator:
                 session.guest_session_id = guest_session_id
             session.updated_at = datetime.now(UTC)
 
-        logger.info(
-            "guest_assessment_claimed",
-            assessment_id=str(assessment_id),
-            user_id=str(user_id),
-        )
+        logger.info("guest_assessment_claimed", assessment_id=str(assessment_id))
 
         if session is not None:
             return AssessmentRead(
@@ -2384,12 +2346,7 @@ class AssessmentOrchestrator:
                             )
                         )
 
-        logger.info(
-            "guest_session_claimed",
-            guest_session_id=str(guest_session_id),
-            user_id=str(user_id),
-            count=len(results),
-        )
+        logger.info("guest_session_claimed", count=len(results))
         return results
 
     async def generate_result(
