@@ -8,8 +8,8 @@ Responsibilities:
     - Export constants governing assessment progression rules.
     - Export RESULT_DEADLINE_SECONDS (5.0 s) for NFR-01 / S2-DAR-8 performance SLA.
 
-Owner: Darshil (assessment) · Task: S1-DAR-2, S2-DAR-8
-Requirements: FR-03, FR-17, NFR-01
+Owner: Darshil (assessment) · Task: S1-DAR-2, S2-DAR-8, S2-DAR-9
+Requirements: FR-03, FR-06, FR-17, NFR-01, DR-02
 """
 
 from app.services.assessment.exceptions import (

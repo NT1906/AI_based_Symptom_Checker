@@ -175,8 +175,11 @@ class TestResultLatencyMaxLoad:
         self, orchestrator: AssessmentOrchestrator
     ) -> None:
         """Fifty symptoms complete within the 5-second SLA."""
+        from app.services.knowledge import get_normalizer
+
+        vocabulary_symptoms = [sym.id for sym in get_normalizer().list_all()][:50]
         symptoms = [
-            Symptom(name=f"symptom_{i}", severity=Severity.MILD) for i in range(50)
+            Symptom(name=name, severity=Severity.MILD) for name in vocabulary_symptoms
         ]
         aid = await _create_ready_session(orchestrator, symptoms)
 
