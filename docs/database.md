@@ -1,9 +1,9 @@
 # Database foundation
 
-Owner: Harsh, Dimple, Kavya, Nishith · Tasks: S0-HAR-1, S1-DIM-4, S1-KAV-4, S1-NIT-4, S2-KAV-3 · Issues: #9, #38, #37, #36, #161 · Requirements: FR-01, FR-02, FR-17, NFR-01, idea § 10
+Owner: Harsh, Dimple, Kavya, Nishith · Tasks: S0-HAR-1, S1-DIM-4, S1-KAV-4, S1-NIT-4, S2-KAV-3, S2-NIT-3 · Issues: #9, #38, #37, #36, #161, #159 · Requirements: FR-01, FR-02, FR-17, NFR-01, NFR-10, idea § 10
 
 This change supplies PostgreSQL-oriented SQLAlchemy 2 models, session factories,
-Alembic migrations (revisions `0001_database_foundation` through `0005_user_profile`),
+Alembic migrations (revisions `0001_database_foundation` through `0006_audit_log`),
 repositories, fictional seed data, and isolated unit tests.
 
 ## Current status and team handoff
@@ -240,4 +240,41 @@ Per idea § 10 and FR-02, users may optionally save minimal clinical context to 
 - **Clinical Sex:** Biological sex is captured solely for clinical risk calibration (`female`, `male`, `other`, `prefer_not_to_say`) with an optional `sex` alias.
 - **Chronic Conditions:** Self-reported conditions (e.g. `["Diabetes", "Asthma"]`) are stored as structured JSON/JSONB text arrays.
 - **Cascading Lifecycle:** The `profiles` table maintains a 1-to-1 foreign key to `users.id` with `ON DELETE CASCADE`. If an account is deleted, the health profile is purged immediately.
+
+---
+
+## Audit Logs & System Traceability (S2-NIT-3, NFR-10)
+
+Owner: Nishith · Task: S2-NIT-3 · Issue: #159 · Requirement: NFR-10
+
+Revision `0006_audit_log` establishes the `audit_logs` table for tracking clinical triage evaluations, risk assessments, and model reproducibility:
+
+```mermaid
+erDiagram
+    USERS ||--o{ AUDIT_LOGS : "who (SET NULL on delete)"
+    GUEST_SESSIONS ||--o{ AUDIT_LOGS : "who (SET NULL on delete)"
+    ASSESSMENTS ||--o{ AUDIT_LOGS : "logs (SET NULL on delete)"
+```
+
+### Privacy & Compliance Invariants (DPDP Act 2023, DR-06, S2-HAR-7)
+- **Zero PII Leakage:** The audit table strictly records operational metadata, model/engine lineages, and non-identifying telemetry. Freeform text, dialogue turns, patient names, and phone numbers are forbidden.
+- **Graceful Anonymization on Erasure:** Foreign keys for `user_id`, `guest_session_id`, and `assessment_id` configure `ON DELETE SET NULL`. If a patient invokes "Delete my data" or a guest session expires, personal linkages clear while historical clinical audit records are preserved for medical compliance and accuracy audits.
+
+### Schema & Indexing
+
+| Column | Type | Nullable | Rationale / Constraint |
+|---|---|---|---|
+| `id` | `UUID` | No | Primary key. |
+| `created_at` | `TIMESTAMPTZ` | No | Immutable audit event timestamp ("when"). Indexed. |
+| `user_id` | `UUID` | Yes | Foreign key to `users.id` (`ON DELETE SET NULL`). Indexed. |
+| `guest_session_id` | `UUID` | Yes | Foreign key to `guest_sessions.id` (`ON DELETE SET NULL`). Indexed. |
+| `assessment_id` | `UUID` | Yes | Foreign key to `assessments.id` (`ON DELETE SET NULL`). Indexed. |
+| `action` | `VARCHAR(64)` | No | Audit action category (`ANALYSIS`, `RECOMMENDATION`, `TRIAGE`). Check: nonblank. Indexed. |
+| `risk_level` | `VARCHAR(32)` | Yes | Triage severity tier (`SELF_CARE`, `CONSULT_DOCTOR`, `URGENT`). Indexed. |
+| `risk_engine_version` | `VARCHAR(32)` | Yes | Pinned deterministic rule version (e.g. `1.1.0`). |
+| `condition_model_version` | `VARCHAR(64)` | Yes | Model version (e.g. `baseline_v1`). |
+| `cv_model_version` | `VARCHAR(64)` | Yes | CV image classifier revision if image was analyzed. |
+| `ai_model` | `VARCHAR(64)` | Yes | AI Gateway LLM model identifier. |
+| `details` | `JSONB` / `JSON` | No | Structured non-PII operational context (rules fired, driving conditions, telemetry). Default `{}`. |
+
 
