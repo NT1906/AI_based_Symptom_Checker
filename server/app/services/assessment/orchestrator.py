@@ -1183,7 +1183,8 @@ class AssessmentOrchestrator:
                             await self._ai_gateway.generate_clarification(
                                 structured_state={
                                     "symptoms": [
-                                        s.model_dump() for s in session.symptoms
+                                        s.model_dump(mode="json")
+                                        for s in session.symptoms
                                     ]
                                 },
                                 already_asked=already_asked,
