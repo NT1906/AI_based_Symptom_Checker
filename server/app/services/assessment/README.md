@@ -1,6 +1,6 @@
 # Assessment Service Module
 
-**Owner:** Darshil (Assessment Orchestration) · **Task:** S1-DAR-2, S1-DAR-3, S1-DAR-4, S2-DAR-1, S2-DAR-2, S2-DAR-3, S2-DAR-4, S2-DAR-6, S2-DAR-7, S2-DAR-8, S2-DAR-9, S2-DAR-10 · **Requirements:** idea §3, idea §10, FR-02, FR-03, FR-04, FR-05, FR-06, FR-07, FR-15, FR-16, FR-17, FR-19, FR-20, FR-21, FR-25, DR-02, DR-05, NFR-01, NFR-03, NFR-05
+**Owner:** Darshil (Assessment Orchestration) · **Task:** S1-DAR-2, S1-DAR-3, S1-DAR-4, S2-DAR-1, S2-DAR-2, S2-DAR-3, S2-DAR-4, S2-DAR-6, S2-DAR-7, S2-DAR-8, S2-DAR-9, S2-DAR-10, S2-DAR-11 · **Requirements:** idea §3, idea §10, FR-01, FR-02, FR-03, FR-04, FR-05, FR-06, FR-07, FR-15, FR-16, FR-17, FR-19, FR-20, FR-21, FR-25, DR-02, DR-05, NFR-01, NFR-03, NFR-05, NFR-10
 
 The Assessment Service orchestrates the conversational symptom assessment lifecycle. It provides:
 1. **Assessment State Machine**: Strictly governs valid states and enforces medical-safety guards throughout the user experience.
@@ -13,6 +13,7 @@ The Assessment Service orchestrates the conversational symptom assessment lifecy
 8. **Performance SLA & Result Latency Budget**: Guarantees that `generate_result()` computes triage classification within `RESULT_DEADLINE_SECONDS = 5.0` s (p95 latency ≤ 5 s on staging per NFR-01). Structured logs emit elapsed time on completion and warn on budget overruns.
 9. **Canonical Symptom ID Mapping (S2-DAR-9)**: Injects `SymptomResolver` to map free-text extracted symptom names (e.g. "Chest pain", "tummy ache", "seene me dard") to canonical symptom IDs (`chest_pain`, `abdominal_pain`) before reaching the condition predictor and deterministic risk engine (DR-02, FR-03, FR-06). Unresolved names remain in session for user confirmation but are safely excluded from risk evaluation.
 10. **Red Flag Skip-Clarification Fast Path (S2-DAR-10)**: Evaluates mapped symptoms with deterministic `find_red_flags()` directly after intake. When any red flag is detected, immediately skips further clarification turns and transitions to `CONFIRMING` with fixed safe 112 emergency notice (`RED_FLAG_EMERGENCY_PROMPT`), allowing rapid confirmation and immediate urgent triage (FR-06, FR-15, DR-02, AI_RULES.md §2.5).
+11. **Database Persistence & User History Linkage (S2-DAR-11)**: Bridges in-memory assessment chat sessions to the relational database. Coordinates database sessions across turns via `OrchestratorAssessmentService`, records chat turns atomically, links assessments to the authenticated user token (protecting against body mass assignment), and surfaces final risk levels from audit logs so the History view reliably renders completed records (FR-01, FR-20, DR-02, NFR-10).
 
 ---
 
@@ -274,7 +275,35 @@ When an intake message reports severe red-flag symptoms (such as crushing chest 
 
 ---
 
-## 15. Running Unit Tests
+## 15. Database Persistence & User History Linkage (S2-DAR-11)
+
+Per **FR-01**, **FR-20**, **DR-02**, and **NFR-10**:
+Chat assessments conducted through `OrchestratorAssessmentService` and `AssessmentOrchestrator` are automatically persisted to the relational database and linked to the authenticated user so that past assessments render properly on the user history dashboard (`GET /api/v1/history`).
+
+- **Architecture & Lifecycle**:
+  - `OrchestratorAssessmentService` exposes a `session_factory` and a context manager `_db_session()` that yields a database session per turn.
+  - In each turn (`create_assessment`, `process_message`, `confirm_symptoms`, `analyze_assessment`), `db_session` is forwarded to `AssessmentOrchestrator`.
+  - The orchestrator persists the `DbAssessment`, `DbAssessmentMessage`, and `DbAssessmentSymptom` records using existing repositories (`SqlAlchemyAssessmentRepository`, `SqlAlchemyMessageRepository`, `SqlAlchemySymptomRepository`).
+- **User ID Linking & Mass-Assignment Protection**:
+  - In `POST /api/v1/assessments`, `user_id` is derived strictly from the verified JWT access token (`user: OptionalUserDep = None`).
+  - If authenticated, `user_id = user.id`. For anonymous guests, `user_id = None`.
+  - Any `userId` provided in the JSON request body is ignored and never bound, preventing privilege escalation and mass-assignment vulnerabilities.
+- **Risk Level & Audit Log History Projection**:
+  - Because `DbAssessment` table stores the core assessment record and `AuditLog` stores clinical analysis decisions (`risk_level`), `AssessmentRead` in `server/app/schemas/assessment.py` dynamically resolves `risk_level` from the associated `AuditLog` via `@model_validator(mode="before")`.
+  - When history endpoints serialize `DbAssessment` instances, `riskLevel` is cleanly populated without altering the base table schema or breaking repository contracts.
+- **Fault-Tolerant DB Resilience**:
+  - Database persistence runs inside a nested savepoint / try-catch block (`_persist_and_cache`).
+  - If a database failure occurs during chat intake, the transaction rolls back gracefully and emits a structured warning (`assessment_db_persist_failed`). The in-memory chat session continues uninterrupted, ensuring the user experience never degrades.
+- **Test Coverage**:
+  - Verified in `tests/unit/assessment/test_chat_persistence.py` covering:
+    - Logged-in assessment persistence and appearance in history with populated risk level.
+    - Guest assessment isolation (guest assessments do not leak into user history).
+    - Mass-assignment rejection when `userId` is passed in the request body.
+    - Non-crashing in-memory chat resilience when the database raises operational errors.
+
+---
+
+## 16. Running Unit Tests
 
 From `server/`:
 

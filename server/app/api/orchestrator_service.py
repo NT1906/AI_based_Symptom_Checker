@@ -4,20 +4,23 @@ Responsibilities:
     - Implement the ``AssessmentService`` protocol the routers depend on, by
       delegating to one shared orchestrator (AI extraction, symptom mapping,
       condition model, deterministic risk engine, result composer).
+    - Persist assessment turns, messages, and state transitions to database
+      with single-transaction resilience (S2-DAR-11, FR-01, FR-20, DR-02).
     - Run "analyze" as confirm-then-result, and keep the finished result so
       ``GET /result`` returns the same answer every time (DR-02).
     - Map "no such assessment" and "wrong state" to 404 and 409.
 
-The orchestrator keeps sessions in memory, so the app must run one worker;
-a restart clears open assessments.
-
-Owner: Nisarg (integration) · Task: S2-NIS-13 · Requirements: FR-01, FR-03, FR-06, DR-02
+Owner: Nisarg (integration), Darshil (persistence)
+Task: S2-NIS-13, S2-DAR-11 · Requirements: FR-01, FR-03, FR-06, FR-20, DR-02
 """
 
 import asyncio
+from collections.abc import Iterator
+from contextlib import contextmanager
 from uuid import UUID
 
 from sqlalchemy import Engine
+from sqlalchemy.orm import Session, sessionmaker
 
 from app.api.deps import AnalyzeResponse, SendMessageResponse
 from app.core.config import Settings
@@ -56,23 +59,78 @@ _CONFIRMABLE = frozenset(
 class OrchestratorAssessmentService:
     """``AssessmentService`` that delegates to an ``AssessmentOrchestrator``."""
 
-    def __init__(self, orchestrator: AssessmentOrchestrator) -> None:
+    def __init__(
+        self,
+        orchestrator: AssessmentOrchestrator,
+        session_factory: sessionmaker[Session] | None = None,
+    ) -> None:
         """Create the service.
 
         Args:
             orchestrator: The shared orchestrator holding assessment sessions.
+            session_factory: Optional database sessionmaker for turn persistence.
         """
         self._orchestrator = orchestrator
+        self._session_factory = session_factory
         self._results: dict[UUID, AssessmentResult] = {}
         self._analyze_lock = asyncio.Lock()
 
+    @property
+    def session_factory(self) -> sessionmaker[Session] | None:
+        """Return the active database sessionmaker factory."""
+        return self._session_factory
+
+    @session_factory.setter
+    def session_factory(self, factory: sessionmaker[Session] | None) -> None:
+        """Set or update the active database sessionmaker factory."""
+        self._session_factory = factory
+
+    @contextmanager
+    def _db_session(self) -> Iterator[Session | None]:
+        """Yield an active database session for turn persistence.
+
+        Commits automatically on clean exit; rolls back and continues safely
+        if any database error occurs, guaranteeing resilience (S2-DAR-4, S2-DAR-11).
+        """
+        if self._session_factory is None:
+            yield None
+            return
+
+        sess: Session | None = None
+        try:
+            sess = self._session_factory()
+        except Exception as exc:
+            logger.warning("database_session_open_failed", error=str(exc))
+            yield None
+            return
+
+        try:
+            yield sess
+        except Exception:
+            if hasattr(sess, "rollback"):
+                sess.rollback()
+            raise
+        else:
+            try:
+                if hasattr(sess, "commit"):
+                    sess.commit()
+            except Exception as exc:
+                if hasattr(sess, "rollback"):
+                    sess.rollback()
+                logger.warning("database_session_commit_failed", error=str(exc))
+        finally:
+            if hasattr(sess, "close"):
+                sess.close()
+
     async def create_assessment(self, payload: AssessmentCreate) -> AssessmentRead:
         """Start a new assessment bound to the verified consent."""
-        return self._orchestrator.create_assessment(
-            consent_id=payload.consent_id,
-            user_id=payload.user_id,
-            guest_session_id=payload.guest_session_id,
-        )
+        with self._db_session() as db_session:
+            return self._orchestrator.create_assessment(
+                consent_id=payload.consent_id,
+                user_id=payload.user_id,
+                guest_session_id=payload.guest_session_id,
+                db_session=db_session,
+            )
 
     async def get_assessment(self, assessment_id: UUID) -> AssessmentRead:
         """Assessment summary.
@@ -80,7 +138,10 @@ class OrchestratorAssessmentService:
         Raises:
             NotFoundError: If the assessment does not exist.
         """
-        assessment = self._orchestrator.get_assessment(assessment_id)
+        with self._db_session() as db_session:
+            assessment = self._orchestrator.get_assessment(
+                assessment_id, db_session=db_session
+            )
         if assessment is None:
             raise NotFoundError("Assessment not found.")
         return assessment
@@ -97,7 +158,10 @@ class OrchestratorAssessmentService:
         Raises:
             ConflictError: If the assessment no longer accepts messages.
         """
-        processed = await self._orchestrator.process_message(assessment_id, message)
+        with self._db_session() as db_session:
+            processed = await self._orchestrator.process_message(
+                assessment_id, message, db_session=db_session
+            )
         if processed.assistant_message is None:
             raise ConflictError("This assessment is no longer accepting messages.")
         return SendMessageResponse(
@@ -122,7 +186,10 @@ class OrchestratorAssessmentService:
 
     async def confirm_symptoms(self, assessment_id: UUID) -> AnalyzeResponse:
         """Confirm the current symptoms; the assessment becomes READY."""
-        await self._orchestrator.confirm_symptoms(assessment_id)
+        with self._db_session() as db_session:
+            await self._orchestrator.confirm_symptoms(
+                assessment_id, db_session=db_session
+            )
         state = self._orchestrator.get_state(assessment_id).state
         return AnalyzeResponse(
             assessment_id=assessment_id, state=state, result_available=False
@@ -141,13 +208,18 @@ class OrchestratorAssessmentService:
             if assessment_id not in self._results:
                 await self.get_assessment(assessment_id)  # 404 before anything else
                 state = self._orchestrator.get_state(assessment_id).state
-                if state in _CONFIRMABLE:
-                    await self._orchestrator.confirm_symptoms(assessment_id)
-                elif state != AssessmentState.READY:
-                    raise ConflictError(
-                        f"An assessment in state {state.value} cannot be analysed."
+                with self._db_session() as db_session:
+                    if state in _CONFIRMABLE:
+                        await self._orchestrator.confirm_symptoms(
+                            assessment_id, db_session=db_session
+                        )
+                    elif state != AssessmentState.READY:
+                        raise ConflictError(
+                            f"An assessment in state {state.value} cannot be analysed."
+                        )
+                    result = await self._orchestrator.generate_result(
+                        assessment_id, db_session=db_session
                     )
-                result = await self._orchestrator.generate_result(assessment_id)
                 self._results[assessment_id] = result
                 logger.info(
                     "assessment_analyzed",
@@ -175,7 +247,10 @@ class OrchestratorAssessmentService:
 
 
 def build_orchestrator_service(
-    settings: Settings, ai_gateway: AiGateway, engine: Engine | None
+    settings: Settings,
+    ai_gateway: AiGateway,
+    engine: Engine | None,
+    session_factory: sessionmaker[Session] | None = None,
 ) -> OrchestratorAssessmentService:
     """The assessment service for the running app.
 
@@ -183,10 +258,14 @@ def build_orchestrator_service(
         settings: Application settings (CV provider).
         ai_gateway: The configured AI gateway.
         engine: Database engine, used only when semantic retrieval is on.
+        session_factory: Optional database sessionmaker factory for persistence.
 
     Returns:
         A service wrapping a fully configured orchestrator.
     """
+    if session_factory is None and engine is not None:
+        session_factory = sessionmaker(bind=engine, expire_on_commit=False)
+
     orchestrator = AssessmentOrchestrator(
         ai_gateway=ai_gateway,
         condition_model=build_condition_model(ConditionModelSettings()),
@@ -194,4 +273,4 @@ def build_orchestrator_service(
         resolver=build_symptom_resolver(RetrievalSettings(), engine),
     )
     logger.info("assessment_service_ready", cv_provider=settings.cv_provider)
-    return OrchestratorAssessmentService(orchestrator)
+    return OrchestratorAssessmentService(orchestrator, session_factory=session_factory)

@@ -9,8 +9,8 @@ Responsibilities:
     - Export RESULT_DEADLINE_SECONDS (5.0 s) for NFR-01 / S2-DAR-8 performance SLA.
     - Export RED_FLAG_EMERGENCY_PROMPT for S2-DAR-10 / FR-06, FR-15 red-flag fast path.
 
-Owner: Darshil (assessment) · Task: S1-DAR-2, S2-DAR-8, S2-DAR-9, S2-DAR-10
-Requirements: FR-03, FR-06, FR-15, FR-17, NFR-01, DR-02
+Owner: Darshil (assessment) · Task: S1-DAR-2, S2-DAR-8, S2-DAR-9, S2-DAR-10, S2-DAR-11
+Requirements: FR-01, FR-03, FR-06, FR-15, FR-17, FR-20, NFR-01, DR-02
 """
 
 from app.services.assessment.exceptions import (
