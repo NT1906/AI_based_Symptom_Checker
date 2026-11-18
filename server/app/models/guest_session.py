@@ -1,6 +1,7 @@
 """Anonymous guest session storage and token ownership.
 
-Owner: Kavya (Database) · Task: S1-KAV-4 · Requirements: idea § 10
+Owner: Kavya, Nishith (Database) · Tasks: S1-KAV-4, S2-NIT-6
+Requirements: NFR-01, idea § 10
 """
 
 from datetime import datetime, UTC
@@ -36,6 +37,7 @@ class GuestSession(RecordMixin, Base):
             name="expires_after_created",
         ),
         Index("ix_guest_sessions_expires_at", "expires_at"),
+        Index("ix_guest_sessions_claimed_by_user_id", "claimed_by_user_id"),
     )
 
     token_hash: Mapped[str] = mapped_column(String(64), nullable=False, unique=True)
