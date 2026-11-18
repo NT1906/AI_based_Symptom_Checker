@@ -6,7 +6,7 @@ Responsibilities:
     - Store non-PII operational details (rule, driving conditions, telemetry).
     - Decouple from users and sessions via SET NULL on account/guest deletion.
 
-Owner: Nishith (Database) · Task: S2-NIT-3 · Requirements: NFR-10
+Owner: Nishith (Database) · Tasks: S2-NIT-3, S2-NIT-6 · Requirements: NFR-01, NFR-10
 """
 
 from typing import TYPE_CHECKING, Any
@@ -61,6 +61,9 @@ class AuditLog(RecordMixin, Base):
         Index("ix_audit_logs_guest_session_id", "guest_session_id"),
         Index("ix_audit_logs_action", "action"),
         Index("ix_audit_logs_risk_level", "risk_level"),
+        Index("ix_audit_logs_assessment_id_created_at", "assessment_id", "created_at"),
+        Index("ix_audit_logs_user_id_created_at", "user_id", "created_at"),
+        Index("ix_audit_logs_action_created_at", "action", "created_at"),
     )
 
     user_id: Mapped[UUID | None] = mapped_column(
