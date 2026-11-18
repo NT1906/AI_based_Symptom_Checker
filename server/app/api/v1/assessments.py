@@ -11,7 +11,7 @@ Owner: Vivek (api) · Task: S1-VIV-1, S1-VIV-3, S1-VIV-4 · Requirements: idea �
 from typing import Annotated, Any
 from uuid import UUID
 
-from fastapi import APIRouter, File, Path, UploadFile, status
+from fastapi import APIRouter, Body, File, Path, UploadFile, status
 from pydantic import Field
 
 from app.api.deps import (
@@ -80,10 +80,36 @@ COMMON_ERROR_RESPONSES: dict[int | str, dict[str, Any]] = {
     status.HTTP_404_NOT_FOUND: {
         "model": ErrorResponse,
         "description": "Assessment not found",
+        "content": {
+            "application/json": {
+                "example": {
+                    "code": "NOT_FOUND",
+                    "message": "Assessment not found",
+                    "details": None,
+                    "requestId": "req_1234567890abcdef",
+                }
+            }
+        },
     },
     status.HTTP_422_UNPROCESSABLE_ENTITY: {
         "model": ErrorResponse,
         "description": "Request or parameter validation failed",
+        "content": {
+            "application/json": {
+                "example": {
+                    "code": "VALIDATION_ERROR",
+                    "message": "Validation failed on one or more fields.",
+                    "details": [
+                        {
+                            "loc": ["body", "content"],
+                            "msg": "field required",
+                            "type": "value_error.missing",
+                        }
+                    ],
+                    "requestId": "req_1234567890abcdef",
+                }
+            }
+        },
     },
 }
 
@@ -92,6 +118,16 @@ STATE_CONFLICT_ERROR_RESPONSES: dict[int | str, dict[str, Any]] = {
     status.HTTP_409_CONFLICT: {
         "model": ErrorResponse,
         "description": "Operation invalid for current assessment state",
+        "content": {
+            "application/json": {
+                "example": {
+                    "code": "INVALID_STATE",
+                    "message": "Cannot perform operation in current assessment state",
+                    "details": None,
+                    "requestId": "req_1234567890abcdef",
+                }
+            }
+        },
     },
 }
 
@@ -111,18 +147,70 @@ STATE_CONFLICT_ERROR_RESPONSES: dict[int | str, dict[str, Any]] = {
         "consent record. Returns initial START lifecycle state."
     ),
     responses={
+        status.HTTP_201_CREATED: {
+            "model": AssessmentRead,
+            "description": "Assessment session successfully created in START state.",
+            "content": {
+                "application/json": {
+                    "example": {
+                        "id": "00000000-0000-4000-8000-000000000001",
+                        "state": "START",
+                        "consentId": "00000000-0000-4000-8000-0000000000c1",
+                        "userId": None,
+                        "createdAt": "2026-11-18T12:00:00Z",
+                        "updatedAt": "2026-11-18T12:00:00Z",
+                    }
+                }
+            },
+        },
         status.HTTP_409_CONFLICT: {
             "model": ErrorResponse,
             "description": "Current policy consent required",
+            "content": {
+                "application/json": {
+                    "example": {
+                        "code": "CONSENT_REQUIRED",
+                        "message": (
+                            "Consent to current policy version is required "
+                            "before starting an assessment"
+                        ),
+                        "details": None,
+                        "requestId": "req_1234567890abcdef",
+                    }
+                }
+            },
         },
         status.HTTP_422_UNPROCESSABLE_ENTITY: {
             "model": ErrorResponse,
             "description": "Validation error on payload",
+            "content": {
+                "application/json": {
+                    "example": {
+                        "code": "VALIDATION_ERROR",
+                        "message": "Consent ID is required",
+                        "details": None,
+                        "requestId": "req_1234567890abcdef",
+                    }
+                }
+            },
         },
     },
 )
 async def create_assessment(
-    payload: AssessmentCreate,
+    payload: Annotated[
+        AssessmentCreate,
+        Body(
+            openapi_examples={
+                "valid_creation": {
+                    "summary": "Start assessment session",
+                    "description": "Provides valid consent record ID to begin session.",
+                    "value": {
+                        "consentId": "00000000-0000-4000-8000-0000000000c1",
+                    },
+                }
+            },
+        ),
+    ],
     service: AssessmentServiceDep,
     session_factory: SessionFactoryDep,
     user: OptionalUserDep = None,
@@ -153,7 +241,25 @@ async def create_assessment(
     response_model=AssessmentRead,
     summary="Get assessment details",
     description="Fetches current status and metadata of an assessment session.",
-    responses=COMMON_ERROR_RESPONSES,
+    responses={
+        status.HTTP_200_OK: {
+            "model": AssessmentRead,
+            "description": "Assessment session summary retrieved.",
+            "content": {
+                "application/json": {
+                    "example": {
+                        "id": "00000000-0000-4000-8000-000000000001",
+                        "state": "COLLECTING",
+                        "consentId": "00000000-0000-4000-8000-0000000000c1",
+                        "userId": "00000000-0000-4000-8000-0000000000a1",
+                        "createdAt": "2026-11-18T12:00:00Z",
+                        "updatedAt": "2026-11-18T12:02:00Z",
+                    }
+                }
+            },
+        },
+        **COMMON_ERROR_RESPONSES,
+    },
 )
 async def get_assessment(
     id: Annotated[UUID, Path(description="Unique assessment identifier")],
@@ -180,7 +286,24 @@ async def get_assessment(
         "Retrieves detailed state snapshot including active symptoms, "
         "clarification loop counter, and lifecycle phase."
     ),
-    responses=COMMON_ERROR_RESPONSES,
+    responses={
+        status.HTTP_200_OK: {
+            "model": AssessmentStateResponse,
+            "description": "Assessment state machine snapshot retrieved.",
+            "content": {
+                "application/json": {
+                    "example": {
+                        "assessmentId": "00000000-0000-4000-8000-000000000001",
+                        "state": "CLARIFYING",
+                        "symptomCount": 2,
+                        "clarificationCount": 1,
+                        "isComplete": False,
+                    }
+                }
+            },
+        },
+        **COMMON_ERROR_RESPONSES,
+    },
 )
 async def get_assessment_state(
     id: Annotated[UUID, Path(description="Unique assessment identifier")],
@@ -207,11 +330,66 @@ async def get_assessment_state(
         "Appends a user chat message to the assessment dialogue and returns "
         "the recorded user message, assistant clarification, and next state."
     ),
-    responses=STATE_CONFLICT_ERROR_RESPONSES,
+    responses={
+        status.HTTP_200_OK: {
+            "model": SendMessageResponse,
+            "description": "Message recorded and assistant response returned.",
+            "content": {
+                "application/json": {
+                    "example": {
+                        "message": {
+                            "id": "00000000-0000-4000-8000-0000000000m1",
+                            "assessmentId": "00000000-0000-4000-8000-000000000001",
+                            "position": 0,
+                            "role": "user",
+                            "content": (
+                                "I have had a throbbing headache and mild "
+                                "fever since yesterday."
+                            ),
+                            "messageType": "text",
+                            "createdAt": "2026-11-18T12:01:00Z",
+                        },
+                        "assistantMessage": {
+                            "id": "00000000-0000-4000-8000-0000000000m2",
+                            "assessmentId": "00000000-0000-4000-8000-000000000001",
+                            "position": 1,
+                            "role": "assistant",
+                            "content": (
+                                "Are you experiencing any nausea, light "
+                                "sensitivity, or neck stiffness?"
+                            ),
+                            "messageType": "clarification",
+                            "createdAt": "2026-11-18T12:01:02Z",
+                        },
+                        "nextState": "CLARIFYING",
+                    }
+                }
+            },
+        },
+        **STATE_CONFLICT_ERROR_RESPONSES,
+    },
 )
 async def send_message(
-    payload: MessageCreate,
     id: Annotated[UUID, Path(description="Unique assessment identifier")],
+    payload: Annotated[
+        MessageCreate,
+        Body(
+            openapi_examples={
+                "symptom_report": {
+                    "summary": "Report symptoms",
+                    "description": (
+                        "User describing symptoms to the clinical assistant."
+                    ),
+                    "value": {
+                        "content": (
+                            "I have had a throbbing headache and mild "
+                            "fever since yesterday."
+                        ),
+                    },
+                }
+            },
+        ),
+    ],
     service: AssessmentServiceDep,
 ) -> SendMessageResponse:
     """Append a user message to the guided assessment dialogue.
@@ -238,7 +416,43 @@ async def send_message(
     response_model=list[MessageRead],
     summary="Get conversation message history",
     description="Returns sequential ordered history of messages in the assessment.",
-    responses=COMMON_ERROR_RESPONSES,
+    responses={
+        status.HTTP_200_OK: {
+            "model": list[MessageRead],
+            "description": "Chronological assessment conversation history.",
+            "content": {
+                "application/json": {
+                    "example": [
+                        {
+                            "id": "00000000-0000-4000-8000-0000000000m1",
+                            "assessmentId": "00000000-0000-4000-8000-000000000001",
+                            "position": 0,
+                            "role": "user",
+                            "content": (
+                                "I have had a throbbing headache and mild "
+                                "fever since yesterday."
+                            ),
+                            "messageType": "text",
+                            "createdAt": "2026-11-18T12:01:00Z",
+                        },
+                        {
+                            "id": "00000000-0000-4000-8000-0000000000m2",
+                            "assessmentId": "00000000-0000-4000-8000-000000000001",
+                            "position": 1,
+                            "role": "assistant",
+                            "content": (
+                                "Are you experiencing any nausea, light "
+                                "sensitivity, or neck stiffness?"
+                            ),
+                            "messageType": "clarification",
+                            "createdAt": "2026-11-18T12:01:02Z",
+                        },
+                    ]
+                }
+            },
+        },
+        **COMMON_ERROR_RESPONSES,
+    },
 )
 async def get_messages(
     id: Annotated[UUID, Path(description="Unique assessment identifier")],
@@ -262,7 +476,37 @@ async def get_messages(
     response_model=list[SymptomRead],
     summary="Get recognized symptoms",
     description="Retrieves recognized symptoms list for the assessment.",
-    responses=COMMON_ERROR_RESPONSES,
+    responses={
+        status.HTTP_200_OK: {
+            "model": list[SymptomRead],
+            "description": "List of recognized and extracted symptoms.",
+            "content": {
+                "application/json": {
+                    "example": [
+                        {
+                            "id": "00000000-0000-4000-8000-0000000000s1",
+                            "name": "headache",
+                            "severity": "MODERATE",
+                            "duration": {"value": 2.0, "unit": "DAY"},
+                            "bodyLocation": "head",
+                            "source": "USER",
+                            "extractionConfidence": 0.95,
+                        },
+                        {
+                            "id": "00000000-0000-4000-8000-0000000000s2",
+                            "name": "fever",
+                            "severity": "MILD",
+                            "duration": {"value": 1.0, "unit": "DAY"},
+                            "bodyLocation": None,
+                            "source": "USER",
+                            "extractionConfidence": 0.9,
+                        },
+                    ]
+                }
+            },
+        },
+        **COMMON_ERROR_RESPONSES,
+    },
 )
 async def get_symptoms(
     id: Annotated[UUID, Path(description="Unique assessment identifier")],
@@ -289,11 +533,69 @@ async def get_symptoms(
         "Allows user to confirm, edit, add, or delete symptoms prior to "
         "triage evaluation."
     ),
-    responses=STATE_CONFLICT_ERROR_RESPONSES,
+    responses={
+        status.HTTP_200_OK: {
+            "model": list[SymptomRead],
+            "description": "Updated and confirmed symptoms list.",
+            "content": {
+                "application/json": {
+                    "example": [
+                        {
+                            "id": "00000000-0000-4000-8000-0000000000s1",
+                            "name": "headache",
+                            "severity": "MODERATE",
+                            "duration": {"value": 2.0, "unit": "DAY"},
+                            "bodyLocation": "head",
+                            "source": "USER",
+                            "extractionConfidence": 1.0,
+                        },
+                        {
+                            "id": "00000000-0000-4000-8000-0000000000s2",
+                            "name": "fever",
+                            "severity": "MILD",
+                            "duration": {"value": 1.0, "unit": "DAY"},
+                            "bodyLocation": None,
+                            "source": "USER",
+                            "extractionConfidence": 1.0,
+                        },
+                    ]
+                }
+            },
+        },
+        **STATE_CONFLICT_ERROR_RESPONSES,
+    },
 )
 async def update_symptoms(
-    payload: UpdateSymptomsRequest,
     id: Annotated[UUID, Path(description="Unique assessment identifier")],
+    payload: Annotated[
+        UpdateSymptomsRequest,
+        Body(
+            openapi_examples={
+                "confirm_symptoms": {
+                    "summary": "Confirm and edit symptoms",
+                    "description": (
+                        "Updates symptom severity and confirms findings "
+                        "before analysis."
+                    ),
+                    "value": {
+                        "symptoms": [
+                            {
+                                "name": "headache",
+                                "severity": "MODERATE",
+                                "duration": {"value": 2.0, "unit": "DAY"},
+                                "bodyLocation": "head",
+                            },
+                            {
+                                "name": "fever",
+                                "severity": "MILD",
+                                "duration": {"value": 1.0, "unit": "DAY"},
+                            },
+                        ]
+                    },
+                }
+            },
+        ),
+    ],
     service: AssessmentServiceDep,
 ) -> list[SymptomRead]:
     """Confirm or modify symptoms before clinical analysis.
@@ -322,7 +624,22 @@ async def update_symptoms(
         "Submits confirmed symptoms to the deterministic risk engine and "
         "condition prediction models. Transitions state to COMPLETED."
     ),
-    responses=STATE_CONFLICT_ERROR_RESPONSES,
+    responses={
+        status.HTTP_200_OK: {
+            "model": AnalyzeResponse,
+            "description": "Analysis completed and results ready for retrieval.",
+            "content": {
+                "application/json": {
+                    "example": {
+                        "assessmentId": "00000000-0000-4000-8000-000000000001",
+                        "state": "COMPLETED",
+                        "resultAvailable": True,
+                    }
+                }
+            },
+        },
+        **STATE_CONFLICT_ERROR_RESPONSES,
+    },
 )
 async def analyze_assessment(
     id: Annotated[UUID, Path(description="Unique assessment identifier")],
@@ -372,7 +689,79 @@ async def analyze_assessment(
         "Retrieves final clinical triage outcome, candidate conditions with "
         "categorical confidence, guidance, limitations, and medical disclaimer."
     ),
-    responses=STATE_CONFLICT_ERROR_RESPONSES,
+    responses={
+        status.HTTP_200_OK: {
+            "model": AssessmentResult,
+            "description": "Final clinical triage evaluation outcome.",
+            "content": {
+                "application/json": {
+                    "example": {
+                        "assessmentId": "00000000-0000-4000-8000-000000000001",
+                        "riskLevel": "CONSULT_DOCTOR",
+                        "conditions": [
+                            {
+                                "name": "Tension-type Headache",
+                                "confidence": "LIKELY",
+                                "rank": 1,
+                                "icd10Code": "G44.2",
+                                "specialty": "General Medicine",
+                                "description": (
+                                    "Common headache disorder often presenting "
+                                    "with mild to moderate aching pain."
+                                ),
+                                "why": (
+                                    "Because you reported persistent throbbing "
+                                    "headache with mild fever."
+                                ),
+                            },
+                            {
+                                "name": "Viral Syndrome",
+                                "confidence": "POSSIBLE",
+                                "rank": 2,
+                                "icd10Code": "B34.9",
+                                "specialty": "General Medicine",
+                                "description": (
+                                    "General viral infection causing concurrent "
+                                    "mild fever and head discomfort."
+                                ),
+                                "why": "Because you reported mild fever.",
+                            },
+                        ],
+                        "guidance": [
+                            "Rest in a quiet, dark room and stay hydrated.",
+                            (
+                                "Consult a healthcare professional if symptoms "
+                                "worsen or persist beyond 48 hours."
+                            ),
+                        ],
+                        "referral": {
+                            "required": True,
+                            "specialty": "General Medicine",
+                            "reason": (
+                                "Persistent headache accompanied by fever "
+                                "warrants non-urgent medical evaluation."
+                            ),
+                            "emergencyNumber": None,
+                        },
+                        "limitations": [
+                            (
+                                "Automated informational assessment based only "
+                                "on user-reported symptoms."
+                            ),
+                            "Does not account for in-person vital signs or lab tests.",
+                        ],
+                        "modelVersion": "1.0.0",
+                        "disclaimer": (
+                            "This is not a medical diagnosis. "
+                            "Always consult a qualified healthcare professional."
+                        ),
+                        "createdAt": "2026-11-18T12:05:00Z",
+                    }
+                }
+            },
+        },
+        **STATE_CONFLICT_ERROR_RESPONSES,
+    },
 )
 async def get_assessment_result(
     id: Annotated[UUID, Path(description="Unique assessment identifier")],
@@ -430,19 +819,64 @@ async def get_assessment_result(
         "in volatile memory without writing to disk or database (DR-06)."
     ),
     responses={
+        status.HTTP_200_OK: {
+            "model": ImageUploadResponse,
+            "description": (
+                "Image successfully validated and sanitized in volatile memory."
+            ),
+            "content": {
+                "application/json": {
+                    "example": {
+                        "assessmentId": "00000000-0000-4000-8000-000000000001",
+                        "status": "processed",
+                        "contentType": "image/jpeg",
+                    }
+                }
+            },
+        },
         status.HTTP_400_BAD_REQUEST: {
             "model": ErrorResponse,
             "description": (
                 "Image validation failed (size, format, or corrupted content)"
             ),
+            "content": {
+                "application/json": {
+                    "example": {
+                        "code": "INVALID_IMAGE",
+                        "message": "Image format not supported or file corrupted",
+                        "details": None,
+                        "requestId": "req_1234567890abcdef",
+                    }
+                }
+            },
         },
         status.HTTP_404_NOT_FOUND: {
             "model": ErrorResponse,
             "description": "Assessment not found",
+            "content": {
+                "application/json": {
+                    "example": {
+                        "code": "NOT_FOUND",
+                        "message": "Assessment not found",
+                        "details": None,
+                        "requestId": "req_1234567890abcdef",
+                    }
+                }
+            },
         },
         status.HTTP_422_UNPROCESSABLE_ENTITY: {
             "model": ErrorResponse,
             "description": "Validation error on path parameter or multipart form",
+            "content": {
+                "application/json": {
+                    "example": {
+                        "code": "VALIDATION_ERROR",
+                        "message": "Validation failed on multipart form payload",
+                        "details": None,
+                        "requestId": "req_1234567890abcdef",
+                    }
+                }
+            },
         },
     },
 )
