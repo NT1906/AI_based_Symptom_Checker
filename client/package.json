@@ -16,7 +16,7 @@
     "gen:api": "openapi-ts -i openapi.json -o src/types && node scripts/add-generated-headers.mjs"
   },
   "dependencies": {
-    "@tanstack/react-query": "^5.104.2",
+    "@tanstack/react-query": "^5.107.1",
     "clsx": "^2.1.1",
     "i18next": "^26.4.4",
     "react": "^18.3.1",
