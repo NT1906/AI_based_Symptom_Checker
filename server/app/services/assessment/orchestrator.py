@@ -357,7 +357,7 @@ class AssessmentOrchestrator:
                 logger.warning(
                     "assessment_db_create_failed",
                     assessment_id=str(aid),
-                    error=str(exc),
+                    error=type(exc).__name__,
                 )
 
         logger.info("assessment_created", assessment_id=str(aid))
@@ -1809,7 +1809,7 @@ class AssessmentOrchestrator:
                 logger.warning(
                     "confirm_symptoms_db_save_failed",
                     assessment_id=str(assessment_id),
-                    error=str(exc),
+                    error=type(exc).__name__,
                 )
 
         logger.info(
@@ -2684,7 +2684,7 @@ class AssessmentOrchestrator:
                 logger.warning(
                     "generate_result_db_save_failed",
                     assessment_id=str(assessment_id),
-                    error=str(exc),
+                    error=type(exc).__name__,
                 )
 
         return result
