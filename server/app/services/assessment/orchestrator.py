@@ -19,6 +19,8 @@ Responsibilities:
       passing to predictor and risk engine (DR-02, FR-03, FR-06, S2-DAR-9).
     - Keep unresolved symptom names in session for user confirmation while
       excluding them from risk engine and predictor inputs, logging name length only.
+    - Detect red-flag symptoms in intake messages, skip clarification, and
+      transition directly to CONFIRMING with fixed 112 notice (S2-DAR-10, FR-06, FR-15).
     - Provide restart_assessment() to cleanly reset an assessment session (FR-25).
     - Claim anonymous guest assessments into registered accounts (idea §10).
     - Step back to chat from CONFIRMING or READY for conversational edits.
@@ -27,8 +29,8 @@ Responsibilities:
     - Run real analysis in generate_result() via condition predictor, risk engine,
       and result composer with safety-wording validation (FR-05, FR-06, FR-07, DR-05).
 
-Owner: Darshil (assessment) · Task: S2-DAR-6, S2-DAR-7, S2-DAR-8, S2-DAR-9
-Requirements: NFR-01, NFR-03, NFR-05, FR-02, DR-02, FR-03, FR-06
+Owner: Darshil (assessment) · Task: S2-DAR-6, S2-DAR-7, S2-DAR-8, S2-DAR-9, S2-DAR-10
+Requirements: NFR-01, NFR-03, NFR-05, FR-02, DR-02, FR-03, FR-06, FR-15
 """
 
 import asyncio
@@ -77,7 +79,7 @@ from app.services.prediction.condition_predictor import (
     ConditionModel,
 )
 from app.services.prediction.result_composer import ResultComposer
-from app.services.prediction.risk_engine import assess_risk
+from app.services.prediction.risk_engine import assess_risk, find_red_flags
 from app.services.prediction.risk_schemas import ReportedSymptom
 from app.services.privacy.safety_guard import (
     UnsafeWordingError,
@@ -100,6 +102,13 @@ logger = get_logger(__name__)
 # within this budget on staging.  Exceeding it emits a WARNING so it appears
 # in the structured log and can be caught by alerts.
 RESULT_DEADLINE_SECONDS: float = 5.0
+
+# S2-DAR-10 / FR-06, FR-15: Fixed safety prompt returned when red flags are detected
+# in an intake message, skipping clarification and guiding the user to emergency care.
+RED_FLAG_EMERGENCY_PROMPT: str = (
+    "Some of what you describe can be serious. If you think this is an emergency, "
+    "call 112 now. Please confirm your symptoms so we can show your result."
+)
 
 
 def merge_symptoms(
@@ -1154,56 +1163,130 @@ class AssessmentOrchestrator:
                     session.messages.append(assistant_msg)
                     result_type = "TEXT"
                 else:
-                    has_unresolved_duration = any(
-                        s.duration is None for s in session.symptoms
-                    )
-                    requires_clarification = (
-                        extraction.requires_clarification
-                        or (
-                            sm.current_state == AssessmentState.CLARIFYING
-                            and has_unresolved_duration
-                        )
-                        or (
-                            has_unresolved_duration
-                            and sm.context.clarification_count == 0
-                        )
-                    )
-
-                    if (
-                        requires_clarification
-                        and sm.context.clarification_count
-                        < sm.context.max_clarifications
-                    ):
-                        already_asked = [
-                            m.content
-                            for m in session.messages
-                            if m.message_type == MessageType.CLARIFICATION
+                    # Step 4a: Check for red flags before clarification
+                    # (S2-DAR-10, FR-06, FR-15, DR-02)
+                    has_red_flags = False
+                    red_flag_count = 0
+                    try:
+                        reported_for_red_flags = [
+                            ReportedSymptom(id=s.name, severity=s.severity)
+                            for s in session.symptoms
                         ]
-                        clarification_res = (
-                            await self._ai_gateway.generate_clarification(
-                                structured_state={
-                                    "symptoms": [
-                                        s.model_dump(mode="json")
-                                        for s in session.symptoms
-                                    ]
-                                },
-                                already_asked=already_asked,
+                        red_flags = find_red_flags(reported_for_red_flags)
+                        has_red_flags = len(red_flags) > 0
+                        red_flag_count = len(red_flags)
+                    except Exception as exc:  # noqa: BLE001
+                        logger.warning(
+                            "red_flag_check_failed",
+                            assessment_id=str(assessment_id),
+                            error=type(exc).__name__,
+                        )
+                        has_red_flags = False
+
+                    if has_red_flags:
+                        logger.info(
+                            "red_flag_detected_skip_clarification",
+                            assessment_id=str(assessment_id),
+                            red_flag_count=red_flag_count,
+                        )
+                        if sm.current_state != AssessmentState.CONFIRMING:
+                            sm.proceed_to_confirmation()
+                        assistant_msg = MessageRead(
+                            id=uuid4(),
+                            assessment_id=assessment_id,
+                            position=len(session.messages),
+                            role=MessageRole.ASSISTANT,
+                            content=RED_FLAG_EMERGENCY_PROMPT,
+                            message_type=MessageType.CONFIRMATION,
+                            created_at=datetime.now(UTC),
+                        )
+                        session.messages.append(assistant_msg)
+                        result_type = "CONFIRMATION"
+                    else:
+                        has_unresolved_duration = any(
+                            s.duration is None for s in session.symptoms
+                        )
+                        requires_clarification = (
+                            extraction.requires_clarification
+                            or (
+                                sm.current_state == AssessmentState.CLARIFYING
+                                and has_unresolved_duration
+                            )
+                            or (
+                                has_unresolved_duration
+                                and sm.context.clarification_count == 0
                             )
                         )
-                        if clarification_res.should_ask and clarification_res.question:
-                            sm.request_clarification()
-                            assistant_msg = MessageRead(
-                                id=uuid4(),
-                                assessment_id=assessment_id,
-                                position=len(session.messages),
-                                role=MessageRole.ASSISTANT,
-                                content=clarification_res.question,
-                                message_type=MessageType.CLARIFICATION,
-                                created_at=datetime.now(UTC),
+
+                        if (
+                            requires_clarification
+                            and sm.context.clarification_count
+                            < sm.context.max_clarifications
+                        ):
+                            already_asked = [
+                                m.content
+                                for m in session.messages
+                                if m.message_type == MessageType.CLARIFICATION
+                            ]
+                            clarification_res = (
+                                await self._ai_gateway.generate_clarification(
+                                    structured_state={
+                                        "symptoms": [
+                                            s.model_dump(mode="json")
+                                            for s in session.symptoms
+                                        ]
+                                    },
+                                    already_asked=already_asked,
+                                )
                             )
-                            session.messages.append(assistant_msg)
-                            result_type = "CLARIFICATION"
+                            if (
+                                clarification_res.should_ask
+                                and clarification_res.question
+                            ):
+                                sm.request_clarification()
+                                assistant_msg = MessageRead(
+                                    id=uuid4(),
+                                    assessment_id=assessment_id,
+                                    position=len(session.messages),
+                                    role=MessageRole.ASSISTANT,
+                                    content=clarification_res.question,
+                                    message_type=MessageType.CLARIFICATION,
+                                    created_at=datetime.now(UTC),
+                                )
+                                session.messages.append(assistant_msg)
+                                result_type = "CLARIFICATION"
+                            else:
+                                sm.proceed_to_confirmation()
+                                confirm_text = (
+                                    "Thank you for providing those details. "
+                                    "Please review and confirm your symptoms "
+                                    "so we can analyze them."
+                                )
+                                assistant_msg = MessageRead(
+                                    id=uuid4(),
+                                    assessment_id=assessment_id,
+                                    position=len(session.messages),
+                                    role=MessageRole.ASSISTANT,
+                                    content=confirm_text,
+                                    message_type=MessageType.CONFIRMATION,
+                                    created_at=datetime.now(UTC),
+                                )
+                                session.messages.append(assistant_msg)
+                                result_type = "CONFIRMATION"
                         else:
+                            if (
+                                requires_clarification
+                                or sm.context.clarification_count
+                                >= sm.context.max_clarifications
+                            ):
+                                session.is_low_confidence = True
+                                sm.context.is_low_confidence = True
+                                logger.info(
+                                    "clarification_cap_reached_low_confidence_flagged",
+                                    assessment_id=str(assessment_id),
+                                    clarification_count=sm.context.clarification_count,
+                                )
+
                             sm.proceed_to_confirmation()
                             confirm_text = (
                                 "Thank you for providing those details. "
@@ -1221,37 +1304,6 @@ class AssessmentOrchestrator:
                             )
                             session.messages.append(assistant_msg)
                             result_type = "CONFIRMATION"
-                    else:
-                        if (
-                            requires_clarification
-                            or sm.context.clarification_count
-                            >= sm.context.max_clarifications
-                        ):
-                            session.is_low_confidence = True
-                            sm.context.is_low_confidence = True
-                            logger.info(
-                                "clarification_cap_reached_low_confidence_flagged",
-                                assessment_id=str(assessment_id),
-                                clarification_count=sm.context.clarification_count,
-                            )
-
-                        sm.proceed_to_confirmation()
-                        confirm_text = (
-                            "Thank you for providing those details. "
-                            "Please review and confirm your symptoms "
-                            "so we can analyze them."
-                        )
-                        assistant_msg = MessageRead(
-                            id=uuid4(),
-                            assessment_id=assessment_id,
-                            position=len(session.messages),
-                            role=MessageRole.ASSISTANT,
-                            content=confirm_text,
-                            message_type=MessageType.CONFIRMATION,
-                            created_at=datetime.now(UTC),
-                        )
-                        session.messages.append(assistant_msg)
-                        result_type = "CONFIRMATION"
 
                 session.updated_at = datetime.now(UTC)
                 logger.info(
@@ -2697,6 +2749,8 @@ class AssessmentOrchestrator:
 
 
 __all__ = [
+    "RED_FLAG_EMERGENCY_PROMPT",
+    "RESULT_DEADLINE_SECONDS",
     "AssessmentOrchestrator",
     "AssessmentSession",
     "merge_symptoms",

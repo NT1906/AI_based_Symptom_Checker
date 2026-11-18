@@ -7,9 +7,10 @@ Responsibilities:
     - Export domain exceptions for state transitions and guard validation.
     - Export constants governing assessment progression rules.
     - Export RESULT_DEADLINE_SECONDS (5.0 s) for NFR-01 / S2-DAR-8 performance SLA.
+    - Export RED_FLAG_EMERGENCY_PROMPT for S2-DAR-10 / FR-06, FR-15 red-flag fast path.
 
-Owner: Darshil (assessment) · Task: S1-DAR-2, S2-DAR-8, S2-DAR-9
-Requirements: FR-03, FR-06, FR-17, NFR-01, DR-02
+Owner: Darshil (assessment) · Task: S1-DAR-2, S2-DAR-8, S2-DAR-9, S2-DAR-10
+Requirements: FR-03, FR-06, FR-15, FR-17, NFR-01, DR-02
 """
 
 from app.services.assessment.exceptions import (
@@ -19,6 +20,7 @@ from app.services.assessment.exceptions import (
     StateGuardViolationError,
 )
 from app.services.assessment.orchestrator import (
+    RED_FLAG_EMERGENCY_PROMPT,
     RESULT_DEADLINE_SECONDS,
     AssessmentOrchestrator,
     AssessmentSession,
@@ -38,6 +40,7 @@ from app.services.assessment.state_machine import (
 
 __all__ = [
     "MAX_CLARIFICATION_TURNS",
+    "RED_FLAG_EMERGENCY_PROMPT",
     "RESULT_DEADLINE_SECONDS",
     "AssessmentAccessDeniedError",
     "AssessmentContext",
