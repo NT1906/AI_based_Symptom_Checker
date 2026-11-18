@@ -53,6 +53,37 @@ def test_hot_query_indexes_present_in_schema(engine: Engine) -> None:
             "state",
             "created_at",
         )
+        assert "ix_assessments_guest_session_id_created_at" in assessment_indexes
+        assert assessment_indexes["ix_assessments_guest_session_id_created_at"] == (
+            "guest_session_id",
+            "created_at",
+        )
+
+        guest_indexes = {
+            ix["name"]: tuple(ix["column_names"])
+            for ix in inspector.get_indexes("guest_sessions")
+        }
+        assert "ix_guest_sessions_claimed_by_user_id" in guest_indexes
+        assert guest_indexes["ix_guest_sessions_claimed_by_user_id"] == (
+            "claimed_by_user_id",
+        )
+
+        audit_indexes = {
+            ix["name"]: tuple(ix["column_names"])
+            for ix in inspector.get_indexes("audit_logs")
+        }
+        assert audit_indexes["ix_audit_logs_assessment_id_created_at"] == (
+            "assessment_id",
+            "created_at",
+        )
+        assert audit_indexes["ix_audit_logs_user_id_created_at"] == (
+            "user_id",
+            "created_at",
+        )
+        assert audit_indexes["ix_audit_logs_action_created_at"] == (
+            "action",
+            "created_at",
+        )
 
         message_indexes = {
             ix["name"]: tuple(ix["column_names"])
