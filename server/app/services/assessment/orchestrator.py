@@ -21,6 +21,8 @@ Responsibilities:
       excluding them from risk engine and predictor inputs, logging name length only.
     - Detect red-flag symptoms in intake messages, skip clarification, and
       transition directly to CONFIRMING with fixed 112 notice (S2-DAR-10, FR-06, FR-15).
+    - Save chat assessments, turns, and triage results to database linked to logged-in
+      user with single-transaction resilience (S2-DAR-11, FR-01, FR-20, DR-02).
     - Provide restart_assessment() to cleanly reset an assessment session (FR-25).
     - Claim anonymous guest assessments into registered accounts (idea §10).
     - Step back to chat from CONFIRMING or READY for conversational edits.
@@ -29,8 +31,9 @@ Responsibilities:
     - Run real analysis in generate_result() via condition predictor, risk engine,
       and result composer with safety-wording validation (FR-05, FR-06, FR-07, DR-05).
 
-Owner: Darshil (assessment) · Task: S2-DAR-6, S2-DAR-7, S2-DAR-8, S2-DAR-9, S2-DAR-10
-Requirements: NFR-01, NFR-03, NFR-05, FR-02, DR-02, FR-03, FR-06, FR-15
+Owner: Darshil (assessment) · Task: S2-DAR-6, S2-DAR-7, S2-DAR-8, S2-DAR-9,
+  S2-DAR-10, S2-DAR-11
+Requirements: NFR-01, NFR-03, NFR-05, FR-01, FR-02, DR-02, FR-03, FR-06, FR-15, FR-20
 """
 
 import asyncio
@@ -55,6 +58,7 @@ from app.schemas.enums import (
     DurationUnit,
     MessageRole,
     MessageType,
+    RiskLevel,
     Severity,
     SymptomSource,
 )
@@ -215,6 +219,8 @@ class AssessmentSession:
     is_low_confidence: bool = False
     guest_session_id: UUID | None = None
     profile: ProfileContext | None = None
+    result: AssessmentResult | None = None
+    risk_level: RiskLevel | None = None
     created_at: datetime = field(default_factory=lambda: datetime.now(UTC))
     updated_at: datetime = field(default_factory=lambda: datetime.now(UTC))
     _idempotency_cache: dict[str, ProcessResult] = field(
@@ -283,6 +289,8 @@ class AssessmentOrchestrator:
         assessment_id: UUID | None = None,
         guest_session_id: UUID | None = None,
         profile: ProfileContext | None = None,
+        *,
+        db_session: Any | None = None,
     ) -> AssessmentRead:
         """Initialize a new assessment session bound to verified consent.
 
@@ -292,6 +300,7 @@ class AssessmentOrchestrator:
             assessment_id: Optional explicit UUID (generated if None).
             guest_session_id: Optional anonymous guest session identifier.
             profile: Optional user clinical profile context (age, chronic conditions).
+            db_session: Optional active SQLAlchemy database session for persistence.
 
         Returns:
             AssessmentRead model representing the initialized assessment.
@@ -323,6 +332,34 @@ class AssessmentOrchestrator:
             updated_at=now,
         )
         self._sessions[aid] = session
+
+        if db_session is not None:
+            try:
+                from app.models.assessment import Assessment as DbAssessment
+
+                db_assessment = db_session.get(DbAssessment, aid)
+                if db_assessment is None:
+                    db_assessment = DbAssessment(
+                        id=aid,
+                        consent_id=consent_id,
+                        user_id=user_id,
+                        guest_session_id=guest_session_id,
+                        state=sm.current_state.value,
+                    )
+                    db_session.add(db_assessment)
+                else:
+                    db_assessment.user_id = user_id
+                    db_assessment.guest_session_id = guest_session_id
+                    db_assessment.state = sm.current_state.value
+                if hasattr(db_session, "flush"):
+                    db_session.flush()
+            except Exception as exc:
+                logger.warning(
+                    "assessment_db_create_failed",
+                    assessment_id=str(aid),
+                    error=str(exc),
+                )
+
         logger.info("assessment_created", assessment_id=str(aid))
         return AssessmentRead(
             id=aid,
@@ -593,6 +630,7 @@ class AssessmentOrchestrator:
                 )
         if session is None:
             return None
+        risk_lvl = session.risk_level.value if session.risk_level is not None else None
         return AssessmentRead(
             id=session.id,
             state=session.state_machine.current_state,
@@ -601,6 +639,7 @@ class AssessmentOrchestrator:
             guest_session_id=session.guest_session_id,
             created_at=session.created_at,
             updated_at=session.updated_at,
+            risk_level=risk_lvl,
         )
 
     def get_messages(
@@ -1357,7 +1396,9 @@ class AssessmentOrchestrator:
                 if hasattr(db_session, "begin_nested")
                 else None
             )
+            _write_succeeded = False
             try:
+                from app.models.assessment import Assessment as DbAssessment
                 from app.repositories.assessment_repository import (
                     update_assessment_state,
                 )
@@ -1365,6 +1406,19 @@ class AssessmentOrchestrator:
                     create_message as db_create_message,
                 )
                 from app.repositories.symptom_repository import upsert_symptom
+
+                db_assessment = db_session.get(DbAssessment, session.id)
+                if db_assessment is None:
+                    db_assessment = DbAssessment(
+                        id=session.id,
+                        consent_id=session.consent_id,
+                        user_id=session.user_id,
+                        guest_session_id=session.guest_session_id,
+                        state=session.state_machine.current_state.value,
+                    )
+                    db_session.add(db_assessment)
+                    if hasattr(db_session, "flush"):
+                        db_session.flush()
 
                 db_create_message(
                     session=db_session,
@@ -1406,14 +1460,23 @@ class AssessmentOrchestrator:
                     assessment_id=session.id,
                     new_state=session.state_machine.current_state.value,
                 )
+                _write_succeeded = True
                 if savepoint is not None:
                     savepoint.commit()
                 elif hasattr(db_session, "flush"):
                     db_session.flush()
-            except Exception:
+            except Exception as exc:
                 if savepoint is not None:
                     savepoint.rollback()
-                raise
+                if _write_succeeded:
+                    # Commit phase failed — data may be inconsistent; re-raise.
+                    raise
+                # Write phase failed — log and continue so user chat is unaffected.
+                logger.warning(
+                    "database_turn_persistence_failed",
+                    assessment_id=str(session.id),
+                    error=type(exc).__name__,
+                )
 
         if idempotency_key:
             session._idempotency_cache[f"key:{idempotency_key}"] = result
@@ -1610,6 +1673,7 @@ class AssessmentOrchestrator:
         *,
         user_id: UUID | None = None,
         guest_session_id: UUID | None = None,
+        db_session: Any | None = None,
     ) -> list[SymptomRead]:
         """Confirm the list of recognized symptoms and transition session to READY.
 
@@ -1622,6 +1686,7 @@ class AssessmentOrchestrator:
             symptoms: Optional updated or confirmed symptoms list.
             user_id: Optional caller user ID for ownership validation.
             guest_session_id: Optional caller guest session ID for ownership validation.
+            db_session: Optional active SQLAlchemy database session for persistence.
 
         Returns:
             list[SymptomRead]: The confirmed symptoms list.
@@ -1637,6 +1702,7 @@ class AssessmentOrchestrator:
                 assessment_id=assessment_id,
                 user_id=user_id,
                 guest_session_id=guest_session_id,
+                db_session=db_session,
             )
 
         session = self._sessions.get(assessment_id)
@@ -1703,6 +1769,49 @@ class AssessmentOrchestrator:
         ]
         session.state_machine.confirm_symptoms()
         session.updated_at = datetime.now(UTC)
+
+        if db_session is not None:
+            try:
+                from app.repositories.assessment_repository import (
+                    update_assessment_state,
+                )
+                from app.repositories.symptom_repository import upsert_symptom
+
+                for sym in session.symptoms:
+                    dur_dict = sym.duration.model_dump() if sym.duration else None
+                    sev_str = (
+                        sym.severity.value
+                        if hasattr(sym.severity, "value")
+                        else str(sym.severity)
+                    )
+                    src_str = (
+                        sym.source.value
+                        if hasattr(sym.source, "value")
+                        else str(sym.source)
+                    )
+                    upsert_symptom(
+                        session=db_session,
+                        assessment_id=session.id,
+                        name=sym.name,
+                        severity=sev_str,
+                        duration=dur_dict,
+                        body_site=sym.body_location,
+                        source=src_str,
+                    )
+                update_assessment_state(
+                    session=db_session,
+                    assessment_id=session.id,
+                    new_state=session.state_machine.current_state.value,
+                )
+                if hasattr(db_session, "flush"):
+                    db_session.flush()
+            except Exception as exc:
+                logger.warning(
+                    "confirm_symptoms_db_save_failed",
+                    assessment_id=str(assessment_id),
+                    error=str(exc),
+                )
+
         logger.info(
             "symptoms_confirmed",
             assessment_id=str(assessment_id),
@@ -2443,6 +2552,7 @@ class AssessmentOrchestrator:
         *,
         user_id: UUID | None = None,
         guest_session_id: UUID | None = None,
+        db_session: Any | None = None,
     ) -> AssessmentResult:
         """Trigger analysis and transition session through ANALYZING to COMPLETED.
 
@@ -2466,6 +2576,7 @@ class AssessmentOrchestrator:
                 If omitted, falls back to profile context attached to the session.
             user_id: Optional caller user ID for ownership validation.
             guest_session_id: Optional caller guest session ID for ownership validation.
+            db_session: Optional active SQLAlchemy database session for persistence.
 
         Returns:
             AssessmentResult with triage risk tier, conditions, and safety disclaimer.
@@ -2481,6 +2592,7 @@ class AssessmentOrchestrator:
                 assessment_id=assessment_id,
                 user_id=user_id,
                 guest_session_id=guest_session_id,
+                db_session=db_session,
             )
 
         session = self._sessions.get(assessment_id)
@@ -2552,6 +2664,29 @@ class AssessmentOrchestrator:
 
         sm.complete_analysis()
         session.updated_at = datetime.now(UTC)
+        session.result = result
+        session.risk_level = decision.level
+
+        if db_session is not None:
+            try:
+                from app.repositories.assessment_repository import (
+                    update_assessment_state,
+                )
+
+                update_assessment_state(
+                    session=db_session,
+                    assessment_id=session.id,
+                    new_state=sm.current_state.value,
+                )
+                if hasattr(db_session, "flush"):
+                    db_session.flush()
+            except Exception as exc:
+                logger.warning(
+                    "generate_result_db_save_failed",
+                    assessment_id=str(assessment_id),
+                    error=str(exc),
+                )
+
         return result
 
     async def merge_image_findings(
