@@ -21,11 +21,12 @@ import pytest
 from fastapi import FastAPI, status
 from fastapi.testclient import TestClient
 
-from app.api.deps import AssessmentService, get_assessment_service
+from app.api.deps import AssessmentService, SendMessageResponse, get_assessment_service
 from app.core.config import Settings
 from app.core.errors import AppError, UnauthorizedError
 from app.middleware.cors import CorsPolicy, configure_cors
-from app.schemas.enums import RiskLevel
+from app.schemas.enums import AssessmentState, MessageRole, RiskLevel
+from app.schemas.message import MessageRead
 from app.schemas.result import AssessmentResult, DEFAULT_DISCLAIMER
 from app.services.assessment.exceptions import AssessmentAccessDeniedError
 from app.services.audit.schemas import FORBIDDEN_AUDIT_KEYS, AuditLogCreate
@@ -119,13 +120,39 @@ def test_owasp_a03_sql_injection_treated_as_literal_string(
     app: FastAPI, client: TestClient
 ) -> None:
     """A03: SQL injection payloads in message endpoints are treated as text."""
-    aid = "e4caa1b2-8493-4a16-928e-5b1287c95e1a"
-    sql_payload = {"content": "'; DROP TABLE users; --"}
+    aid = UUID("e4caa1b2-8493-4a16-928e-5b1287c95e1a")
+    sql_text = "'; DROP TABLE users; --"
 
-    response = client.post(f"/api/v1/assessments/{aid}/messages", json=sql_payload)
-    # The application processes it safely as user message content without DB error
-    assert response.status_code == status.HTTP_200_OK
-    assert response.json()["message"]["content"] == "'; DROP TABLE users; --"
+    mock_service = AsyncMock(spec=AssessmentService)
+    user_msg = MessageRead(
+        id=UUID("00000000-0000-0000-0000-000000000001"),
+        assessment_id=aid,
+        role=MessageRole.USER,
+        content=sql_text,
+    )
+    asst_msg = MessageRead(
+        id=UUID("00000000-0000-0000-0000-000000000002"),
+        assessment_id=aid,
+        role=MessageRole.ASSISTANT,
+        content="I understand your symptom description.",
+    )
+    mock_service.process_message.return_value = SendMessageResponse(
+        message=user_msg,
+        assistant_message=asst_msg,
+        next_state=AssessmentState.SYMPTOM_COLLECTION,
+    )
+    app.dependency_overrides[get_assessment_service] = lambda: mock_service
+
+    try:
+        response = client.post(
+            f"/api/v1/assessments/{aid}/messages", json={"content": sql_text}
+        )
+        # The application processes it safely as user message content without DB error
+        assert response.status_code == status.HTTP_200_OK
+        assert response.json()["message"]["content"] == sql_text
+        mock_service.process_message.assert_awaited_once_with(aid, sql_text)
+    finally:
+        app.dependency_overrides.pop(get_assessment_service, None)
 
 
 # ---------------------------------------------------------------------------
