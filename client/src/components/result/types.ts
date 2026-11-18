@@ -65,6 +65,8 @@ export interface TriageGuidance {
   warningSigns?: string[];
   /** Recommended timeframe for seeking medical evaluation (e.g. within 24-48 hours). */
   timeframe?: string;
+  /** Heading for `selfCareAdvice`; defaults to "General Self-Care Steps" (S2-NIS-13). */
+  stepsHeading?: string;
 }
 
 /** Supported external map search providers (FR-08, idea §9). */
@@ -116,4 +118,6 @@ export interface AssessmentResultData {
   referral?: ReferralInfo;
   /** ISO timestamp of when the assessment result was generated. */
   completedAt?: string;
+  /** Plain-language limits of this result, from the server (S2-NIS-13). */
+  limitations?: string[];
 }

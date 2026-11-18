@@ -12,7 +12,7 @@
  * - FR-08: External map search link for recommended medical specialty (no doctor data stored).
  * - NFR-06: WCAG 2.1 AA accessible landmarks, contrast, and focus states.
  *
- * Owner: Mann (Frontend + Deployment · Testing) · Task: S1-MAN-3 · Requirements: DR-01, DR-02, FR-06, FR-15, FR-22, FR-23, FR-24, FR-08, NFR-06
+ * Owner: Mann (Frontend + Deployment · Testing) · Task: S1-MAN-3, S2-NIS-13 · Requirements: DR-01, DR-02, FR-06, FR-15, FR-22, FR-23, FR-24, FR-08, NFR-06
  */
 
 import React from "react";
@@ -257,7 +257,7 @@ export function ResultPage({
                 <div className="space-y-2.5">
                   <h3 className="flex items-center gap-1.5 text-sm font-bold text-slate-900 dark:text-slate-100">
                     <span aria-hidden="true">💡</span>
-                    <span>General Self-Care Steps</span>
+                    <span>{guidance.stepsHeading ?? "General Self-Care Steps"}</span>
                   </h3>
                   <ul className="space-y-2 text-xs leading-relaxed text-slate-700 sm:text-sm dark:text-slate-300">
                     {guidance.selfCareAdvice.map((item, idx) => (
@@ -313,6 +313,26 @@ export function ResultPage({
             referral={referral}
             title="Recommended Specialist Evaluation"
           />
+        )}
+
+        {/* 4b. Limits of this result, as stated by the server (S2-NIS-13) */}
+        {result.limitations && result.limitations.length > 0 && (
+          <section
+            aria-labelledby="limitations-heading"
+            className="rounded-2xl border border-slate-200 bg-white p-5 text-sm text-slate-700 sm:p-6 dark:border-slate-800 dark:bg-slate-900 dark:text-slate-300"
+          >
+            <h2
+              id="limitations-heading"
+              className="text-base font-bold text-slate-900 dark:text-slate-100"
+            >
+              About this result
+            </h2>
+            <ul className="mt-2 list-disc space-y-1 pl-5">
+              {result.limitations.map((item) => (
+                <li key={item}>{item}</li>
+              ))}
+            </ul>
+          </section>
         )}
 
         {/* 5. Persistent Medical Disclaimer Card (DR-01) */}
