@@ -1,9 +1,9 @@
 # Database foundation
 
-Owner: Harsh, Dimple, Kavya, Nishith · Tasks: S0-HAR-1, S1-DIM-4, S1-KAV-4, S1-NIT-4, S2-KAV-3, S2-NIT-3, S2-NIT-4 · Issues: #9, #38, #37, #36, #161, #159, #160 · Requirements: FR-01, FR-02, FR-03, FR-17, FR-18, NFR-01, NFR-10, DR-02, idea § 10
+Owner: Harsh, Dimple, Kavya, Nishith · Tasks: S0-HAR-1, S1-DIM-4, S1-KAV-4, S1-NIT-4, S2-KAV-3, S2-NIT-3, S2-NIT-4, S2-NIT-6 · Issues: #9, #38, #37, #36, #161, #159, #160, #198 · Requirements: FR-01, FR-02, FR-03, FR-17, FR-18, NFR-01, NFR-10, DR-02, idea § 10
 
 This change supplies PostgreSQL-oriented SQLAlchemy 2 models, session factories,
-Alembic migrations (revisions `0001_database_foundation` through `0007_history_indexes_pgvector`),
+Alembic migrations (revisions `0001_database_foundation` through `0008_query_perf_indexes`),
 repositories, fictional seed data, and isolated unit tests.
 
 ## Current status and team handoff
@@ -319,6 +319,26 @@ Revision `0007_history_indexes_pgvector` delivers two major database tier capabi
    SELECT extname, extversion FROM pg_extension WHERE extname = 'vector';
    SELECT COUNT(*) FROM symptom_embeddings;
    ```
+
+---
+
+## Query Performance Review & Index Fixes (S2-NIT-6)
+
+Owner: Nishith · Task: S2-NIT-6 · Issue: #198 · Requirement: NFR-01
+
+Revision `0008_query_perf_indexes` adds 5 backward-compatible composite and foreign-key indexes identified during the `EXPLAIN ANALYZE` review across all 12 hot-path queries (full report in [query-performance-review.md](query-performance-review.md)):
+
+- `ix_assessments_guest_session_id_created_at` on `assessments (guest_session_id, created_at)` — eliminates `Sort` on guest history pagination.
+- `ix_guest_sessions_claimed_by_user_id` on `guest_sessions (claimed_by_user_id)` — eliminates full `Seq Scan` during DPDP `delete_user_account` (`ON DELETE SET NULL`).
+- `ix_audit_logs_assessment_id_created_at` on `audit_logs (assessment_id, created_at)` — eliminates `Sort` on assessment audit listings.
+- `ix_audit_logs_user_id_created_at` on `audit_logs (user_id, created_at)` — eliminates `Sort` on user audit listings.
+- `ix_audit_logs_action_created_at` on `audit_logs (action, created_at)` — eliminates `Sort` / filter discard on time-windowed compliance queries.
+
+Reproduce `EXPLAIN (ANALYZE, BUFFERS)` on Neon staging or local PostgreSQL:
+
+```powershell
+python -m app.db.query_perf --database-url "$env:DATABASE_URL"
+```
 
 
 
