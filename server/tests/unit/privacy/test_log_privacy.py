@@ -1,4 +1,4 @@
-﻿"""Prevent personal values in authentication and error logging.
+"""Prevent personal values in authentication and error logging.
 
 Owner: Harsh Â· Task: S2-HAR-7 Â· Issue: #210 Â· Requirements: NFR-10
 """
