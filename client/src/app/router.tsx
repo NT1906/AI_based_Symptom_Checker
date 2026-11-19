@@ -1,49 +1,66 @@
 /**
- * @file Client-side route definitions.
- * Owner: Rutva - Task: S2-RUT-2 - Issue: #181
- * Requirements: FR-02, NFR-08, NFR-09
+ * @file Client-side route definitions with route-level code splitting.
+ * Owner: Rutva - Task: S2-RUT-7 - Issue: #216
+ * Requirements: NFR-01, NFR-06, NFR-08, NFR-09
  */
 import { createBrowserRouter } from "react-router-dom";
-import App from "../App";
-import LandingPage from "../pages/LandingPage";
-import ProfilePage from "../pages/ProfilePage";
-import LoginPage from "../pages/LoginPage";
-import RegisterPage from "../pages/RegisterPage";
-import HistoryPage from "../pages/HistoryPage";
-import PrivacyPolicyPage from "../pages/PrivacyPolicyPage";
 
-/** Defines the application's browser routes. */
+/** Defines application routes and loads each page only when it is visited. */
 export const router = createBrowserRouter([
   {
     path: "/",
-    element: <LandingPage />,
+    lazy: async () => {
+      const { default: LandingPage } = await import("../pages/LandingPage");
+      return { Component: LandingPage };
+    },
   },
   {
     path: "/chat",
-    element: <App />,
+    lazy: async () => {
+      const { default: App } = await import("../App");
+      return { Component: App };
+    },
   },
   {
     path: "/profile",
-    element: <ProfilePage />,
+    lazy: async () => {
+      const { default: ProfilePage } = await import("../pages/ProfilePage");
+      return { Component: ProfilePage };
+    },
   },
   {
     path: "/login",
-    element: <LoginPage />,
+    lazy: async () => {
+      const { default: LoginPage } = await import("../pages/LoginPage");
+      return { Component: LoginPage };
+    },
   },
   {
     path: "/register",
-    element: <RegisterPage />,
+    lazy: async () => {
+      const { default: RegisterPage } = await import("../pages/RegisterPage");
+      return { Component: RegisterPage };
+    },
   },
   {
     path: "/history",
-    element: <HistoryPage />,
+    lazy: async () => {
+      const { default: HistoryPage } = await import("../pages/HistoryPage");
+      return { Component: HistoryPage };
+    },
   },
   {
     path: "/history/:assessmentId",
-    element: <HistoryPage />,
+    lazy: async () => {
+      const { default: HistoryPage } = await import("../pages/HistoryPage");
+      return { Component: HistoryPage };
+    },
   },
   {
     path: "/privacy",
-    element: <PrivacyPolicyPage />,
+    lazy: async () => {
+      const { default: PrivacyPolicyPage } = await import("../pages/PrivacyPolicyPage");
+      return { Component: PrivacyPolicyPage };
+    },
   },
 ]);
