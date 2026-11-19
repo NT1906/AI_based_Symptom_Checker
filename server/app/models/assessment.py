@@ -1,14 +1,15 @@
 """Assessment ownership, consent linkage, and state persistence.
 
-Owner: Harsh, Dimple, Kavya, Nishith
-Tasks: S0-HAR-1, S1-DIM-4, S1-KAV-4, S2-NIT-4, S2-NIT-6
+Owner: Harsh, Dimple, Kavya, Nishith, Nisarg
+Tasks: S0-HAR-1, S1-DIM-4, S1-KAV-4, S2-NIT-4, S2-NIT-6, S2-NIS-16
 Requirements: FR-01, NFR-01, idea § 10
 """
 
-from typing import TYPE_CHECKING
+from typing import TYPE_CHECKING, Any
 from uuid import UUID
 
-from sqlalchemy import CheckConstraint, ForeignKey, Index, String
+from sqlalchemy import JSON, CheckConstraint, ForeignKey, Index, String
+from sqlalchemy.dialects.postgresql import JSONB
 from sqlalchemy.orm import Mapped, mapped_column, relationship
 
 from app.models.base import Base, RecordMixin
@@ -60,6 +61,11 @@ class Assessment(RecordMixin, Base):
         ForeignKey("consents.id", ondelete="RESTRICT"), unique=True
     )
     state: Mapped[str] = mapped_column(String(32), server_default="START", index=True)
+    # The finished AssessmentResult (camelCase JSON), kept only for assessments
+    # owned by an account so history can show it again (S2-NIS-16, #313).
+    result: Mapped[dict[str, Any] | None] = mapped_column(
+        JSON().with_variant(JSONB, "postgresql"), nullable=True
+    )
     user: Mapped["User | None"] = relationship(back_populates="assessments")
     guest_session: Mapped["GuestSession | None"] = relationship(
         back_populates="assessments"

@@ -65,6 +65,10 @@ class AssessmentRead(SchemaBase):
         default=None,
         description="Final triage risk level (e.g. SELF_CARE, CONSULT_DOCTOR, URGENT)",
     )
+    top_condition: str | None = Field(
+        default=None,
+        description="Name of the best-ranked possible condition in the saved result",
+    )
 
     @model_validator(mode="before")
     @classmethod

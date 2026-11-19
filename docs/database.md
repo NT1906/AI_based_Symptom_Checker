@@ -3,7 +3,7 @@
 Owner: Harsh, Dimple, Kavya, Nishith · Tasks: S0-HAR-1, S1-DIM-4, S1-KAV-4, S1-NIT-4, S2-KAV-3, S2-NIT-3, S2-NIT-4, S2-NIT-6, S2-NIT-7, S2-KAV-6 · Issues: #9, #38, #37, #36, #161, #159, #160, #198, #199, #200 · Requirements: FR-01, FR-02, FR-03, FR-17, FR-18, NFR-01, NFR-05, NFR-08, NFR-10, DR-02, DR-06, idea § 10
 
 This change supplies PostgreSQL-oriented SQLAlchemy 2 models, session factories,
-Alembic migrations (revisions `0001_database_foundation` through `0008_query_perf_indexes`),
+Alembic migrations (revisions `0001_database_foundation` through `0009_assessment_result`),
 repositories, fictional seed data, and isolated unit tests.
 
 ## Current status and team handoff
@@ -425,6 +425,7 @@ Clinical triage assessment sessions and state lifecycle.
 | `guest_session_id` | `UUID` | Yes | `NULL` | `FK guest_sessions(id) ON DELETE SET NULL` | Owning guest session (set to null on purge or claim). |
 | `consent_id` | `UUID` | No | — | `UNIQUE`, `FK consents(id) ON DELETE RESTRICT` | Affirmative triage consent; 1-to-1 per assessment. |
 | `state` | `VARCHAR(32)` | No | `'START'` | `CHECK (state IN ('START','SYMPTOM_COLLECTION','CLARIFYING','CONFIRMING','READY','ANALYZING','COMPLETED'))` | Finite state machine triage stage. |
+| `result` | `JSONB` | Yes | `NULL` | — | The finished result (camelCase `AssessmentResult`) shown again in history. Saved only when `user_id` is set; guest results are never stored (DR-06). Added by `0009_assessment_result` (S2-NIS-16, #313); deleted with the row and included in the account export. |
 
 #### Table 6: `messages`
 Ordered dialogue turns between patient and symptom checker.

@@ -1,6 +1,6 @@
 /**
  * @file Tests for the home-page welcome panel.
- * Owner: Nisarg · Task: S2-NIS-15 · Issue: #312 · Requirements: FR-02
+ * Owner: Nisarg · Task: S2-NIS-15, S2-NIS-16 · Issues: #312, #313 · Requirements: FR-02
  *
  * Covers guests (no panel), the greeting, recent assessments, the empty state,
  * the load error and the state labels.
@@ -76,6 +76,20 @@ describe("WelcomeBackPanel", () => {
     expect(links.map((link) => link.getAttribute("href"))).toEqual(
       expect.arrayContaining(["/history", "/profile", "/history/assessment-1"]),
     );
+  });
+
+  it("shows the saved risk level and top condition when a result was kept", async () => {
+    vi.mocked(getAssessmentHistory).mockResolvedValue({
+      items: [{ ...completed, riskLevel: "CONSULT_DOCTOR", topCondition: "Migraine" }],
+      nextOffset: null,
+    });
+    useAuthStore.setState({ status: "authenticated", user: testUser });
+    renderPanel();
+    expect(await screen.findByText("Top possible condition: Migraine")).toBeInTheDocument();
+    expect(
+      screen.getByRole("status", { name: "Risk level: Consult a Doctor" }),
+    ).toBeInTheDocument();
+    expect(screen.queryByText("Completed")).not.toBeInTheDocument();
   });
 
   it("explains the empty state", async () => {
