@@ -1,6 +1,6 @@
 {
   "schema_version": "1.0",
-  "dataset_version": "v0",
+  "dataset_version": "2.0",
   "intended_use": "Canonical symptom vocabulary for the AI-Based Symptom Checker. Maps lay terms to canonical IDs so that extraction, normalization and prediction all use the same identifiers. This is an informational triage aid, not a diagnostic reference.",
   "body_systems": [
     "general",
@@ -20,601 +20,1785 @@
       "id": "fever",
       "name": "Fever",
       "body_system": "general",
-      "lay_terms": ["high temperature", "running a temperature", "feeling hot", "bukhar", "bukhaar", "tez bukhar", "badan garam"]
+      "lay_terms": [
+        "high temperature",
+        "running a temperature",
+        "feeling hot",
+        "bukhar",
+        "bukhaar",
+        "tez bukhar",
+        "badan garam",
+        "feever",
+        "halka bukhar",
+        "halka bukhar hai",
+        "halka bukhar bhi hai",
+        "bukhaar hai"
+      ]
     },
     {
       "id": "chills",
       "name": "Chills or shivering",
       "body_system": "general",
-      "lay_terms": ["shivering", "feeling cold", "rigors", "cold shivers", "thandi lag rahi", "kaamp raha hoon", "kaamping"]
+      "lay_terms": [
+        "shivering",
+        "feeling cold",
+        "rigors",
+        "cold shivers",
+        "thandi lag rahi",
+        "kaamp raha hoon",
+        "kaamping",
+        "shivring",
+        "shivering badly",
+        "thandi lagna",
+        "kanpkapi",
+        "shivering with cold"
+      ]
     },
     {
       "id": "fatigue",
       "name": "Tiredness or weakness",
       "body_system": "general",
-      "lay_terms": ["tired", "exhausted", "no energy", "weakness", "weak", "feeling drained", "worn out", "kamzori", "thakan", "thak gaya"]
+      "lay_terms": [
+        "tired",
+        "exhausted",
+        "no energy",
+        "weakness",
+        "weak",
+        "feeling drained",
+        "worn out",
+        "kamzori",
+        "thakan",
+        "thak gaya",
+        "can't sleep properly",
+        "no energy to do anything",
+        "thakaan rehti hai",
+        "thakaan hai",
+        "bohot thakaan",
+        "exhaustion",
+        "feeling very weak",
+        "bahut thakaan ho rahi hai",
+        "thakaan ho rahi hai"
+      ]
     },
     {
       "id": "body_aches",
       "name": "Body or muscle aches",
       "body_system": "general",
-      "lay_terms": ["muscle pain", "body pain", "aching all over", "sore muscles", "muscles hurting", "badan dard", "poora badan dukh raha"]
+      "lay_terms": [
+        "muscle pain",
+        "body pain",
+        "aching all over",
+        "sore muscles",
+        "muscles hurting",
+        "badan dard",
+        "poora badan dukh raha",
+        "whole body is aching",
+        "body is aching",
+        "body me dard hai",
+        "body me dard",
+        "badan toot raha hai"
+      ]
     },
     {
       "id": "sweating",
       "name": "Sweating",
       "body_system": "general",
-      "lay_terms": ["perspiring", "sweaty", "drenched in sweat", "pasina", "bahut pasina"]
+      "lay_terms": [
+        "perspiring",
+        "sweaty",
+        "drenched in sweat",
+        "pasina",
+        "bahut pasina",
+        "sweating a lot",
+        "sweating heavily",
+        "bohot pasina"
+      ]
     },
     {
       "id": "night_sweats",
       "name": "Night sweats",
       "body_system": "general",
-      "lay_terms": ["sweating at night", "waking up soaked", "drenched in sweat at night", "raat ko pasina"]
+      "lay_terms": [
+        "sweating at night",
+        "waking up soaked",
+        "drenched in sweat at night",
+        "raat ko pasina",
+        "raat ko bahut pasina aata hai",
+        "raat ko pasina aata hai",
+        "drenching sweats at night"
+      ]
     },
     {
       "id": "weight_loss",
       "name": "Unintended weight loss",
       "body_system": "general",
-      "lay_terms": ["losing weight", "getting thin", "lost weight without trying", "unexplained weight loss", "vajan kam ho raha", "patla ho raha"]
+      "lay_terms": [
+        "losing weight",
+        "getting thin",
+        "lost weight without trying",
+        "unexplained weight loss",
+        "vajan kam ho raha",
+        "patla ho raha",
+        "lost some weight recently",
+        "lost some weight",
+        "wajan bhi kam ho raha hai",
+        "wajan kam hona",
+        "wajan bhi kam ho raha hai bina kisi reason ke"
+      ]
     },
     {
       "id": "loss_of_appetite",
       "name": "Loss of appetite",
       "body_system": "general",
-      "lay_terms": ["not hungry", "don't feel like eating", "no appetite", "can't eat", "lost my appetite", "bhook nahi lagti", "khana nahi kha pa raha"]
+      "lay_terms": [
+        "not hungry",
+        "don't feel like eating",
+        "no appetite",
+        "can't eat",
+        "lost my appetite",
+        "bhook nahi lagti",
+        "khana nahi kha pa raha",
+        "bhook bilkul nahi lagti",
+        "not interested in food",
+        "loss of appetite",
+        "can't sleep or eat",
+        "cant sleep or eat"
+      ]
     },
     {
       "id": "dizziness",
       "name": "Dizziness or light-headedness",
       "body_system": "general",
-      "lay_terms": ["dizzy", "lightheaded", "room is spinning", "feel faint", "head spinning", "unsteady", "chakkar", "chakkar aa raha", "sir ghoom raha"]
+      "lay_terms": [
+        "dizzy",
+        "lightheaded",
+        "room is spinning",
+        "feel faint",
+        "head spinning",
+        "unsteady",
+        "chakkar",
+        "chakkar aa raha",
+        "sir ghoom raha",
+        "dizzynes",
+        "sir ghoom raha hai",
+        "chakkar aa rahe hain",
+        "chakkar aana",
+        "feeling lightheaded"
+      ]
     },
     {
       "id": "fainting",
       "name": "Fainting",
       "body_system": "general",
-      "lay_terms": ["passed out", "blacked out", "lost consciousness", "fainted", "collapsed", "behosh", "behosh ho gaya"]
+      "lay_terms": [
+        "passed out",
+        "blacked out",
+        "lost consciousness",
+        "fainted",
+        "collapsed",
+        "behosh",
+        "behosh ho gaya",
+        "achanak behosh ho gaya",
+        "behoshi",
+        "feel like i'm going to pass out",
+        "going to pass out",
+        "pass out",
+        "collapse during a marathon",
+        "collapse"
+      ]
     },
     {
       "id": "swollen_neck_glands",
       "name": "Swollen glands in the neck",
       "body_system": "general",
-      "lay_terms": ["swollen glands", "lumps in neck", "swollen lymph nodes", "neck glands swollen", "gale me gaanth", "gale me sujan"]
+      "lay_terms": [
+        "swollen glands",
+        "lumps in neck",
+        "swollen lymph nodes",
+        "neck glands swollen",
+        "gale me gaanth",
+        "gale me sujan",
+        "swollen glands in my neck that are tender",
+        "swollen glands in my neck",
+        "swolen glanz on my nek",
+        "swolen glanz",
+        "gardan me gathaan jaisi lag rahi hai",
+        "gardan me gathaan"
+      ]
     },
     {
       "id": "excessive_thirst",
       "name": "Excessive thirst",
       "body_system": "general",
-      "lay_terms": ["very thirsty", "always thirsty", "drinking lots of water", "can't stop drinking water", "bahut pyaas lagti hai", "zyada pyaas"]
+      "lay_terms": [
+        "very thirsty",
+        "always thirsty",
+        "drinking lots of water",
+        "can't stop drinking water",
+        "bahut pyaas lagti hai",
+        "zyada pyaas",
+        "always feel thirsty",
+        "bohot pyas lagti hai",
+        "bahut pyas lagti hai",
+        "feeling thirsty all the time",
+        "unquenchable thirst"
+      ]
     },
     {
       "id": "pale_skin",
       "name": "Pale skin",
       "body_system": "general",
-      "lay_terms": ["looking pale", "whitish skin", "no colour in face", "looking washed out", "rang udd gaya", "rang safed ho gaya"]
+      "lay_terms": [
+        "looking pale",
+        "whitish skin",
+        "no colour in face",
+        "looking washed out",
+        "rang udd gaya",
+        "rang safed ho gaya",
+        "skin looks pale lately",
+        "skin looks pale",
+        "pale looking",
+        "chehra peela pad gaya"
+      ]
     },
     {
       "id": "little_or_no_urine",
       "name": "Passing little or no urine",
       "body_system": "general",
-      "lay_terms": ["not peeing", "very little urine", "no urine output", "stopped passing urine", "peshab nahi ho raha", "peshab bahut kam"]
+      "lay_terms": [
+        "not peeing",
+        "very little urine",
+        "no urine output",
+        "stopped passing urine",
+        "peshab nahi ho raha",
+        "peshab bahut kam",
+        "litlle or no urin output",
+        "little or no urine output",
+        "no urine",
+        "peshab band hona"
+      ]
     },
     {
       "id": "unable_to_keep_fluids_down",
       "name": "Unable to keep fluids down",
       "body_system": "general",
-      "lay_terms": ["can't keep water down", "vomiting everything", "throwing up water", "can't hold anything down", "paani bhi nahi ruk raha"]
+      "lay_terms": [
+        "can't keep water down",
+        "vomiting everything",
+        "throwing up water",
+        "can't hold anything down",
+        "paani bhi nahi ruk raha",
+        "cant keep water down",
+        "paani bhi hazam nahi ho raha",
+        "unable to hold water",
+        "cannot keep liquids down"
+      ]
     },
     {
       "id": "slow_healing_wounds",
       "name": "Wounds that heal slowly",
       "body_system": "general",
-      "lay_terms": ["wounds not healing", "cuts take long to heal", "slow healing", "ghav jaldi theek nahi ho rahe"]
+      "lay_terms": [
+        "wounds not healing",
+        "cuts take long to heal",
+        "slow healing",
+        "ghav jaldi theek nahi ho rahe",
+        "pair me chot theek nahi ho rahi hai",
+        "chot theek nahi ho rahi",
+        "wound not healing",
+        "slow healing cut",
+        "not healing for over 3 weeks",
+        "cut on my foot is not healing"
+      ]
     },
     {
       "id": "headache",
       "name": "Headache",
       "body_system": "neurological",
-      "lay_terms": ["head pain", "head hurting", "head is pounding", "sar dard", "sir dard", "sir me dard"]
+      "lay_terms": [
+        "head pain",
+        "head hurting",
+        "head is pounding",
+        "sar dard",
+        "sir dard",
+        "sir me dard",
+        "headack",
+        "headach",
+        "hedache",
+        "extreem headach",
+        "dull ache spreading to my head",
+        "throbbing head hurt",
+        "throbbing head",
+        "sir me bohot tez dard hai",
+        "sir me bohot tez dard",
+        "sar me dard",
+        "one sided headache",
+        "throbbing head hurt much worse"
+      ]
     },
     {
       "id": "sudden_severe_headache",
       "name": "Sudden, very severe headache",
       "body_system": "neurological",
-      "lay_terms": ["worst headache ever", "thunderclap headache", "sudden extreme head pain", "head exploding", "achanak tez sar dard"]
+      "lay_terms": [
+        "worst headache ever",
+        "thunderclap headache",
+        "sudden extreme head pain",
+        "head exploding",
+        "achanak tez sar dard",
+        "worst headache of my life",
+        "worst headache",
+        "sudden intense headache"
+      ]
     },
     {
       "id": "light_sensitivity",
       "name": "Sensitivity to light",
       "body_system": "neurological",
-      "lay_terms": ["eyes hurt in light", "can't stand bright light", "light hurts my eyes", "photophobia", "roshni se taklif", "roshni se dard"]
+      "lay_terms": [
+        "eyes hurt in light",
+        "can't stand bright light",
+        "light hurts my eyes",
+        "photophobia",
+        "roshni se taklif",
+        "roshni se dard",
+        "tez roshni se takleef hoti hai",
+        "tez roshni se takleef",
+        "light bothering me",
+        "eyes hurt with light",
+        "bright sunlight is unbearable"
+      ]
     },
     {
       "id": "sound_sensitivity",
       "name": "Sensitivity to sound",
       "body_system": "neurological",
-      "lay_terms": ["noise bothers me", "can't stand loud noise", "sounds are painful", "everything is too loud", "awaaz se taklif"]
+      "lay_terms": [
+        "noise bothers me",
+        "can't stand loud noise",
+        "sounds are painful",
+        "everything is too loud",
+        "awaaz se taklif",
+        "aawaaz sunne se sir me dard badh jata hai",
+        "aawaaz sunne se sir me dard",
+        "sensitive to sounds",
+        "loud noises hurt",
+        "every loud noise",
+        "loud noise makes"
+      ]
     },
     {
       "id": "visual_aura",
       "name": "Flashing lights or zig-zag lines in vision",
       "body_system": "neurological",
-      "lay_terms": ["seeing flashing lights", "zig-zag lines in vision", "seeing spots", "sparkles in vision", "flashing before eyes"]
+      "lay_terms": [
+        "seeing flashing lights",
+        "zig-zag lines in vision",
+        "seeing spots",
+        "sparkles in vision",
+        "flashing before eyes",
+        "aage chamak dikhti hai",
+        "chamak dikhti hai",
+        "flashing zigzag lights",
+        "aura before migraine",
+        "saw flashing zigzag lights"
+      ]
     },
     {
       "id": "stiff_neck",
       "name": "Stiff neck",
       "body_system": "neurological",
-      "lay_terms": ["neck stiffness", "can't move neck", "neck won't bend", "neck feels locked", "gardan akad gayi"]
+      "lay_terms": [
+        "neck stiffness",
+        "can't move neck",
+        "neck won't bend",
+        "neck feels locked",
+        "gardan akad gayi"
+      ]
     },
     {
       "id": "neck_or_shoulder_tension",
       "name": "Tight neck or shoulder muscles",
       "body_system": "musculoskeletal",
-      "lay_terms": ["tight neck", "shoulder tightness", "neck tension", "tight shoulders", "neck and shoulders tight", "gardan me khichav", "kandhe me khichav"]
+      "lay_terms": [
+        "tight neck",
+        "shoulder tightness",
+        "neck tension",
+        "tight shoulders",
+        "neck and shoulders tight",
+        "gardan me khichav",
+        "kandhe me khichav",
+        "neck and shoulder tension",
+        "tension in neck and shoulder",
+        "gardan aur kandhe me jakdan",
+        "stiff neck and shoulders"
+      ]
     },
     {
       "id": "confusion",
       "name": "Confusion or unusual drowsiness",
       "body_system": "neurological",
-      "lay_terms": ["confused", "disoriented", "not making sense", "very drowsy", "can't think clearly", "acting strange", "samajh nahi aa raha"]
+      "lay_terms": [
+        "confused",
+        "disoriented",
+        "not making sense",
+        "very drowsy",
+        "can't think clearly",
+        "acting strange",
+        "samajh nahi aa raha",
+        "sudden confution",
+        "confution",
+        "kuch samajh nahi aa raha tha",
+        "kuch samajh nahi aa raha",
+        "mental confusion"
+      ]
     },
     {
       "id": "seizure",
       "name": "Seizure (fit)",
       "body_system": "neurological",
-      "lay_terms": ["fit", "convulsion", "having a fit", "shaking uncontrollably", "epileptic fit", "daura", "mirgi ka daura"]
+      "lay_terms": [
+        "fit",
+        "convulsion",
+        "having a fit",
+        "shaking uncontrollably",
+        "epileptic fit",
+        "daura",
+        "mirgi ka daura"
+      ]
     },
     {
       "id": "facial_droop",
       "name": "Face drooping on one side",
       "body_system": "neurological",
-      "lay_terms": ["face drooping", "one side of face drooping", "face falling on one side", "lopsided face", "mouth drooping", "chehra ek taraf latakna"]
+      "lay_terms": [
+        "face drooping",
+        "one side of face drooping",
+        "face falling on one side",
+        "lopsided face",
+        "mouth drooping",
+        "chehra ek taraf latakna",
+        "droopin face on right side",
+        "droopin face",
+        "drooping face",
+        "one side of face is drooping",
+        "chehra latak gaya",
+        "weakness on right side of my face"
+      ]
     },
     {
       "id": "one_sided_weakness",
       "name": "Weakness or numbness on one side of the body",
       "body_system": "neurological",
-      "lay_terms": ["weak on one side", "can't move one arm", "one side numb", "half body weak", "arm or leg not working", "ek taraf kamzori"]
+      "lay_terms": [
+        "weak on one side",
+        "can't move one arm",
+        "one side numb",
+        "half body weak",
+        "arm or leg not working",
+        "ek taraf kamzori",
+        "sudden weakness on right side of my face",
+        "sudden weakness on right side",
+        "arm is also numb",
+        "one side weakness"
+      ]
     },
     {
       "id": "slurred_speech",
       "name": "Slurred or difficult speech",
       "body_system": "neurological",
-      "lay_terms": ["can't speak properly", "speech is slurred", "words not coming out right", "trouble talking", "tongue feels heavy", "bolne me dikkat"]
+      "lay_terms": [
+        "can't speak properly",
+        "speech is slurred",
+        "words not coming out right",
+        "trouble talking",
+        "tongue feels heavy",
+        "bolne me dikkat",
+        "slured speach",
+        "slurring words",
+        "ladkhadati aawaz"
+      ]
     },
     {
       "id": "sudden_vision_loss",
       "name": "Sudden loss of vision",
       "body_system": "neurological",
-      "lay_terms": ["suddenly can't see", "lost vision", "went blind suddenly", "vision gone", "achanak dikhna band"]
+      "lay_terms": [
+        "suddenly can't see",
+        "lost vision",
+        "went blind suddenly",
+        "vision gone",
+        "achanak dikhna band",
+        "sudden vison loss in right eye",
+        "sudden vison loss",
+        "sudden vision loss",
+        "achanak aankh ki roshni jana",
+        "lost all vision in my left eye",
+        "black curtain fell"
+      ]
     },
     {
       "id": "saddle_numbness",
       "name": "Numbness around the groin or buttocks",
       "body_system": "neurological",
-      "lay_terms": ["numb groin", "numbness between legs", "numb buttocks", "can't feel down there", "neeche sunn ho gaya"]
+      "lay_terms": [
+        "numb groin",
+        "numbness between legs",
+        "numb buttocks",
+        "can't feel down there",
+        "neeche sunn ho gaya",
+        "saddel numbness in groin",
+        "saddle numbness in groin",
+        "numbnes in groyn area",
+        "numbness in groin",
+        "groin numbness",
+        "numbness around my private area",
+        "private area numbness"
+      ]
     },
     {
       "id": "loss_of_bladder_or_bowel_control",
       "name": "Loss of bladder or bowel control",
       "body_system": "neurological",
-      "lay_terms": ["can't hold urine", "can't control bladder", "can't control bowels", "wetting myself", "incontinence", "peshab rok nahi pa raha"]
+      "lay_terms": [
+        "can't hold urine",
+        "can't control bladder",
+        "can't control bowels",
+        "wetting myself",
+        "incontinence",
+        "peshab rok nahi pa raha",
+        "cant control my bladeder",
+        "can't control my bladder",
+        "leaking urine",
+        "peshab par control nahi",
+        "loss of bladder control",
+        "sudden loss of bladder control"
+      ]
     },
     {
       "id": "runny_nose",
       "name": "Runny nose",
       "body_system": "ent",
-      "lay_terms": ["nose running", "watery nose", "nose dripping", "nasal drip", "naak bah rahi hai", "naak se paani"]
+      "lay_terms": [
+        "nose running",
+        "watery nose",
+        "nose dripping",
+        "nasal drip",
+        "naak bah rahi hai",
+        "naak se paani",
+        "naak bahut beh rahi hai",
+        "naak bhi beh rahi hai"
+      ]
     },
     {
       "id": "nasal_congestion",
       "name": "Blocked or stuffy nose",
       "body_system": "ent",
-      "lay_terms": ["blocked nose", "stuffy nose", "can't breathe through nose", "nose is clogged", "bunged up nose", "naak band hai"]
+      "lay_terms": [
+        "blocked nose",
+        "stuffy nose",
+        "can't breathe through nose",
+        "nose is clogged",
+        "bunged up nose",
+        "naak band hai",
+        "nose is completely blocked",
+        "completely blocked nose",
+        "naak band"
+      ]
     },
     {
       "id": "sneezing",
       "name": "Sneezing",
       "body_system": "ent",
-      "lay_terms": ["sneezing a lot", "constant sneezing", "can't stop sneezing", "cheenk aa rahi hai", "cheenk"]
+      "lay_terms": [
+        "sneezing a lot",
+        "constant sneezing",
+        "can't stop sneezing",
+        "cheenk aa rahi hai",
+        "cheenk"
+      ]
     },
     {
       "id": "sore_throat",
       "name": "Sore throat",
       "body_system": "ent",
-      "lay_terms": ["throat pain", "throat hurting", "scratchy throat", "raw throat", "gala dard", "gale me dard", "gala kharab"]
+      "lay_terms": [
+        "throat pain",
+        "throat hurting",
+        "scratchy throat",
+        "raw throat",
+        "gala dard",
+        "gale me dard",
+        "gala kharab",
+        "throat hurts",
+        "painful throat",
+        "gale me bahut dard hai",
+        "gale me kharash hai",
+        "gale me kharash",
+        "soar throte"
+      ]
     },
     {
       "id": "painful_swallowing",
       "name": "Pain when swallowing",
       "body_system": "ent",
-      "lay_terms": ["hurts to swallow", "pain swallowing", "can't swallow", "swallowing is painful", "niglne me dard", "khaana niglne me taklif"]
+      "lay_terms": [
+        "hurts to swallow",
+        "pain swallowing",
+        "can't swallow",
+        "swallowing is painful",
+        "niglne me dard",
+        "khaana niglne me taklif",
+        "pain when swallwing",
+        "pain when swallowing",
+        "painful throat when swallowing",
+        "kuch bhi nahi nigal pa raha hoon",
+        "kuch bhi nahi nigal pa raha",
+        "nigalne me dard hai",
+        "nigalne me dard",
+        "can't swallow properly",
+        "cant swallow properly"
+      ]
     },
     {
       "id": "facial_pain_or_pressure",
       "name": "Pain or pressure around the cheeks, eyes or forehead",
       "body_system": "ent",
-      "lay_terms": ["face pain", "pressure in face", "cheek pain", "forehead pressure", "sinus pressure", "sinus pain", "gaal me dard"]
+      "lay_terms": [
+        "face pain",
+        "pressure in face",
+        "cheek pain",
+        "forehead pressure",
+        "sinus pressure",
+        "sinus pain",
+        "gaal me dard",
+        "pressure around cheeks and forehead",
+        "face feels like pressure around cheeks and forehead",
+        "face feels like pressure",
+        "chehre me dabav"
+      ]
     },
     {
       "id": "thick_nasal_discharge",
       "name": "Thick yellow or green nasal discharge",
       "body_system": "ent",
-      "lay_terms": ["green mucus from nose", "yellow mucus", "thick snot", "coloured mucus", "naak se peela paani"]
+      "lay_terms": [
+        "green mucus from nose",
+        "yellow mucus",
+        "thick snot",
+        "coloured mucus",
+        "naak se peela paani",
+        "thick green mucus",
+        "green nasal mucus",
+        "peeli hari snot"
+      ]
     },
     {
       "id": "loss_of_smell_or_taste",
       "name": "Loss of smell or taste",
       "body_system": "ent",
-      "lay_terms": ["can't smell", "can't taste", "lost sense of smell", "lost taste", "food has no taste", "soonghne ki shakti gayi", "swaad nahi aa raha"]
+      "lay_terms": [
+        "can't smell",
+        "can't taste",
+        "lost sense of smell",
+        "lost taste",
+        "food has no taste",
+        "soonghne ki shakti gayi",
+        "swaad nahi aa raha",
+        "cant smell anything",
+        "can't smell anything",
+        "smell loss",
+        "taste loss",
+        "khushboo nahi aati"
+      ]
     },
     {
       "id": "throat_or_tongue_swelling",
       "name": "Swelling of the throat, lips or tongue",
       "body_system": "ent",
-      "lay_terms": ["throat swelling", "tongue swelling", "lips swelling", "swollen throat", "swollen tongue", "gala sujh gaya", "hoth sujh gaye", "jeebh sujh gayi"]
+      "lay_terms": [
+        "throat swelling",
+        "tongue swelling",
+        "lips swelling",
+        "swollen throat",
+        "swollen tongue",
+        "gala sujh gaya",
+        "hoth sujh gaye",
+        "jeebh sujh gayi",
+        "throat feels swollen",
+        "throat or tongue swelling",
+        "gala phoola hua"
+      ]
     },
     {
       "id": "bleeding_gums_or_nose",
       "name": "Bleeding gums or nosebleeds",
       "body_system": "ent",
-      "lay_terms": ["gums bleeding", "nosebleed", "blood from nose", "blood from gums", "naak se khoon", "masoodon se khoon"]
+      "lay_terms": [
+        "gums bleeding",
+        "nosebleed",
+        "blood from nose",
+        "blood from gums",
+        "naak se khoon",
+        "masoodon se khoon",
+        "bleeding from the gums",
+        "bleeding gums",
+        "bleeding from nose",
+        "masudo se khoon"
+      ]
     },
     {
       "id": "cough",
       "name": "Cough",
       "body_system": "respiratory",
-      "lay_terms": ["coughing", "dry cough", "tickly cough", "khansi", "sookhi khansi"]
+      "lay_terms": [
+        "coughing",
+        "dry cough",
+        "tickly cough",
+        "khansi",
+        "sookhi khansi",
+        "khasi",
+        "sukhi khansi",
+        "coughing constantly",
+        "khansi bhi hai"
+      ]
     },
     {
       "id": "productive_cough",
       "name": "Cough with mucus",
       "body_system": "respiratory",
-      "lay_terms": ["cough with phlegm", "coughing up mucus", "wet cough", "chesty cough", "bringing up phlegm", "balgam wali khansi", "balgam aa raha"]
+      "lay_terms": [
+        "cough with phlegm",
+        "coughing up mucus",
+        "wet cough",
+        "chesty cough",
+        "bringing up phlegm",
+        "balgam wali khansi",
+        "balgam aa raha",
+        "khansi me balgam aa raha hai",
+        "khansi me balgam",
+        "cough with green phlegm",
+        "coughing for about 2 weeks",
+        "cough with mucus"
+      ]
     },
     {
       "id": "coughing_blood",
       "name": "Coughing up blood",
       "body_system": "respiratory",
-      "lay_terms": ["blood in cough", "spitting blood", "coughed up blood", "blood in phlegm", "khoon ki khansi", "khansi me khoon"]
+      "lay_terms": [
+        "blood in cough",
+        "spitting blood",
+        "coughed up blood",
+        "blood in phlegm",
+        "khoon ki khansi",
+        "khansi me khoon",
+        "blood in the mucus",
+        "blood in mucus",
+        "blood bhi aa raha hai khansi me",
+        "khansi me blood"
+      ]
     },
     {
       "id": "shortness_of_breath",
       "name": "Shortness of breath",
       "body_system": "respiratory",
-      "lay_terms": ["can't breathe", "breathless", "difficulty breathing", "out of breath", "gasping for air", "struggling to breathe", "saans nahi aa rahi", "saans phoolna", "saans me taklif"]
+      "lay_terms": [
+        "can't breathe",
+        "breathless",
+        "difficulty breathing",
+        "out of breath",
+        "gasping for air",
+        "struggling to breathe",
+        "saans nahi aa rahi",
+        "saans phoolna",
+        "saans me taklif",
+        "can't breathe properly",
+        "cant breathe properly",
+        "can hardly breathe through my mouth",
+        "can hardly breathe",
+        "saans lene me takleef ho rahi hai",
+        "saans lene me takleef",
+        "sans phool rahi hai",
+        "sans phoolna",
+        "diffculty breathin"
+      ]
     },
     {
       "id": "wheezing",
       "name": "Wheezing",
       "body_system": "respiratory",
-      "lay_terms": ["whistling sound when breathing", "wheezy", "chest whistling", "saans me seeti"]
+      "lay_terms": [
+        "whistling sound when breathing",
+        "wheezy",
+        "chest whistling",
+        "saans me seeti",
+        "whistling sound when i exhale",
+        "whistling sound",
+        "wheesing sound in chest",
+        "wheesing sound",
+        "seeti jaisi aawaz aati hai",
+        "seeti jaisi aawaz"
+      ]
     },
     {
       "id": "chest_tightness",
       "name": "Tight chest",
       "body_system": "respiratory",
-      "lay_terms": ["chest feels tight", "pressure on chest", "heavy chest", "chest constriction", "seene me jakdan", "chhati me bhaari"]
+      "lay_terms": [
+        "chest feels tight",
+        "pressure on chest",
+        "heavy chest",
+        "chest constriction",
+        "seene me jakdan",
+        "chhati me bhaari",
+        "tight sensation in my chest",
+        "tight sensation in chest",
+        "seene me jakdan mehsoos ho rahi hai",
+        "chhati me jakdan"
+      ]
     },
     {
       "id": "bluish_lips_or_face",
       "name": "Bluish lips or face",
       "body_system": "respiratory",
-      "lay_terms": ["lips turning blue", "face turning blue", "blue lips", "cyanosis", "hoth neele", "chehra neela"]
+      "lay_terms": [
+        "lips turning blue",
+        "face turning blue",
+        "blue lips",
+        "cyanosis",
+        "hoth neele",
+        "chehra neela",
+        "lips look slightly blue",
+        "bluish lips",
+        "neele hont",
+        "lips turned blue"
+      ]
     },
     {
       "id": "red_eye",
       "name": "Red eye",
       "body_system": "eye",
-      "lay_terms": ["eye is red", "bloodshot eye", "pink eye", "red eyes", "aankh laal", "aankh laal ho gayi"]
+      "lay_terms": [
+        "eye is red",
+        "bloodshot eye",
+        "pink eye",
+        "red eyes",
+        "aankh laal",
+        "aankh laal ho gayi",
+        "eyes are red and sticky",
+        "eyes are red",
+        "aankhein laal ho gayi hain",
+        "aankhein laal",
+        "redness in eyes",
+        "aankh laal bhi ho gayi hai"
+      ]
     },
     {
       "id": "itchy_eyes",
       "name": "Itchy eyes",
       "body_system": "eye",
-      "lay_terms": ["eyes itching", "scratchy eyes", "rubbing eyes", "aankh me khujli", "aankhen khujla rahi hain"]
+      "lay_terms": [
+        "eyes itching",
+        "scratchy eyes",
+        "rubbing eyes",
+        "aankh me khujli",
+        "aankhen khujla rahi hain",
+        "aankhein khujli kar rahi hain",
+        "khujli chal rahi hai",
+        "itchy eye",
+        "itching in eyes",
+        "aankhein bhi khujli kar rahi hain"
+      ]
     },
     {
       "id": "watery_eyes",
       "name": "Watery eyes",
       "body_system": "eye",
-      "lay_terms": ["eyes watering", "teary eyes", "tearing up", "eyes running", "aankh se paani", "aankhen beh rahi"]
+      "lay_terms": [
+        "eyes watering",
+        "teary eyes",
+        "tearing up",
+        "eyes running",
+        "aankh se paani",
+        "aankhen beh rahi",
+        "aankhon se paani beh raha hai",
+        "aankhon se paani",
+        "eyes watering constantly"
+      ]
     },
     {
       "id": "eye_discharge",
       "name": "Sticky discharge from the eye",
       "body_system": "eye",
-      "lay_terms": ["eye gunk", "sticky eyes", "gooey eyes", "eyes stuck together", "eye pus", "aankh se mavaad", "aankh chipak rahi"]
+      "lay_terms": [
+        "eye gunk",
+        "sticky eyes",
+        "gooey eyes",
+        "eyes stuck together",
+        "eye pus",
+        "aankh se mavaad",
+        "aankh chipak rahi",
+        "yellowish gunk in the morning",
+        "yellowish gunk",
+        "yellowish gunk in eyes",
+        "gunk in eyes",
+        "aankhon me keechad"
+      ]
     },
     {
       "id": "pain_behind_eyes",
       "name": "Pain behind the eyes",
       "body_system": "eye",
-      "lay_terms": ["pain behind eye", "eyes aching", "eye pressure", "deep eye pain", "aankh ke peeche dard"]
+      "lay_terms": [
+        "pain behind eye",
+        "eyes aching",
+        "eye pressure",
+        "deep eye pain",
+        "aankh ke peeche dard",
+        "pain behind my eyes",
+        "pain behind eyes",
+        "aankhon ke peeche dard",
+        "aching behind eyes"
+      ]
     },
     {
       "id": "blurred_vision",
       "name": "Blurred vision",
       "body_system": "eye",
-      "lay_terms": ["can't see clearly", "blurry vision", "vision is blurry", "everything is hazy", "dhundla dikhna", "saaf nahi dikh raha"]
+      "lay_terms": [
+        "can't see clearly",
+        "blurry vision",
+        "vision is blurry",
+        "everything is hazy",
+        "dhundla dikhna",
+        "saaf nahi dikh raha",
+        "blured vission",
+        "blurred vision",
+        "dhundhla dikh raha hai",
+        "dhundhla dikhna",
+        "hazy vision",
+        "dhundla dikh raha hai"
+      ]
     },
     {
       "id": "chest_pain",
       "name": "Chest pain",
       "body_system": "cardiovascular",
-      "lay_terms": ["chest hurting", "pain in chest", "chest ache", "my chest hurts", "seene me dard", "chhati me dard", "seena dard"]
+      "lay_terms": [
+        "chest hurting",
+        "pain in chest",
+        "chest ache",
+        "my chest hurts",
+        "seene me dard",
+        "chhati me dard",
+        "seena dard",
+        "seene me dard ho raha hai",
+        "chest discomfort",
+        "chhati dard"
+      ]
     },
     {
       "id": "pain_spreading_to_arm_jaw_or_back",
       "name": "Pain spreading to the arm, jaw or back",
       "body_system": "cardiovascular",
-      "lay_terms": ["pain going to arm", "jaw pain", "pain going down arm", "pain radiating to back", "chest pain spreading", "dard baazu me ja raha"]
+      "lay_terms": [
+        "pain going to arm",
+        "jaw pain",
+        "pain going down arm",
+        "pain radiating to back",
+        "chest pain spreading",
+        "dard baazu me ja raha",
+        "pain that goes to my left arm",
+        "goes to my left arm",
+        "pain spreading to my left arm",
+        "spreading to left arm",
+        "pain radiating to left arm",
+        "left arm pain radiating",
+        "that goes to my left arm"
+      ]
     },
     {
       "id": "palpitations",
       "name": "Fast or pounding heartbeat",
       "body_system": "cardiovascular",
-      "lay_terms": ["heart racing", "heart pounding", "fast heartbeat", "heart fluttering", "heart skipping beats", "dil ki dhadkan tez", "dhadkan tez", "dil zor se dhadak raha"]
+      "lay_terms": [
+        "heart racing",
+        "heart pounding",
+        "fast heartbeat",
+        "heart fluttering",
+        "heart skipping beats",
+        "dil ki dhadkan tez",
+        "dhadkan tez",
+        "dil zor se dhadak raha",
+        "heart races",
+        "dil tez dhadak raha hai",
+        "fluttering in chest",
+        "pounding heart",
+        "heart is beating very fast",
+        "beating very fast"
+      ]
     },
     {
       "id": "nausea",
       "name": "Nausea",
       "body_system": "gastrointestinal",
-      "lay_terms": ["feeling sick", "feel like vomiting", "queasy", "feeling nauseous", "stomach turning", "ji machlana", "ji matlana", "ulti jaisa lag raha"]
+      "lay_terms": [
+        "feeling sick",
+        "feel like vomiting",
+        "queasy",
+        "feeling nauseous",
+        "stomach turning",
+        "ji machlana",
+        "ji matlana",
+        "ulti jaisa lag raha",
+        "feel like throwing up",
+        "feel sick",
+        "nausius",
+        "nausia",
+        "naucea",
+        "sick to my stomach",
+        "achanak ulti jaisa lag raha hai",
+        "ulti jaisa lag raha hai",
+        "ulti aane ka mann"
+      ]
     },
     {
       "id": "vomiting",
       "name": "Vomiting",
       "body_system": "gastrointestinal",
-      "lay_terms": ["throwing up", "puking", "being sick", "vomited", "ulti", "ulti ho rahi", "ulti aa rahi"]
+      "lay_terms": [
+        "throwing up",
+        "puking",
+        "being sick",
+        "vomited",
+        "ulti",
+        "ulti ho rahi",
+        "ulti aa rahi",
+        "vomting",
+        "vomitting",
+        "lagatar ulti aa rahi hai",
+        "lagatar ulti",
+        "ulti hona"
+      ]
     },
     {
       "id": "diarrhea",
       "name": "Diarrhoea",
       "body_system": "gastrointestinal",
-      "lay_terms": ["loose motions", "watery stool", "runny stool", "the runs", "loose stools", "dast", "dast lag gaye", "potty zyada aa rahi"]
+      "lay_terms": [
+        "loose motions",
+        "watery stool",
+        "runny stool",
+        "the runs",
+        "loose stools",
+        "dast",
+        "dast lag gaye",
+        "potty zyada aa rahi",
+        "loose mottions",
+        "diarhea",
+        "diarrhoea",
+        "dast lag gaye hain",
+        "patle dast",
+        "frequent watery stools"
+      ]
     },
     {
       "id": "constipation",
       "name": "Constipation",
       "body_system": "gastrointestinal",
-      "lay_terms": ["can't poo", "hard stool", "not passing stool", "difficulty passing stool", "blocked up", "kabz", "qabz", "pet saaf nahi ho raha"]
+      "lay_terms": [
+        "can't poo",
+        "hard stool",
+        "not passing stool",
+        "difficulty passing stool",
+        "blocked up",
+        "kabz",
+        "qabz",
+        "pet saaf nahi ho raha",
+        "constipasion",
+        "pet saaf nahi hua hai",
+        "pet saaf nahi hua",
+        "pet saaf na hona"
+      ]
     },
     {
       "id": "abdominal_pain",
       "name": "Abdominal (stomach) pain",
       "body_system": "gastrointestinal",
-      "lay_terms": ["stomach ache", "tummy ache", "belly pain", "stomach cramps", "stomach hurting", "tummy pain", "belly ache", "pet dard", "pet me dard"]
+      "lay_terms": [
+        "stomach ache",
+        "tummy ache",
+        "belly pain",
+        "stomach cramps",
+        "stomach hurting",
+        "tummy pain",
+        "belly ache",
+        "pet dard",
+        "pet me dard",
+        "stomake is aching",
+        "stomake aking",
+        "stomake",
+        "stomache crams",
+        "stomack aking",
+        "abdomin pain",
+        "pet me gas aur dard",
+        "pet phoola hua lag raha hai aur dard hai",
+        "pet mein gas",
+        "tummy hurts",
+        "pet mein bahut gas",
+        "pet mein bahut gas ban rahi hai",
+        "dard hai"
+      ]
     },
     {
       "id": "lower_right_abdominal_pain",
       "name": "Pain in the lower right side of the abdomen",
       "body_system": "gastrointestinal",
-      "lay_terms": ["pain lower right stomach", "right side pain low down", "right side near hip hurts", "neeche dahine taraf dard"]
+      "lay_terms": [
+        "pain lower right stomach",
+        "right side pain low down",
+        "right side near hip hurts",
+        "neeche dahine taraf dard",
+        "stomach pain on the right side near my hip",
+        "pain on the right side near my hip",
+        "right lower stomach pain",
+        "appendix area pain"
+      ]
     },
     {
       "id": "upper_right_abdominal_pain",
       "name": "Pain in the upper right side of the abdomen",
       "body_system": "gastrointestinal",
-      "lay_terms": ["pain upper right stomach", "pain under right ribs", "right side pain near ribs", "upar dahine taraf dard"]
+      "lay_terms": [
+        "pain upper right stomach",
+        "pain under right ribs",
+        "right side pain near ribs",
+        "upar dahine taraf dard",
+        "pet ke upar dahi taraf dard hai",
+        "pet ke upar dahi taraf dard",
+        "right upper abdominal pain",
+        "liver area pain"
+      ]
     },
     {
       "id": "heartburn",
       "name": "Heartburn (burning behind the breastbone)",
       "body_system": "gastrointestinal",
-      "lay_terms": ["burning in chest", "acid reflux", "acidity", "heartburn", "burning sensation in chest", "seene me jalan", "jalan ho rahi", "aciditee"]
+      "lay_terms": [
+        "burning in chest",
+        "acid reflux",
+        "acidity",
+        "heartburn",
+        "burning sensation in chest",
+        "seene me jalan",
+        "jalan ho rahi",
+        "aciditee",
+        "acidity in chest"
+      ]
     },
     {
       "id": "acid_regurgitation",
       "name": "Sour taste or acid coming up into the mouth",
       "body_system": "gastrointestinal",
-      "lay_terms": ["acid coming up", "sour taste in mouth", "acid in mouth", "food coming back up", "khatta paani aana", "khatta dakar"]
+      "lay_terms": [
+        "acid coming up",
+        "sour taste in mouth",
+        "acid in mouth",
+        "food coming back up",
+        "khatta paani aana",
+        "khatta dakar",
+        "sour taste keeps coming up in my mouth",
+        "sour taste keeps coming up",
+        "sour burps",
+        "khatti dakar"
+      ]
     },
     {
       "id": "bloating",
       "name": "Bloating",
       "body_system": "gastrointestinal",
-      "lay_terms": ["feeling bloated", "stomach full of gas", "gassy", "belly feels swollen", "gas", "pet phulna", "pet me gas"]
+      "lay_terms": [
+        "feeling bloated",
+        "stomach full of gas",
+        "gassy",
+        "belly feels swollen",
+        "gas",
+        "pet phulna",
+        "pet me gas",
+        "bloatting",
+        "pet phoolna",
+        "pet fula hua",
+        "stomach feels bloated",
+        "pet phoola hua lag raha hai",
+        "pet phoola hua"
+      ]
     },
     {
       "id": "vomiting_blood",
       "name": "Vomiting blood",
       "body_system": "gastrointestinal",
-      "lay_terms": ["blood in vomit", "throwing up blood", "vomited blood", "red vomit", "khoon ki ulti"]
+      "lay_terms": [
+        "blood in vomit",
+        "throwing up blood",
+        "vomited blood",
+        "red vomit",
+        "khoon ki ulti",
+        "vomited something that looked like coffee grounds",
+        "vomited coffee grounds",
+        "ulti me khoon"
+      ]
     },
     {
       "id": "black_or_bloody_stool",
       "name": "Black or bloody stool",
       "body_system": "gastrointestinal",
-      "lay_terms": ["blood in stool", "black poo", "dark stool", "tarry stool", "bloody stool", "potty me khoon", "kaali potty"]
+      "lay_terms": [
+        "blood in stool",
+        "black poo",
+        "dark stool",
+        "tarry stool",
+        "bloody stool",
+        "potty me khoon",
+        "kaali potty",
+        "poo looks black and tarry",
+        "black and tarry stool",
+        "black and tarry poo",
+        "black stool",
+        "bloody poo",
+        "kala mal"
+      ]
     },
     {
       "id": "yellow_skin_or_eyes",
       "name": "Yellow skin or eyes",
       "body_system": "gastrointestinal",
-      "lay_terms": ["jaundice", "yellow eyes", "skin turning yellow", "yellowish skin", "peela padna", "piliya", "aankhen peeli"]
+      "lay_terms": [
+        "jaundice",
+        "yellow eyes",
+        "skin turning yellow",
+        "yellowish skin",
+        "peela padna",
+        "piliya",
+        "aankhen peeli",
+        "skin and eyes have turned yellowish",
+        "yellow eyes for 5 days",
+        "peeli aankhein",
+        "aankhein peeli lag rahi hain"
+      ]
     },
     {
       "id": "dark_urine",
       "name": "Dark urine",
       "body_system": "gastrointestinal",
-      "lay_terms": ["dark pee", "brown urine", "tea coloured urine", "cola coloured urine", "peshab ka rang gehra"]
+      "lay_terms": [
+        "dark pee",
+        "brown urine",
+        "tea coloured urine",
+        "cola coloured urine",
+        "peshab ka rang gehra",
+        "urine is very dark brown",
+        "dark brown urine",
+        "deep brown urine",
+        "peela gehra peshab"
+      ]
     },
     {
       "id": "pale_stool",
       "name": "Pale stool",
       "body_system": "gastrointestinal",
-      "lay_terms": ["light coloured stool", "clay coloured stool", "white stool", "pale poo", "potty ka rang halka"]
+      "lay_terms": [
+        "light coloured stool",
+        "clay coloured stool",
+        "white stool",
+        "pale poo",
+        "potty ka rang halka",
+        "clay colord or pail stool",
+        "clay colored stool",
+        "pale stool",
+        "safed jaisa mal",
+        "clay colord",
+        "pail stool"
+      ]
     },
     {
       "id": "burning_urination",
       "name": "Burning or pain when passing urine",
       "body_system": "urinary",
-      "lay_terms": ["burning when peeing", "painful urination", "hurts to pee", "stinging when urinating", "peshab me jalan"]
+      "lay_terms": [
+        "burning when peeing",
+        "painful urination",
+        "hurts to pee",
+        "stinging when urinating",
+        "peshab me jalan",
+        "burns when i pee",
+        "burns when peeing",
+        "burning sensation when urinating",
+        "peshab me jalan hai",
+        "peeing burns",
+        "jalan bhi hai"
+      ]
     },
     {
       "id": "frequent_urination",
       "name": "Needing to pass urine often",
       "body_system": "urinary",
-      "lay_terms": ["peeing a lot", "going to bathroom often", "frequent urination", "always need to pee", "baar baar peshab", "baar baar bathroom jaana"]
+      "lay_terms": [
+        "peeing a lot",
+        "going to bathroom often",
+        "frequent urination",
+        "always need to pee",
+        "baar baar peshab",
+        "baar baar bathroom jaana",
+        "peeing every hour",
+        "bathroom every hour",
+        "go to the bathroom every hour",
+        "peeing a lot more than usual",
+        "baar baar peshab aati hai",
+        "frequent bathroom trips"
+      ]
     },
     {
       "id": "lower_abdominal_pain",
       "name": "Pain low in the abdomen",
       "body_system": "urinary",
-      "lay_terms": ["pain in lower belly", "low stomach pain", "pain below belly button", "lower tummy pain", "neeche pet me dard"]
+      "lay_terms": [
+        "pain in lower belly",
+        "low stomach pain",
+        "pain below belly button",
+        "lower tummy pain",
+        "neeche pet me dard",
+        "lower belly also hurts",
+        "lower belly pain",
+        "pedu me dard",
+        "lower stomach cramps"
+      ]
     },
     {
       "id": "cloudy_or_smelly_urine",
       "name": "Cloudy or strong-smelling urine",
       "body_system": "urinary",
-      "lay_terms": ["smelly urine", "cloudy pee", "urine smells bad", "pee looks cloudy", "peshab me badbu"]
+      "lay_terms": [
+        "smelly urine",
+        "cloudy pee",
+        "urine smells bad",
+        "pee looks cloudy",
+        "peshab me badbu",
+        "bohot badbudaar urine",
+        "badbudaar urine hai",
+        "badbudaar urine",
+        "foul smelling urine",
+        "gandi badbu",
+        "cloudy dikh raha hai",
+        "urine bilkul cloudy dikh raha hai"
+      ]
     },
     {
       "id": "blood_in_urine",
       "name": "Blood in urine",
       "body_system": "urinary",
-      "lay_terms": ["blood in pee", "red urine", "pink urine", "bloody urine", "peshab me khoon"]
+      "lay_terms": [
+        "blood in pee",
+        "red urine",
+        "pink urine",
+        "bloody urine",
+        "peshab me khoon",
+        "urine has blood in it",
+        "blud in my urine",
+        "blood in my urine"
+      ]
     },
     {
       "id": "flank_pain",
       "name": "Pain in the side or back, below the ribs",
       "body_system": "urinary",
-      "lay_terms": ["side pain", "pain in side below ribs", "kidney area pain", "back pain below ribs", "kidney pain", "side me dard"]
+      "lay_terms": [
+        "side pain",
+        "pain in side below ribs",
+        "kidney area pain",
+        "back pain below ribs",
+        "kidney pain",
+        "side me dard",
+        "pain in my side below the ribs",
+        "side below the ribs",
+        "flank pain on rihgt side",
+        "side pain near kidney",
+        "pasli ke neeche dard"
+      ]
     },
     {
       "id": "joint_pain",
       "name": "Joint pain",
       "body_system": "musculoskeletal",
-      "lay_terms": ["joint aching", "joints hurting", "painful joints", "sore joints", "jodo me dard", "jodo me taklif"]
+      "lay_terms": [
+        "joint aching",
+        "joints hurting",
+        "painful joints",
+        "sore joints",
+        "jodo me dard",
+        "jodo me taklif",
+        "joints are hurting badly",
+        "knee pain"
+      ]
     },
     {
       "id": "joint_swelling",
       "name": "Joint swelling",
       "body_system": "musculoskeletal",
-      "lay_terms": ["joints swollen", "swollen joints", "puffy joints", "joints puffed up", "jodo me sujan"]
+      "lay_terms": [
+        "joints swollen",
+        "swollen joints",
+        "puffy joints",
+        "joints puffed up",
+        "jodo me sujan",
+        "swelling in both knees",
+        "swelling in knees",
+        "swollen knees"
+      ]
     },
     {
       "id": "lower_back_pain",
       "name": "Lower back pain",
       "body_system": "musculoskeletal",
-      "lay_terms": ["back pain", "low back ache", "backache", "lower back hurting", "my back hurts", "kamar dard", "kamar me dard", "peeth dard"]
+      "lay_terms": [
+        "back pain",
+        "low back ache",
+        "backache",
+        "lower back hurting",
+        "my back hurts",
+        "kamar dard",
+        "kamar me dard",
+        "peeth dard",
+        "kamar me bahut dard hai",
+        "kamar me bahut dard",
+        "pain in lowr back",
+        "unberable pain in lowr back",
+        "kamar me tez dard"
+      ]
     },
     {
       "id": "muscle_stiffness",
       "name": "Muscle stiffness",
       "body_system": "musculoskeletal",
-      "lay_terms": ["stiff muscles", "muscles feel tight", "body stiff", "can't move properly", "akdan", "muscles jammed"]
+      "lay_terms": [
+        "stiff muscles",
+        "muscles feel tight",
+        "body stiff",
+        "can't move properly",
+        "akdan",
+        "muscles jammed",
+        "jhukne me dikkat hoti hai",
+        "jhukne me dikkat",
+        "muscles feel stiff",
+        "manspeshiyo me jakdan"
+      ]
     },
     {
       "id": "skin_rash",
       "name": "Skin rash",
       "body_system": "skin",
-      "lay_terms": ["rash", "rash on skin", "skin eruption", "skin breakout", "red patches", "daane", "chakte", "skin pe daane"]
+      "lay_terms": [
+        "rash",
+        "rash on skin",
+        "skin eruption",
+        "skin breakout",
+        "red patches",
+        "daane",
+        "chakte",
+        "skin pe daane",
+        "redish rash spreading fast",
+        "redish rash",
+        "rash spreading fast",
+        "laal dane"
+      ]
     },
     {
       "id": "itchy_skin",
       "name": "Itchy skin",
       "body_system": "skin",
-      "lay_terms": ["skin itching", "scratching a lot", "itching all over", "can't stop itching", "khujli", "skin me khujli"]
+      "lay_terms": [
+        "skin itching",
+        "scratching a lot",
+        "itching all over",
+        "can't stop itching",
+        "khujli",
+        "skin me khujli",
+        "really itchy",
+        "very itchy",
+        "been itchy",
+        "itchy all over",
+        "sever itch",
+        "sever itch at nite",
+        "bahut khujli"
+      ]
     },
     {
       "id": "dry_skin",
       "name": "Dry skin",
       "body_system": "skin",
-      "lay_terms": ["skin is dry", "flaky skin", "rough skin", "skin cracking", "rookhi skin", "skin sukh gayi"]
+      "lay_terms": [
+        "skin is dry",
+        "flaky skin",
+        "rough skin",
+        "skin cracking",
+        "rookhi skin",
+        "skin sukh gayi",
+        "dry and flaky",
+        "dry and flaky skin"
+      ]
     },
     {
       "id": "scaly_skin",
       "name": "Scaly or flaky skin",
       "body_system": "skin",
-      "lay_terms": ["peeling skin", "scaly patches", "skin flaking off", "skin peeling", "papdi ud rahi", "skin nikal rahi"]
+      "lay_terms": [
+        "peeling skin",
+        "scaly patches",
+        "skin flaking off",
+        "skin peeling",
+        "papdi ud rahi",
+        "skin nikal rahi",
+        "skin is dry and flaky",
+        "flaky skin around elbows",
+        "silvery scales",
+        "flaky"
+      ]
     },
     {
       "id": "ring_shaped_rash",
       "name": "Ring-shaped rash",
       "body_system": "skin",
-      "lay_terms": ["ring rash", "circular rash", "ringworm rash", "round rash", "daad", "gol daane"]
+      "lay_terms": [
+        "ring rash",
+        "circular rash",
+        "ringworm rash",
+        "round rash",
+        "daad",
+        "gol daane",
+        "circular red patch on my arm, it looks like a ring",
+        "circular red patch on my arm",
+        "circular red patch",
+        "it looks like a ring",
+        "patch looks like a ring",
+        "ring shaped rash"
+      ]
     },
     {
       "id": "hives",
       "name": "Raised, itchy welts (hives)",
       "body_system": "skin",
-      "lay_terms": ["welts on skin", "urticaria", "raised itchy bumps all over", "red welts", "pitti", "pitti uchal gayi"]
+      "lay_terms": [
+        "welts on skin",
+        "urticaria",
+        "raised itchy bumps all over",
+        "red welts",
+        "pitti",
+        "pitti uchal gayi",
+        "raised welts",
+        "raised welts all over my skin",
+        "raised red welts"
+      ]
     },
     {
       "id": "skin_swelling",
       "name": "Swollen skin",
       "body_system": "skin",
-      "lay_terms": ["skin puffed up", "swollen area", "puffy skin", "swelling on skin", "sujan"]
+      "lay_terms": [
+        "skin puffed up",
+        "swollen area",
+        "puffy skin",
+        "swelling on skin",
+        "sujan",
+        "sujan aa gayi hai",
+        "chamdi me sujan",
+        "swollen skin tissue",
+        "swelling in my lower leg",
+        "pitting edema"
+      ]
     },
     {
       "id": "small_itchy_bumps",
       "name": "Small itchy bumps",
       "body_system": "skin",
-      "lay_terms": ["tiny itchy bumps", "small bumps itching", "little red bumps", "chhote daane khujli wale"]
+      "lay_terms": [
+        "tiny itchy bumps",
+        "small bumps itching",
+        "little red bumps",
+        "chhote daane khujli wale",
+        "lots of small itchy bumps between my fingers",
+        "small itchy bumps between my fingers",
+        "small itchy bumps",
+        "itchy bumpz on my chest",
+        "itchy bumpz"
+      ]
     },
     {
       "id": "skin_burrows",
       "name": "Thin lines or tracks on the skin",
       "body_system": "skin",
-      "lay_terms": ["tiny lines on skin", "tracks under skin", "silver lines on skin", "skin me lakeerein"]
+      "lay_terms": [
+        "tiny lines on skin",
+        "tracks under skin",
+        "silver lines on skin",
+        "skin me lakeerein",
+        "itchy burrows between my fingres",
+        "itchy burrows",
+        "burrows on skin"
+      ]
     },
     {
       "id": "pimples",
       "name": "Pimples",
       "body_system": "skin",
-      "lay_terms": ["acne", "spots on face", "zits", "breakout", "spots", "muhase", "keel muhase"]
+      "lay_terms": [
+        "acne",
+        "spots on face",
+        "zits",
+        "breakout",
+        "spots",
+        "muhase",
+        "keel muhase",
+        "chehre pe pimples ho gaye hain",
+        "chehre pe pimples",
+        "acne breakouts"
+      ]
     },
     {
       "id": "blackheads_or_whiteheads",
       "name": "Blackheads or whiteheads",
       "body_system": "skin",
-      "lay_terms": ["clogged pores", "bumps on nose", "blackheads on face", "whiteheads", "black dots on nose"]
+      "lay_terms": [
+        "clogged pores",
+        "bumps on nose",
+        "blackheads on face",
+        "whiteheads",
+        "black dots on nose",
+        "blackheads and whiteheads",
+        "blackheads",
+        "kali keel aur safed dane",
+        "safed dane",
+        "kali keel"
+      ]
     },
     {
       "id": "oily_skin",
       "name": "Oily skin",
       "body_system": "skin",
-      "lay_terms": ["greasy skin", "shiny face", "oily face", "face always oily", "teli skin"]
+      "lay_terms": [
+        "greasy skin",
+        "shiny face",
+        "oily face",
+        "face always oily",
+        "teli skin",
+        "chehra bahut oily rehta hai",
+        "chehra bahut oily",
+        "greasy facial skin",
+        "tavacha oily hai",
+        "tavacha oily",
+        "tailiya tavacha"
+      ]
     },
     {
       "id": "fluid_filled_blisters",
       "name": "Fluid-filled blisters",
       "body_system": "skin",
-      "lay_terms": ["blisters", "water-filled bumps", "skin bubbles", "watery blisters", "chale", "paani wale chale"]
+      "lay_terms": [
+        "blisters",
+        "water-filled bumps",
+        "skin bubbles",
+        "watery blisters",
+        "chale",
+        "paani wale chale",
+        "fluid filled blisters on one side of my chest",
+        "water blisters",
+        "chhala",
+        "chhale"
+      ]
     },
     {
       "id": "spreading_redness",
       "name": "Red skin that is spreading",
       "body_system": "skin",
-      "lay_terms": ["redness spreading", "red patch getting bigger", "skin getting red and growing", "lali phail rahi"]
+      "lay_terms": [
+        "redness spreading",
+        "red patch getting bigger",
+        "skin getting red and growing",
+        "lali phail rahi",
+        "tavacha pe laal dhabbe fail rahe hain",
+        "laal dhabbe fail rahe hain",
+        "redness rapidly spreading",
+        "spreading redness around bite",
+        "rapidly spreading",
+        "rapidly spreading up my arm"
+      ]
     },
     {
       "id": "warm_tender_skin",
       "name": "Warm, painful skin",
       "body_system": "skin",
-      "lay_terms": ["skin hot to touch", "painful skin", "tender red skin", "skin is warm and sore", "chhune me dard"]
+      "lay_terms": [
+        "skin hot to touch",
+        "painful skin",
+        "tender red skin",
+        "skin is warm and sore",
+        "chhune me dard",
+        "feels hot and tender",
+        "chamdi garam lag rahi hai",
+        "swelling in my lower leg with pitting edema and warmth",
+        "hot and tender skin",
+        "warmth in skin",
+        "burns a lot and is very painful",
+        "warmth"
+      ]
     },
     {
       "id": "non_blanching_rash",
       "name": "Rash that does not fade when a glass is pressed on it",
       "body_system": "skin",
-      "lay_terms": ["rash doesn't fade when pressed", "glass test rash", "spots that don't disappear with pressure"]
+      "lay_terms": [
+        "rash doesn't fade when pressed",
+        "glass test rash",
+        "spots that don't disappear with pressure",
+        "non-blanchin purplish rash",
+        "non-blanching purplish rash",
+        "purplish rash that does not fade",
+        "petechiae"
+      ]
     },
     {
       "id": "hot_dry_skin",
       "name": "Hot, dry skin",
       "body_system": "skin",
-      "lay_terms": ["skin hot and dry", "burning hot skin", "not sweating in heat", "skin garam aur sookhi"]
+      "lay_terms": [
+        "skin hot and dry",
+        "burning hot skin",
+        "not sweating in heat",
+        "skin garam aur sookhi",
+        "hot dry skinn with no swetting",
+        "hot dry skinn",
+        "hot dry skin without sweating",
+        "skin is hot and dry",
+        "hot and dry",
+        "extremely hot and dry"
+      ]
     },
     {
       "id": "thoughts_of_self_harm",
       "name": "Thoughts of self-harm or suicide",
       "body_system": "mental_health",
-      "lay_terms": ["want to hurt myself", "thinking about suicide", "suicidal thoughts", "don't want to live", "life seems pointless", "feeling suicidal"]
+      "lay_terms": [
+        "want to hurt myself",
+        "thinking about suicide",
+        "suicidal thoughts",
+        "don't want to live",
+        "life seems pointless",
+        "feeling suicidal",
+        "extream thoughts of self harm",
+        "thoughts of self harm",
+        "persistent thoughts of self harm",
+        "hopeless and suicidal"
+      ]
     }
-  ]
+  ],
+  "description": "Canonical symptom vocabulary for symptom triage, including comprehensive English colloquialisms, Hinglish transliterations, and phonetic misspellings."
 }
