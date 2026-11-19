@@ -16,7 +16,12 @@
         "bukhar",
         "bukhaar",
         "tez bukhar",
-        "badan garam"
+        "badan garam",
+        "feever",
+        "halka bukhar",
+        "halka bukhar hai",
+        "halka bukhar bhi hai",
+        "bukhaar hai"
       ]
     },
     {
@@ -32,7 +37,12 @@
         "cold shivers",
         "thandi lag rahi",
         "kaamp raha hoon",
-        "kaamping"
+        "kaamping",
+        "shivring",
+        "shivering badly",
+        "thandi lagna",
+        "kanpkapi",
+        "shivering with cold"
       ]
     },
     {
@@ -51,7 +61,16 @@
         "worn out",
         "kamzori",
         "thakan",
-        "thak gaya"
+        "thak gaya",
+        "can't sleep properly",
+        "no energy to do anything",
+        "thakaan rehti hai",
+        "thakaan hai",
+        "bohot thakaan",
+        "exhaustion",
+        "feeling very weak",
+        "bahut thakaan ho rahi hai",
+        "thakaan ho rahi hai"
       ]
     },
     {
@@ -67,7 +86,12 @@
         "sore muscles",
         "muscles hurting",
         "badan dard",
-        "poora badan dukh raha"
+        "poora badan dukh raha",
+        "whole body is aching",
+        "body is aching",
+        "body me dard hai",
+        "body me dard",
+        "badan toot raha hai"
       ]
     },
     {
@@ -81,7 +105,10 @@
         "sweaty",
         "drenched in sweat",
         "pasina",
-        "bahut pasina"
+        "bahut pasina",
+        "sweating a lot",
+        "sweating heavily",
+        "bohot pasina"
       ]
     },
     {
@@ -94,7 +121,10 @@
         "sweating at night",
         "waking up soaked",
         "drenched in sweat at night",
-        "raat ko pasina"
+        "raat ko pasina",
+        "raat ko bahut pasina aata hai",
+        "raat ko pasina aata hai",
+        "drenching sweats at night"
       ]
     },
     {
@@ -109,7 +139,12 @@
         "lost weight without trying",
         "unexplained weight loss",
         "vajan kam ho raha",
-        "patla ho raha"
+        "patla ho raha",
+        "lost some weight recently",
+        "lost some weight",
+        "wajan bhi kam ho raha hai",
+        "wajan kam hona",
+        "wajan bhi kam ho raha hai bina kisi reason ke"
       ]
     },
     {
@@ -125,7 +160,12 @@
         "can't eat",
         "lost my appetite",
         "bhook nahi lagti",
-        "khana nahi kha pa raha"
+        "khana nahi kha pa raha",
+        "bhook bilkul nahi lagti",
+        "not interested in food",
+        "loss of appetite",
+        "can't sleep or eat",
+        "cant sleep or eat"
       ]
     },
     {
@@ -143,7 +183,12 @@
         "unsteady",
         "chakkar",
         "chakkar aa raha",
-        "sir ghoom raha"
+        "sir ghoom raha",
+        "dizzynes",
+        "sir ghoom raha hai",
+        "chakkar aa rahe hain",
+        "chakkar aana",
+        "feeling lightheaded"
       ]
     },
     {
@@ -159,7 +204,14 @@
         "fainted",
         "collapsed",
         "behosh",
-        "behosh ho gaya"
+        "behosh ho gaya",
+        "achanak behosh ho gaya",
+        "behoshi",
+        "feel like i'm going to pass out",
+        "going to pass out",
+        "pass out",
+        "collapse during a marathon",
+        "collapse"
       ]
     },
     {
@@ -174,7 +226,13 @@
         "swollen lymph nodes",
         "neck glands swollen",
         "gale me gaanth",
-        "gale me sujan"
+        "gale me sujan",
+        "swollen glands in my neck that are tender",
+        "swollen glands in my neck",
+        "swolen glanz on my nek",
+        "swolen glanz",
+        "gardan me gathaan jaisi lag rahi hai",
+        "gardan me gathaan"
       ]
     },
     {
@@ -189,7 +247,12 @@
         "drinking lots of water",
         "can't stop drinking water",
         "bahut pyaas lagti hai",
-        "zyada pyaas"
+        "zyada pyaas",
+        "always feel thirsty",
+        "bohot pyas lagti hai",
+        "bahut pyas lagti hai",
+        "feeling thirsty all the time",
+        "unquenchable thirst"
       ]
     },
     {
@@ -204,7 +267,11 @@
         "no colour in face",
         "looking washed out",
         "rang udd gaya",
-        "rang safed ho gaya"
+        "rang safed ho gaya",
+        "skin looks pale lately",
+        "skin looks pale",
+        "pale looking",
+        "chehra peela pad gaya"
       ]
     },
     {
@@ -219,7 +286,11 @@
         "no urine output",
         "stopped passing urine",
         "peshab nahi ho raha",
-        "peshab bahut kam"
+        "peshab bahut kam",
+        "litlle or no urin output",
+        "little or no urine output",
+        "no urine",
+        "peshab band hona"
       ]
     },
     {
@@ -233,7 +304,11 @@
         "vomiting everything",
         "throwing up water",
         "can't hold anything down",
-        "paani bhi nahi ruk raha"
+        "paani bhi nahi ruk raha",
+        "cant keep water down",
+        "paani bhi hazam nahi ho raha",
+        "unable to hold water",
+        "cannot keep liquids down"
       ]
     },
     {
@@ -246,7 +321,13 @@
         "wounds not healing",
         "cuts take long to heal",
         "slow healing",
-        "ghav jaldi theek nahi ho rahe"
+        "ghav jaldi theek nahi ho rahe",
+        "pair me chot theek nahi ho rahi hai",
+        "chot theek nahi ho rahi",
+        "wound not healing",
+        "slow healing cut",
+        "not healing for over 3 weeks",
+        "cut on my foot is not healing"
       ]
     },
     {
@@ -261,7 +342,19 @@
         "head is pounding",
         "sar dard",
         "sir dard",
-        "sir me dard"
+        "sir me dard",
+        "headack",
+        "headach",
+        "hedache",
+        "extreem headach",
+        "dull ache spreading to my head",
+        "throbbing head hurt",
+        "throbbing head",
+        "sir me bohot tez dard hai",
+        "sir me bohot tez dard",
+        "sar me dard",
+        "one sided headache",
+        "throbbing head hurt much worse"
       ]
     },
     {
@@ -275,7 +368,10 @@
         "thunderclap headache",
         "sudden extreme head pain",
         "head exploding",
-        "achanak tez sar dard"
+        "achanak tez sar dard",
+        "worst headache of my life",
+        "worst headache",
+        "sudden intense headache"
       ]
     },
     {
@@ -290,7 +386,12 @@
         "light hurts my eyes",
         "photophobia",
         "roshni se taklif",
-        "roshni se dard"
+        "roshni se dard",
+        "tez roshni se takleef hoti hai",
+        "tez roshni se takleef",
+        "light bothering me",
+        "eyes hurt with light",
+        "bright sunlight is unbearable"
       ]
     },
     {
@@ -304,7 +405,13 @@
         "can't stand loud noise",
         "sounds are painful",
         "everything is too loud",
-        "awaaz se taklif"
+        "awaaz se taklif",
+        "aawaaz sunne se sir me dard badh jata hai",
+        "aawaaz sunne se sir me dard",
+        "sensitive to sounds",
+        "loud noises hurt",
+        "every loud noise",
+        "loud noise makes"
       ]
     },
     {
@@ -318,7 +425,12 @@
         "zig-zag lines in vision",
         "seeing spots",
         "sparkles in vision",
-        "flashing before eyes"
+        "flashing before eyes",
+        "aage chamak dikhti hai",
+        "chamak dikhti hai",
+        "flashing zigzag lights",
+        "aura before migraine",
+        "saw flashing zigzag lights"
       ]
     },
     {
@@ -348,7 +460,11 @@
         "tight shoulders",
         "neck and shoulders tight",
         "gardan me khichav",
-        "kandhe me khichav"
+        "kandhe me khichav",
+        "neck and shoulder tension",
+        "tension in neck and shoulder",
+        "gardan aur kandhe me jakdan",
+        "stiff neck and shoulders"
       ]
     },
     {
@@ -364,7 +480,12 @@
         "very drowsy",
         "can't think clearly",
         "acting strange",
-        "samajh nahi aa raha"
+        "samajh nahi aa raha",
+        "sudden confution",
+        "confution",
+        "kuch samajh nahi aa raha tha",
+        "kuch samajh nahi aa raha",
+        "mental confusion"
       ]
     },
     {
@@ -395,7 +516,13 @@
         "face falling on one side",
         "lopsided face",
         "mouth drooping",
-        "chehra ek taraf latakna"
+        "chehra ek taraf latakna",
+        "droopin face on right side",
+        "droopin face",
+        "drooping face",
+        "one side of face is drooping",
+        "chehra latak gaya",
+        "weakness on right side of my face"
       ]
     },
     {
@@ -410,7 +537,11 @@
         "one side numb",
         "half body weak",
         "arm or leg not working",
-        "ek taraf kamzori"
+        "ek taraf kamzori",
+        "sudden weakness on right side of my face",
+        "sudden weakness on right side",
+        "arm is also numb",
+        "one side weakness"
       ]
     },
     {
@@ -425,7 +556,10 @@
         "words not coming out right",
         "trouble talking",
         "tongue feels heavy",
-        "bolne me dikkat"
+        "bolne me dikkat",
+        "slured speach",
+        "slurring words",
+        "ladkhadati aawaz"
       ]
     },
     {
@@ -439,7 +573,13 @@
         "lost vision",
         "went blind suddenly",
         "vision gone",
-        "achanak dikhna band"
+        "achanak dikhna band",
+        "sudden vison loss in right eye",
+        "sudden vison loss",
+        "sudden vision loss",
+        "achanak aankh ki roshni jana",
+        "lost all vision in my left eye",
+        "black curtain fell"
       ]
     },
     {
@@ -453,7 +593,14 @@
         "numbness between legs",
         "numb buttocks",
         "can't feel down there",
-        "neeche sunn ho gaya"
+        "neeche sunn ho gaya",
+        "saddel numbness in groin",
+        "saddle numbness in groin",
+        "numbnes in groyn area",
+        "numbness in groin",
+        "groin numbness",
+        "numbness around my private area",
+        "private area numbness"
       ]
     },
     {
@@ -468,7 +615,13 @@
         "can't control bowels",
         "wetting myself",
         "incontinence",
-        "peshab rok nahi pa raha"
+        "peshab rok nahi pa raha",
+        "cant control my bladeder",
+        "can't control my bladder",
+        "leaking urine",
+        "peshab par control nahi",
+        "loss of bladder control",
+        "sudden loss of bladder control"
       ]
     },
     {
@@ -483,7 +636,9 @@
         "nose dripping",
         "nasal drip",
         "naak bah rahi hai",
-        "naak se paani"
+        "naak se paani",
+        "naak bahut beh rahi hai",
+        "naak bhi beh rahi hai"
       ]
     },
     {
@@ -498,7 +653,10 @@
         "can't breathe through nose",
         "nose is clogged",
         "bunged up nose",
-        "naak band hai"
+        "naak band hai",
+        "nose is completely blocked",
+        "completely blocked nose",
+        "naak band"
       ]
     },
     {
@@ -528,7 +686,13 @@
         "raw throat",
         "gala dard",
         "gale me dard",
-        "gala kharab"
+        "gala kharab",
+        "throat hurts",
+        "painful throat",
+        "gale me bahut dard hai",
+        "gale me kharash hai",
+        "gale me kharash",
+        "soar throte"
       ]
     },
     {
@@ -543,7 +707,16 @@
         "can't swallow",
         "swallowing is painful",
         "niglne me dard",
-        "khaana niglne me taklif"
+        "khaana niglne me taklif",
+        "pain when swallwing",
+        "pain when swallowing",
+        "painful throat when swallowing",
+        "kuch bhi nahi nigal pa raha hoon",
+        "kuch bhi nahi nigal pa raha",
+        "nigalne me dard hai",
+        "nigalne me dard",
+        "can't swallow properly",
+        "cant swallow properly"
       ]
     },
     {
@@ -559,7 +732,11 @@
         "forehead pressure",
         "sinus pressure",
         "sinus pain",
-        "gaal me dard"
+        "gaal me dard",
+        "pressure around cheeks and forehead",
+        "face feels like pressure around cheeks and forehead",
+        "face feels like pressure",
+        "chehre me dabav"
       ]
     },
     {
@@ -573,7 +750,10 @@
         "yellow mucus",
         "thick snot",
         "coloured mucus",
-        "naak se peela paani"
+        "naak se peela paani",
+        "thick green mucus",
+        "green nasal mucus",
+        "peeli hari snot"
       ]
     },
     {
@@ -589,7 +769,12 @@
         "lost taste",
         "food has no taste",
         "soonghne ki shakti gayi",
-        "swaad nahi aa raha"
+        "swaad nahi aa raha",
+        "cant smell anything",
+        "can't smell anything",
+        "smell loss",
+        "taste loss",
+        "khushboo nahi aati"
       ]
     },
     {
@@ -606,7 +791,10 @@
         "swollen tongue",
         "gala sujh gaya",
         "hoth sujh gaye",
-        "jeebh sujh gayi"
+        "jeebh sujh gayi",
+        "throat feels swollen",
+        "throat or tongue swelling",
+        "gala phoola hua"
       ]
     },
     {
@@ -621,7 +809,11 @@
         "blood from nose",
         "blood from gums",
         "naak se khoon",
-        "masoodon se khoon"
+        "masoodon se khoon",
+        "bleeding from the gums",
+        "bleeding gums",
+        "bleeding from nose",
+        "masudo se khoon"
       ]
     },
     {
@@ -635,7 +827,11 @@
         "dry cough",
         "tickly cough",
         "khansi",
-        "sookhi khansi"
+        "sookhi khansi",
+        "khasi",
+        "sukhi khansi",
+        "coughing constantly",
+        "khansi bhi hai"
       ]
     },
     {
@@ -651,7 +847,12 @@
         "chesty cough",
         "bringing up phlegm",
         "balgam wali khansi",
-        "balgam aa raha"
+        "balgam aa raha",
+        "khansi me balgam aa raha hai",
+        "khansi me balgam",
+        "cough with green phlegm",
+        "coughing for about 2 weeks",
+        "cough with mucus"
       ]
     },
     {
@@ -666,7 +867,11 @@
         "coughed up blood",
         "blood in phlegm",
         "khoon ki khansi",
-        "khansi me khoon"
+        "khansi me khoon",
+        "blood in the mucus",
+        "blood in mucus",
+        "blood bhi aa raha hai khansi me",
+        "khansi me blood"
       ]
     },
     {
@@ -684,7 +889,16 @@
         "struggling to breathe",
         "saans nahi aa rahi",
         "saans phoolna",
-        "saans me taklif"
+        "saans me taklif",
+        "can't breathe properly",
+        "cant breathe properly",
+        "can hardly breathe through my mouth",
+        "can hardly breathe",
+        "saans lene me takleef ho rahi hai",
+        "saans lene me takleef",
+        "sans phool rahi hai",
+        "sans phoolna",
+        "diffculty breathin"
       ]
     },
     {
@@ -697,7 +911,13 @@
         "whistling sound when breathing",
         "wheezy",
         "chest whistling",
-        "saans me seeti"
+        "saans me seeti",
+        "whistling sound when i exhale",
+        "whistling sound",
+        "wheesing sound in chest",
+        "wheesing sound",
+        "seeti jaisi aawaz aati hai",
+        "seeti jaisi aawaz"
       ]
     },
     {
@@ -712,7 +932,11 @@
         "heavy chest",
         "chest constriction",
         "seene me jakdan",
-        "chhati me bhaari"
+        "chhati me bhaari",
+        "tight sensation in my chest",
+        "tight sensation in chest",
+        "seene me jakdan mehsoos ho rahi hai",
+        "chhati me jakdan"
       ]
     },
     {
@@ -727,7 +951,11 @@
         "blue lips",
         "cyanosis",
         "hoth neele",
-        "chehra neela"
+        "chehra neela",
+        "lips look slightly blue",
+        "bluish lips",
+        "neele hont",
+        "lips turned blue"
       ]
     },
     {
@@ -742,7 +970,13 @@
         "pink eye",
         "red eyes",
         "aankh laal",
-        "aankh laal ho gayi"
+        "aankh laal ho gayi",
+        "eyes are red and sticky",
+        "eyes are red",
+        "aankhein laal ho gayi hain",
+        "aankhein laal",
+        "redness in eyes",
+        "aankh laal bhi ho gayi hai"
       ]
     },
     {
@@ -756,7 +990,12 @@
         "scratchy eyes",
         "rubbing eyes",
         "aankh me khujli",
-        "aankhen khujla rahi hain"
+        "aankhen khujla rahi hain",
+        "aankhein khujli kar rahi hain",
+        "khujli chal rahi hai",
+        "itchy eye",
+        "itching in eyes",
+        "aankhein bhi khujli kar rahi hain"
       ]
     },
     {
@@ -771,7 +1010,10 @@
         "tearing up",
         "eyes running",
         "aankh se paani",
-        "aankhen beh rahi"
+        "aankhen beh rahi",
+        "aankhon se paani beh raha hai",
+        "aankhon se paani",
+        "eyes watering constantly"
       ]
     },
     {
@@ -787,7 +1029,12 @@
         "eyes stuck together",
         "eye pus",
         "aankh se mavaad",
-        "aankh chipak rahi"
+        "aankh chipak rahi",
+        "yellowish gunk in the morning",
+        "yellowish gunk",
+        "yellowish gunk in eyes",
+        "gunk in eyes",
+        "aankhon me keechad"
       ]
     },
     {
@@ -801,7 +1048,11 @@
         "eyes aching",
         "eye pressure",
         "deep eye pain",
-        "aankh ke peeche dard"
+        "aankh ke peeche dard",
+        "pain behind my eyes",
+        "pain behind eyes",
+        "aankhon ke peeche dard",
+        "aching behind eyes"
       ]
     },
     {
@@ -816,7 +1067,13 @@
         "vision is blurry",
         "everything is hazy",
         "dhundla dikhna",
-        "saaf nahi dikh raha"
+        "saaf nahi dikh raha",
+        "blured vission",
+        "blurred vision",
+        "dhundhla dikh raha hai",
+        "dhundhla dikhna",
+        "hazy vision",
+        "dhundla dikh raha hai"
       ]
     },
     {
@@ -832,7 +1089,10 @@
         "my chest hurts",
         "seene me dard",
         "chhati me dard",
-        "seena dard"
+        "seena dard",
+        "seene me dard ho raha hai",
+        "chest discomfort",
+        "chhati dard"
       ]
     },
     {
@@ -847,7 +1107,14 @@
         "pain going down arm",
         "pain radiating to back",
         "chest pain spreading",
-        "dard baazu me ja raha"
+        "dard baazu me ja raha",
+        "pain that goes to my left arm",
+        "goes to my left arm",
+        "pain spreading to my left arm",
+        "spreading to left arm",
+        "pain radiating to left arm",
+        "left arm pain radiating",
+        "that goes to my left arm"
       ]
     },
     {
@@ -864,7 +1131,13 @@
         "heart skipping beats",
         "dil ki dhadkan tez",
         "dhadkan tez",
-        "dil zor se dhadak raha"
+        "dil zor se dhadak raha",
+        "heart races",
+        "dil tez dhadak raha hai",
+        "fluttering in chest",
+        "pounding heart",
+        "heart is beating very fast",
+        "beating very fast"
       ]
     },
     {
@@ -881,7 +1154,16 @@
         "stomach turning",
         "ji machlana",
         "ji matlana",
-        "ulti jaisa lag raha"
+        "ulti jaisa lag raha",
+        "feel like throwing up",
+        "feel sick",
+        "nausius",
+        "nausia",
+        "naucea",
+        "sick to my stomach",
+        "achanak ulti jaisa lag raha hai",
+        "ulti jaisa lag raha hai",
+        "ulti aane ka mann"
       ]
     },
     {
@@ -897,7 +1179,12 @@
         "vomited",
         "ulti",
         "ulti ho rahi",
-        "ulti aa rahi"
+        "ulti aa rahi",
+        "vomting",
+        "vomitting",
+        "lagatar ulti aa rahi hai",
+        "lagatar ulti",
+        "ulti hona"
       ]
     },
     {
@@ -914,7 +1201,13 @@
         "loose stools",
         "dast",
         "dast lag gaye",
-        "potty zyada aa rahi"
+        "potty zyada aa rahi",
+        "loose mottions",
+        "diarhea",
+        "diarrhoea",
+        "dast lag gaye hain",
+        "patle dast",
+        "frequent watery stools"
       ]
     },
     {
@@ -931,7 +1224,11 @@
         "blocked up",
         "kabz",
         "qabz",
-        "pet saaf nahi ho raha"
+        "pet saaf nahi ho raha",
+        "constipasion",
+        "pet saaf nahi hua hai",
+        "pet saaf nahi hua",
+        "pet saaf na hona"
       ]
     },
     {
@@ -949,7 +1246,20 @@
         "tummy pain",
         "belly ache",
         "pet dard",
-        "pet me dard"
+        "pet me dard",
+        "stomake is aching",
+        "stomake aking",
+        "stomake",
+        "stomache crams",
+        "stomack aking",
+        "abdomin pain",
+        "pet me gas aur dard",
+        "pet phoola hua lag raha hai aur dard hai",
+        "pet mein gas",
+        "tummy hurts",
+        "pet mein bahut gas",
+        "pet mein bahut gas ban rahi hai",
+        "dard hai"
       ]
     },
     {
@@ -962,7 +1272,11 @@
         "pain lower right stomach",
         "right side pain low down",
         "right side near hip hurts",
-        "neeche dahine taraf dard"
+        "neeche dahine taraf dard",
+        "stomach pain on the right side near my hip",
+        "pain on the right side near my hip",
+        "right lower stomach pain",
+        "appendix area pain"
       ]
     },
     {
@@ -975,7 +1289,11 @@
         "pain upper right stomach",
         "pain under right ribs",
         "right side pain near ribs",
-        "upar dahine taraf dard"
+        "upar dahine taraf dard",
+        "pet ke upar dahi taraf dard hai",
+        "pet ke upar dahi taraf dard",
+        "right upper abdominal pain",
+        "liver area pain"
       ]
     },
     {
@@ -992,7 +1310,8 @@
         "burning sensation in chest",
         "seene me jalan",
         "jalan ho rahi",
-        "aciditee"
+        "aciditee",
+        "acidity in chest"
       ]
     },
     {
@@ -1007,7 +1326,11 @@
         "acid in mouth",
         "food coming back up",
         "khatta paani aana",
-        "khatta dakar"
+        "khatta dakar",
+        "sour taste keeps coming up in my mouth",
+        "sour taste keeps coming up",
+        "sour burps",
+        "khatti dakar"
       ]
     },
     {
@@ -1023,7 +1346,13 @@
         "belly feels swollen",
         "gas",
         "pet phulna",
-        "pet me gas"
+        "pet me gas",
+        "bloatting",
+        "pet phoolna",
+        "pet fula hua",
+        "stomach feels bloated",
+        "pet phoola hua lag raha hai",
+        "pet phoola hua"
       ]
     },
     {
@@ -1037,7 +1366,10 @@
         "throwing up blood",
         "vomited blood",
         "red vomit",
-        "khoon ki ulti"
+        "khoon ki ulti",
+        "vomited something that looked like coffee grounds",
+        "vomited coffee grounds",
+        "ulti me khoon"
       ]
     },
     {
@@ -1053,7 +1385,13 @@
         "tarry stool",
         "bloody stool",
         "potty me khoon",
-        "kaali potty"
+        "kaali potty",
+        "poo looks black and tarry",
+        "black and tarry stool",
+        "black and tarry poo",
+        "black stool",
+        "bloody poo",
+        "kala mal"
       ]
     },
     {
@@ -1069,7 +1407,11 @@
         "yellowish skin",
         "peela padna",
         "piliya",
-        "aankhen peeli"
+        "aankhen peeli",
+        "skin and eyes have turned yellowish",
+        "yellow eyes for 5 days",
+        "peeli aankhein",
+        "aankhein peeli lag rahi hain"
       ]
     },
     {
@@ -1083,7 +1425,11 @@
         "brown urine",
         "tea coloured urine",
         "cola coloured urine",
-        "peshab ka rang gehra"
+        "peshab ka rang gehra",
+        "urine is very dark brown",
+        "dark brown urine",
+        "deep brown urine",
+        "peela gehra peshab"
       ]
     },
     {
@@ -1097,7 +1443,13 @@
         "clay coloured stool",
         "white stool",
         "pale poo",
-        "potty ka rang halka"
+        "potty ka rang halka",
+        "clay colord or pail stool",
+        "clay colored stool",
+        "pale stool",
+        "safed jaisa mal",
+        "clay colord",
+        "pail stool"
       ]
     },
     {
@@ -1111,7 +1463,13 @@
         "painful urination",
         "hurts to pee",
         "stinging when urinating",
-        "peshab me jalan"
+        "peshab me jalan",
+        "burns when i pee",
+        "burns when peeing",
+        "burning sensation when urinating",
+        "peshab me jalan hai",
+        "peeing burns",
+        "jalan bhi hai"
       ]
     },
     {
@@ -1126,7 +1484,13 @@
         "frequent urination",
         "always need to pee",
         "baar baar peshab",
-        "baar baar bathroom jaana"
+        "baar baar bathroom jaana",
+        "peeing every hour",
+        "bathroom every hour",
+        "go to the bathroom every hour",
+        "peeing a lot more than usual",
+        "baar baar peshab aati hai",
+        "frequent bathroom trips"
       ]
     },
     {
@@ -1140,7 +1504,11 @@
         "low stomach pain",
         "pain below belly button",
         "lower tummy pain",
-        "neeche pet me dard"
+        "neeche pet me dard",
+        "lower belly also hurts",
+        "lower belly pain",
+        "pedu me dard",
+        "lower stomach cramps"
       ]
     },
     {
@@ -1154,7 +1522,14 @@
         "cloudy pee",
         "urine smells bad",
         "pee looks cloudy",
-        "peshab me badbu"
+        "peshab me badbu",
+        "bohot badbudaar urine",
+        "badbudaar urine hai",
+        "badbudaar urine",
+        "foul smelling urine",
+        "gandi badbu",
+        "cloudy dikh raha hai",
+        "urine bilkul cloudy dikh raha hai"
       ]
     },
     {
@@ -1168,7 +1543,10 @@
         "red urine",
         "pink urine",
         "bloody urine",
-        "peshab me khoon"
+        "peshab me khoon",
+        "urine has blood in it",
+        "blud in my urine",
+        "blood in my urine"
       ]
     },
     {
@@ -1183,7 +1561,12 @@
         "kidney area pain",
         "back pain below ribs",
         "kidney pain",
-        "side me dard"
+        "side me dard",
+        "pain in my side below the ribs",
+        "side below the ribs",
+        "flank pain on rihgt side",
+        "side pain near kidney",
+        "pasli ke neeche dard"
       ]
     },
     {
@@ -1198,7 +1581,9 @@
         "painful joints",
         "sore joints",
         "jodo me dard",
-        "jodo me taklif"
+        "jodo me taklif",
+        "joints are hurting badly",
+        "knee pain"
       ]
     },
     {
@@ -1212,7 +1597,10 @@
         "swollen joints",
         "puffy joints",
         "joints puffed up",
-        "jodo me sujan"
+        "jodo me sujan",
+        "swelling in both knees",
+        "swelling in knees",
+        "swollen knees"
       ]
     },
     {
@@ -1229,7 +1617,12 @@
         "my back hurts",
         "kamar dard",
         "kamar me dard",
-        "peeth dard"
+        "peeth dard",
+        "kamar me bahut dard hai",
+        "kamar me bahut dard",
+        "pain in lowr back",
+        "unberable pain in lowr back",
+        "kamar me tez dard"
       ]
     },
     {
@@ -1244,7 +1637,11 @@
         "body stiff",
         "can't move properly",
         "akdan",
-        "muscles jammed"
+        "muscles jammed",
+        "jhukne me dikkat hoti hai",
+        "jhukne me dikkat",
+        "muscles feel stiff",
+        "manspeshiyo me jakdan"
       ]
     },
     {
@@ -1261,7 +1658,11 @@
         "red patches",
         "daane",
         "chakte",
-        "skin pe daane"
+        "skin pe daane",
+        "redish rash spreading fast",
+        "redish rash",
+        "rash spreading fast",
+        "laal dane"
       ]
     },
     {
@@ -1276,7 +1677,14 @@
         "itching all over",
         "can't stop itching",
         "khujli",
-        "skin me khujli"
+        "skin me khujli",
+        "really itchy",
+        "very itchy",
+        "been itchy",
+        "itchy all over",
+        "sever itch",
+        "sever itch at nite",
+        "bahut khujli"
       ]
     },
     {
@@ -1291,7 +1699,9 @@
         "rough skin",
         "skin cracking",
         "rookhi skin",
-        "skin sukh gayi"
+        "skin sukh gayi",
+        "dry and flaky",
+        "dry and flaky skin"
       ]
     },
     {
@@ -1306,7 +1716,11 @@
         "skin flaking off",
         "skin peeling",
         "papdi ud rahi",
-        "skin nikal rahi"
+        "skin nikal rahi",
+        "skin is dry and flaky",
+        "flaky skin around elbows",
+        "silvery scales",
+        "flaky"
       ]
     },
     {
@@ -1321,7 +1735,13 @@
         "ringworm rash",
         "round rash",
         "daad",
-        "gol daane"
+        "gol daane",
+        "circular red patch on my arm, it looks like a ring",
+        "circular red patch on my arm",
+        "circular red patch",
+        "it looks like a ring",
+        "patch looks like a ring",
+        "ring shaped rash"
       ]
     },
     {
@@ -1336,7 +1756,10 @@
         "raised itchy bumps all over",
         "red welts",
         "pitti",
-        "pitti uchal gayi"
+        "pitti uchal gayi",
+        "raised welts",
+        "raised welts all over my skin",
+        "raised red welts"
       ]
     },
     {
@@ -1350,7 +1773,12 @@
         "swollen area",
         "puffy skin",
         "swelling on skin",
-        "sujan"
+        "sujan",
+        "sujan aa gayi hai",
+        "chamdi me sujan",
+        "swollen skin tissue",
+        "swelling in my lower leg",
+        "pitting edema"
       ]
     },
     {
@@ -1363,7 +1791,12 @@
         "tiny itchy bumps",
         "small bumps itching",
         "little red bumps",
-        "chhote daane khujli wale"
+        "chhote daane khujli wale",
+        "lots of small itchy bumps between my fingers",
+        "small itchy bumps between my fingers",
+        "small itchy bumps",
+        "itchy bumpz on my chest",
+        "itchy bumpz"
       ]
     },
     {
@@ -1376,7 +1809,10 @@
         "tiny lines on skin",
         "tracks under skin",
         "silver lines on skin",
-        "skin me lakeerein"
+        "skin me lakeerein",
+        "itchy burrows between my fingres",
+        "itchy burrows",
+        "burrows on skin"
       ]
     },
     {
@@ -1392,7 +1828,10 @@
         "breakout",
         "spots",
         "muhase",
-        "keel muhase"
+        "keel muhase",
+        "chehre pe pimples ho gaye hain",
+        "chehre pe pimples",
+        "acne breakouts"
       ]
     },
     {
@@ -1406,7 +1845,12 @@
         "bumps on nose",
         "blackheads on face",
         "whiteheads",
-        "black dots on nose"
+        "black dots on nose",
+        "blackheads and whiteheads",
+        "blackheads",
+        "kali keel aur safed dane",
+        "safed dane",
+        "kali keel"
       ]
     },
     {
@@ -1420,7 +1864,13 @@
         "shiny face",
         "oily face",
         "face always oily",
-        "teli skin"
+        "teli skin",
+        "chehra bahut oily rehta hai",
+        "chehra bahut oily",
+        "greasy facial skin",
+        "tavacha oily hai",
+        "tavacha oily",
+        "tailiya tavacha"
       ]
     },
     {
@@ -1435,7 +1885,11 @@
         "skin bubbles",
         "watery blisters",
         "chale",
-        "paani wale chale"
+        "paani wale chale",
+        "fluid filled blisters on one side of my chest",
+        "water blisters",
+        "chhala",
+        "chhale"
       ]
     },
     {
@@ -1448,7 +1902,13 @@
         "redness spreading",
         "red patch getting bigger",
         "skin getting red and growing",
-        "lali phail rahi"
+        "lali phail rahi",
+        "tavacha pe laal dhabbe fail rahe hain",
+        "laal dhabbe fail rahe hain",
+        "redness rapidly spreading",
+        "spreading redness around bite",
+        "rapidly spreading",
+        "rapidly spreading up my arm"
       ]
     },
     {
@@ -1462,7 +1922,14 @@
         "painful skin",
         "tender red skin",
         "skin is warm and sore",
-        "chhune me dard"
+        "chhune me dard",
+        "feels hot and tender",
+        "chamdi garam lag rahi hai",
+        "swelling in my lower leg with pitting edema and warmth",
+        "hot and tender skin",
+        "warmth in skin",
+        "burns a lot and is very painful",
+        "warmth"
       ]
     },
     {
@@ -1474,7 +1941,11 @@
       "lay_terms": [
         "rash doesn't fade when pressed",
         "glass test rash",
-        "spots that don't disappear with pressure"
+        "spots that don't disappear with pressure",
+        "non-blanchin purplish rash",
+        "non-blanching purplish rash",
+        "purplish rash that does not fade",
+        "petechiae"
       ]
     },
     {
@@ -1487,7 +1958,13 @@
         "skin hot and dry",
         "burning hot skin",
         "not sweating in heat",
-        "skin garam aur sookhi"
+        "skin garam aur sookhi",
+        "hot dry skinn with no swetting",
+        "hot dry skinn",
+        "hot dry skin without sweating",
+        "skin is hot and dry",
+        "hot and dry",
+        "extremely hot and dry"
       ]
     },
     {
@@ -1502,8 +1979,13 @@
         "suicidal thoughts",
         "don't want to live",
         "life seems pointless",
-        "feeling suicidal"
+        "feeling suicidal",
+        "extream thoughts of self harm",
+        "thoughts of self harm",
+        "persistent thoughts of self harm",
+        "hopeless and suicidal"
       ]
     }
-  ]
+  ],
+  "dataset_version": "2.0"
 }

@@ -9,7 +9,7 @@ Covers:
     - Complete dataset parity and integrity (100 symptoms aligned with symptoms.json).
     - Edge cases: whitespace, casing, punctuation, long queries, and missing entries.
 
-Owner: Kavya (knowledge) · Task: S1-KAV-3 · Requirements: FR-18
+Owner: Kavya (knowledge) · Tasks: S1-KAV-3, S2-KAV-5 · Requirements: FR-18, NFR-07
 """
 
 import json
@@ -415,3 +415,39 @@ class TestGlossaryEdgeCases:
         bad_json.write_text(json.dumps({"entries": "not-a-list"}))
         with pytest.raises(ValueError, match="must be a list"):
             SymptomGlossary(data_path=bad_json)
+
+
+class TestGlossaryRegressionV2:
+    """Verifies S2-KAV-5 glossary completeness and expanded lay terms indexing."""
+
+    def test_all_one_hundred_canonical_symptoms_present_in_glossary(
+        self, glossary: SymptomGlossary
+    ) -> None:
+        """Every canonical symptom must have a verified glossary entry."""
+        all_entries = glossary.list_entries()
+        assert len(all_entries) == 100
+        for entry in all_entries:
+            assert entry.plain_definition.strip(), f"Empty definition for {entry.id}"
+            care = entry.when_to_seek_care.strip()
+            assert care, f"Empty care guidance for {entry.id}"
+            assert len(entry.lay_terms) > 0, f"No lay terms for {entry.id}"
+
+    @pytest.mark.parametrize(
+        ("query", "expected_id"),
+        [
+            ("burns when i pee", "burning_urination"),
+            ("throat hurts", "sore_throat"),
+            ("whistling sound when i exhale", "wheezing"),
+            ("worst headache of my life", "sudden_severe_headache"),
+            ("poo looks black and tarry", "black_or_bloody_stool"),
+            ("loss of bladder control", "loss_of_bladder_or_bowel_control"),
+            ("saddle numbness in groin", "saddle_numbness"),
+        ],
+    )
+    def test_lookup_expanded_v2_lay_terms(
+        self, glossary: SymptomGlossary, query: str, expected_id: str
+    ) -> None:
+        """New v2 lay terms must resolve directly in the curated glossary."""
+        entry = glossary.get_entry(query)
+        assert entry is not None
+        assert entry.id == expected_id
