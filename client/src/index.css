@@ -33,3 +33,45 @@ button {
 a {
   color: inherit;
 }
+
+/*
+ * Print / "Save as PDF" for the result page (S2-NIS-17, #314).
+ * Keep the result, conditions, guidance and disclaimers; drop the sticky
+ * header, buttons and any overlay (dialogs, PWA prompts, urgent pop-up).
+ */
+@media print {
+  @page {
+    margin: 14mm;
+  }
+
+  body {
+    background: #fff;
+  }
+
+  *,
+  *::before,
+  *::after {
+    transition: none !important;
+    animation: none !important;
+  }
+
+  header[role="banner"],
+  main button,
+  .fixed {
+    display: none !important;
+  }
+
+  section,
+  aside,
+  article {
+    break-inside: avoid;
+  }
+
+  /* Coloured call buttons lose contrast on paper; print them as red text. */
+  main a[href^="tel:"] {
+    background: none !important;
+    box-shadow: none !important;
+    color: #9f1239 !important;
+    border: 1px solid #9f1239 !important;
+  }
+}

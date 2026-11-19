@@ -10,6 +10,7 @@
  * - Persistent medical disclaimer compliance (DR-01).
  * - Edge case handling for empty condition lists and missing optional fields.
  * - Interaction with "Start New Assessment" and condition selection callbacks.
+ * - Save as PDF / Print action and the print-only heading (S2-NIS-17, #314).
  *
  * Owner: Mann (Frontend + Deployment · Testing) · Task: S1-MAN-3 · Requirements: DR-01, DR-02, FR-06, FR-15, FR-22, FR-23, FR-24, FR-08, NFR-06
  */
@@ -196,5 +197,29 @@ describe("ResultPage", () => {
     expect(mapLink).toHaveAttribute("rel", "noopener noreferrer");
     expect(mapLink.getAttribute("href")).toContain("https://www.google.com/maps/search/?api=1");
     expect(mapLink.getAttribute("href")).toContain(encodeURIComponent("General Physician near me"));
+  });
+
+  it("opens the browser print dialog to save or print the result (S2-NIS-17)", async () => {
+    const user = userEvent.setup();
+    const print = vi.spyOn(window, "print").mockImplementation(() => undefined);
+    render(<ResultPage result={DEFAULT_RESULT_DATA} />);
+
+    await user.click(screen.getByRole("button", { name: /Save as PDF \/ Print/i }));
+
+    expect(print).toHaveBeenCalledOnce();
+    print.mockRestore();
+  });
+
+  it("includes a print-only heading with the completion date and non-diagnostic note", () => {
+    render(
+      <ResultPage
+        result={{ ...DEFAULT_RESULT_DATA, completedAt: "2026-11-19T10:30:00Z" }}
+      />,
+    );
+    const heading = screen.getByText(/AI-Based Symptom Checker · Assessment result/);
+    const block = heading.parentElement;
+    expect(block).toHaveClass("hidden", "print:block");
+    expect(block).toHaveTextContent(/Completed .*2026/);
+    expect(block).toHaveTextContent("not a medical diagnosis");
   });
 });

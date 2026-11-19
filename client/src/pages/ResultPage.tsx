@@ -12,7 +12,7 @@
  * - FR-08: External map search link for recommended medical specialty (no doctor data stored).
  * - NFR-06: WCAG 2.1 AA accessible landmarks, contrast, and focus states.
  *
- * Owner: Mann (Frontend + Deployment Â· Testing) Â· Task: S1-MAN-3, S2-NIS-13, S2-NIS-16 Â· Requirements: DR-01, DR-02, FR-06, FR-15, FR-22, FR-23, FR-24, FR-08, NFR-06
+ * Owner: Mann (Frontend + Deployment · Testing) · Task: S1-MAN-3, S2-NIS-13, S2-NIS-16, S2-NIS-17 · Requirements: DR-01, DR-02, FR-06, FR-15, FR-22, FR-23, FR-24, FR-08, NFR-06
  */
 
 import React from "react";
@@ -105,6 +105,19 @@ export const DEFAULT_RESULT_DATA: AssessmentResultData = {
 };
 
 /**
+ * Format a timestamp for the printed result.
+ *
+ * @param value - ISO timestamp.
+ * @returns A local date and time, or the raw value if it cannot be parsed.
+ */
+function formatPrintDate(value: string): string {
+  const date = new Date(value);
+  return Number.isNaN(date.getTime())
+    ? value
+    : date.toLocaleString(undefined, { dateStyle: "medium", timeStyle: "short" });
+}
+
+/**
  * Result page composing ConditionList, RiskBadge, guidance slot, and persistent disclaimer.
  *
  * @param props - Component properties.
@@ -147,6 +160,31 @@ export function ResultPage({
         <UrgentCareAlert onDismiss={() => setUrgentAlertDismissed(true)} />
       )}
       <div className="space-y-8 pb-12">
+        {/* Print-only heading so a saved PDF says what it is (S2-NIS-17, #314). */}
+        <div className="hidden border-b border-slate-300 pb-3 print:block">
+          <p className="text-lg font-bold text-slate-900">
+            AI-Based Symptom Checker · Assessment result
+          </p>
+          <p className="text-xs text-slate-600">
+            {result.completedAt
+              ? `Completed ${formatPrintDate(result.completedAt)} · `
+              : ""}
+            Informational triage aid, not a medical diagnosis.
+          </p>
+        </div>
+
+        {/* Save or print this result (S2-NIS-17, #314). */}
+        <div className="flex justify-end print:hidden">
+          <button
+            type="button"
+            onClick={() => window.print()}
+            className="inline-flex min-h-[44px] items-center gap-2 rounded-xl border border-teal-600 bg-white px-4 py-2 text-sm font-semibold text-teal-800 shadow-xs transition hover:bg-teal-50 focus:outline-none focus:ring-4 focus:ring-teal-200"
+          >
+            <span aria-hidden="true">🖨️</span>
+            <span>Save as PDF / Print</span>
+          </button>
+        </div>
+
         {/* 1. Triage Risk Level Banner */}
         <section
           aria-labelledby="triage-status-heading"
@@ -192,7 +230,7 @@ export function ResultPage({
               <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
                 <div className="space-y-1">
                   <p className="text-sm font-bold uppercase tracking-wide text-rose-700 dark:text-rose-300">
-                    âš ï¸ Immediate Action Required
+                    ⚠️ Immediate Action Required
                   </p>
                   <p className="text-xs leading-relaxed text-slate-700 sm:text-sm dark:text-slate-200">
                     Your reported symptoms indicate a potential high-risk condition.
@@ -206,7 +244,7 @@ export function ResultPage({
                   aria-label={`Call emergency number ${emergencyNumber} now`}
                 >
                   <span aria-hidden="true" className="text-lg">
-                    ðŸ“ž
+                    📞
                   </span>
                   <span>Call {emergencyNumber} Now</span>
                 </a>
@@ -268,7 +306,7 @@ export function ResultPage({
               {guidance.selfCareAdvice && guidance.selfCareAdvice.length > 0 && (
                 <div className="space-y-2.5">
                   <h3 className="flex items-center gap-1.5 text-sm font-bold text-slate-900 dark:text-slate-100">
-                    <span aria-hidden="true">ðŸ’¡</span>
+                    <span aria-hidden="true">💡</span>
                     <span>{guidance.stepsHeading ?? "General Self-Care Steps"}</span>
                   </h3>
                   <ul className="space-y-2 text-xs leading-relaxed text-slate-700 sm:text-sm dark:text-slate-300">
@@ -289,7 +327,7 @@ export function ResultPage({
               {guidance.warningSigns && guidance.warningSigns.length > 0 && (
                 <div className="space-y-2.5 rounded-xl border border-amber-200 bg-amber-50/50 p-3.5 sm:p-4 dark:border-amber-900/50 dark:bg-amber-950/20">
                   <h3 className="flex items-center gap-1.5 text-sm font-bold text-amber-900 dark:text-amber-200">
-                    <span aria-hidden="true">âš ï¸</span>
+                    <span aria-hidden="true">⚠️</span>
                     <span>When to Seek Emergency Care</span>
                   </h3>
                   <ul className="space-y-1.5 text-xs leading-relaxed text-amber-950 sm:text-sm dark:text-amber-200/90">
@@ -384,7 +422,7 @@ export function ResultPage({
               onClick={handleStartOver}
               className="inline-flex min-h-[44px] items-center justify-center gap-2 rounded-xl border border-slate-300 bg-white px-6 py-3 text-sm font-semibold text-slate-800 shadow-xs transition hover:bg-slate-50 focus:outline-none focus:ring-4 focus:ring-slate-300 dark:border-slate-700 dark:bg-slate-800 dark:text-slate-200 dark:hover:bg-slate-700"
             >
-              <span aria-hidden="true">ðŸ”„</span>
+              <span aria-hidden="true">🔄</span>
               <span>Start New Assessment</span>
             </button>
           </div>
