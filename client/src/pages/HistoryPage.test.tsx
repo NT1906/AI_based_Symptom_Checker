@@ -94,12 +94,76 @@ describe("HistoryPage", () => {
 
     renderHistoryPage();
 
-    expect(
-      await screen.findByText("Assessment assessment-1"),
-    ).toBeInTheDocument();
-
+    expect(await screen.findByText("No saved result")).toBeInTheDocument();
     expect(screen.getByText("Completed")).toBeInTheDocument();
+    expect(screen.getByRole("link", { name: /view details/i })).toHaveAttribute(
+      "href",
+      "/history/assessment-1",
+    );
     expect(getAssessmentHistory).toHaveBeenCalledWith(20, 0);
+  });
+
+  it("shows the saved risk level and top condition (S2-NIS-16)", async () => {
+    vi.mocked(getAssessmentHistory).mockResolvedValue({
+      items: [
+        {
+          ...testAssessment,
+          riskLevel: "URGENT",
+          topCondition: "Heart attack (myocardial infarction)",
+        },
+      ],
+      nextOffset: null,
+    });
+
+    renderHistoryPage();
+
+    expect(
+      await screen.findByText(
+        "Top possible condition: Heart attack (myocardial infarction)",
+      ),
+    ).toBeInTheDocument();
+    expect(
+      screen.getByRole("status", { name: "Risk level: Urgent Care Needed" }),
+    ).toBeInTheDocument();
+    expect(screen.getByText("View result")).toBeInTheDocument();
+  });
+
+  it("reopens a saved result from history (S2-NIS-16)", async () => {
+    vi.mocked(getAssessmentHistoryDetail).mockResolvedValue({
+      ...testAssessment,
+      riskLevel: "SELF_CARE",
+      topCondition: "Common cold",
+      result: {
+        assessmentId: "assessment-1",
+        riskLevel: "SELF_CARE",
+        conditions: [
+          {
+            name: "Common cold",
+            confidence: "LIKELY",
+            rank: 1,
+            why: "Because you reported runny nose and sneezing.",
+          },
+        ],
+        guidance: ["Rest and drink plenty of fluids."],
+        referral: { required: false },
+        limitations: [],
+        modelVersion: "1.0.0",
+        disclaimer: "This is not a medical diagnosis.",
+        createdAt: "2026-11-15T10:30:00Z",
+      },
+    });
+
+    renderHistoryPage("/history/assessment-1");
+
+    expect(
+      await screen.findByRole("heading", { name: "Past Assessment Result" }),
+    ).toBeInTheDocument();
+    expect(screen.getAllByText("Common cold").length).toBeGreaterThan(0);
+    expect(screen.getByText("Rest and drink plenty of fluids.")).toBeInTheDocument();
+    expect(screen.getByRole("link", { name: /back to history/i })).toHaveAttribute(
+      "href",
+      "/history",
+    );
   });
 
   it("renders an empty state when no assessments exist", async () => {

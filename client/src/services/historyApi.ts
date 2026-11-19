@@ -1,17 +1,31 @@
-
 /**
  * @file Typed API services for retrieving assessment history.
  * Owner: Rutva - Task: S2-RUT-2 - Issue: #181
+ * Saved results: Nisarg - Task: S2-NIS-16 - Issue: #313
  * Requirement: FR-02
  */
 
-import type { AssessmentRead, ErrorResponse } from "../types";
+import type { AssessmentRead, AssessmentResult, ErrorResponse, RiskLevel } from "../types";
 import { AssessmentApiError } from "./assessmentApi";
+
+/** One history entry: assessment metadata plus its saved result's headline. */
+export type HistoryItem = AssessmentRead & {
+  /** Risk level of the finished assessment, if it finished. */
+  riskLevel?: RiskLevel | null;
+  /** Best-ranked possible condition in the saved result, if one was saved. */
+  topCondition?: string | null;
+};
+
+/** One past assessment with the full result saved when it finished. */
+export type HistoryDetail = HistoryItem & {
+  /** The result as shown at the time, or null if it was not saved. */
+  result?: AssessmentResult | null;
+};
 
 /** Paginated response containing assessment history summaries. */
 export interface HistoryListResponse {
   /** Assessments returned for the current page. */
-  items: AssessmentRead[];
+  items: HistoryItem[];
   /** Offset for the next page, or null when no more pages exist. */
   nextOffset: number | null;
 }
@@ -49,10 +63,7 @@ async function requestJson<T>(path: string): Promise<T> {
   if (!response.ok) {
     const payload: unknown = await response.json().catch(() => null);
 
-    throw new AssessmentApiError(
-      response.status,
-      isErrorResponse(payload) ? payload : undefined,
-    );
+    throw new AssessmentApiError(response.status, isErrorResponse(payload) ? payload : undefined);
   }
 
   return (await response.json()) as T;
@@ -65,10 +76,7 @@ async function requestJson<T>(path: string): Promise<T> {
  * @param offset - Zero-based pagination offset.
  * @returns Assessment summaries and the next page offset.
  */
-export function getAssessmentHistory(
-  limit = 20,
-  offset = 0,
-): Promise<HistoryListResponse> {
+export function getAssessmentHistory(limit = 20, offset = 0): Promise<HistoryListResponse> {
   if (!Number.isInteger(limit) || limit < 1 || limit > 100) {
     return Promise.reject(new RangeError("History limit must be between 1 and 100."));
   }
@@ -82,25 +90,19 @@ export function getAssessmentHistory(
     offset: String(offset),
   });
 
-  return requestJson<HistoryListResponse>(
-    `/api/v1/history?${params.toString()}`,
-  );
+  return requestJson<HistoryListResponse>(`/api/v1/history?${params.toString()}`);
 }
 
 /**
  * Retrieve one assessment from the authenticated user's history.
  *
  * @param assessmentId - Assessment identifier.
- * @returns Assessment summary.
+ * @returns Assessment summary with its saved result, if any.
  */
-export function getAssessmentHistoryDetail(
-  assessmentId: string,
-): Promise<AssessmentRead> {
+export function getAssessmentHistoryDetail(assessmentId: string): Promise<HistoryDetail> {
   if (!assessmentId.trim()) {
     return Promise.reject(new RangeError("Assessment ID is required."));
   }
 
-  return requestJson<AssessmentRead>(
-    `/api/v1/history/${encodeURIComponent(assessmentId)}`,
-  );
+  return requestJson<HistoryDetail>(`/api/v1/history/${encodeURIComponent(assessmentId)}`);
 }

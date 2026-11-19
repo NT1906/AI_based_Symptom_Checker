@@ -65,6 +65,7 @@ def _export_assessment(row: Assessment) -> JsonValue:
         "id": str(row.id),
         "state": row.state,
         "createdAt": row.created_at.isoformat(),
+        "result": row.result,
         "consent": {
             "policyVersion": row.consent.policy_version,
             "createdAt": row.consent.created_at.isoformat(),

@@ -1,6 +1,6 @@
 /**
  * @file Home-page panel for logged-in users: greeting and recent assessments.
- * Owner: Nisarg · Task: S2-NIS-15 · Issue: #312 · Requirements: FR-02
+ * Owner: Nisarg · Task: S2-NIS-15, S2-NIS-16 · Issues: #312, #313 · Requirements: FR-02
  *
  * Responsibilities:
  * - Greet the logged-in user and show their last few saved assessments.
@@ -10,6 +10,7 @@
 import { useQuery } from "@tanstack/react-query";
 import { Link } from "react-router-dom";
 import { getAssessmentHistory } from "../../services/historyApi";
+import { RiskBadge } from "../risk/RiskBadge";
 import { useAuthStore } from "../../stores/authStore";
 
 /** How many recent assessments the panel lists. */
@@ -119,10 +120,21 @@ export function WelcomeBackPanel(): React.JSX.Element | null {
                 to={`/history/${encodeURIComponent(item.id)}`}
                 className="flex items-center justify-between gap-3 py-2.5 text-sm transition hover:text-teal-800"
               >
-                <span className="text-slate-700">{formatDate(item.createdAt)}</span>
-                <span className="rounded-full bg-slate-100 px-2.5 py-0.5 text-xs font-semibold text-slate-700">
-                  {stateLabel(item.state)}
+                <span className="min-w-0">
+                  <span className="block text-slate-700">{formatDate(item.createdAt)}</span>
+                  {item.topCondition && (
+                    <span className="block truncate text-xs text-slate-500">
+                      Top possible condition: {item.topCondition}
+                    </span>
+                  )}
                 </span>
+                {item.riskLevel ? (
+                  <RiskBadge level={item.riskLevel} className="shrink-0" />
+                ) : (
+                  <span className="shrink-0 rounded-full bg-slate-100 px-2.5 py-0.5 text-xs font-semibold text-slate-700">
+                    {stateLabel(item.state)}
+                  </span>
+                )}
               </Link>
             </li>
           ))}

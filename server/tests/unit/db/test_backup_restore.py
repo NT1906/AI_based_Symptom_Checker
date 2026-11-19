@@ -18,6 +18,8 @@ from datetime import UTC, datetime, timedelta
 from pathlib import Path
 
 import pytest
+from alembic.config import Config
+from alembic.script import ScriptDirectory
 from sqlalchemy import delete, text
 from sqlalchemy.engine import Engine
 
@@ -44,6 +46,12 @@ from app.models.profile import Profile
 from app.models.symptom import Symptom
 from app.models.symptom_embedding import SymptomEmbedding
 from app.models.user import User
+
+# Why: compare with the newest migration instead of a fixed name, so adding a
+# migration does not break the drill (S2-NIS-16 added 0009).
+HEAD_REVISION = ScriptDirectory.from_config(
+    Config(str(Path(__file__).resolve().parents[3] / "alembic.ini"))
+).get_current_head()
 
 
 def _seed_all_nine_tables(engine: Engine) -> None:
@@ -134,7 +142,7 @@ def test_end_to_end_backup_wipe_restore_and_verify_drill(
     with engine.connect() as conn:
         before = export_logical_snapshot(conn, snapshot_file)
 
-    assert before.alembic_revision == "0008_query_perf_indexes"
+    assert before.alembic_revision == HEAD_REVISION
     for table_name in TABLE_ORDER:
         assert before.tables[table_name].row_count >= 1
 
@@ -159,7 +167,7 @@ def test_end_to_end_backup_wipe_restore_and_verify_drill(
     assert diff.is_match is True, f"Unexpected restore mismatches: {diff.mismatches}"
 
     report = format_integrity_report(after)
-    assert "0008_query_perf_indexes" in report
+    assert HEAD_REVISION in report
     assert "restore.drill@example.invalid" not in report
     assert "throbbing head pain" not in report
 

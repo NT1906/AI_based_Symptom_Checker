@@ -2,6 +2,7 @@
 /**
  * @file Authenticated assessment history list and detail page.
  * Owner: Rutva - Task: S2-RUT-2 - Issue: #181
+ * Saved results: Nisarg - Task: S2-NIS-16 - Issue: #313
  * Requirement: FR-02
  */
 
@@ -9,6 +10,9 @@ import { useEffect, useState } from "react";
 import { Link, useNavigate, useParams } from "react-router-dom";
 import { useQuery } from "@tanstack/react-query";
 import { AppLayout } from "../components/layout/AppLayout";
+import { RiskBadge } from "../components/risk/RiskBadge";
+import { toResultData } from "../services/assessmentMapping";
+import { ResultPage } from "./ResultPage";
 import { useAuthStore } from "../stores/authStore";
 import {
   getAssessmentHistory,
@@ -131,6 +135,26 @@ export default function HistoryPage(): React.JSX.Element {
     );
   }
 
+  if (assessmentId && detailQuery.data?.result) {
+    const mapped = toResultData(detailQuery.data.result);
+    return (
+      <ResultPage
+        result={mapped.data}
+        emergencyNumber={mapped.emergencyNumber}
+        title="Past Assessment Result"
+        subtitle={`Saved result from ${formatDate(detailQuery.data.createdAt)}`}
+        headerActions={
+          <Link
+            to="/history"
+            className="inline-flex min-h-[44px] items-center rounded-lg px-3 py-2 text-xs font-semibold text-teal-800 hover:bg-teal-50 sm:text-sm"
+          >
+            ← Back to history
+          </Link>
+        }
+      />
+    );
+  }
+
   if (assessmentId) {
     return (
       <AppLayout title="Assessment Details" showStartOver={false}>
@@ -195,8 +219,9 @@ export default function HistoryPage(): React.JSX.Element {
                 </div>
               </dl>
               <p className="mt-5 text-sm text-slate-600">
-                This page displays assessment metadata currently provided by
-                the history service. It does not provide a medical diagnosis.
+                The full result was not saved for this assessment, for example
+                because it did not finish or finished before results were kept.
+                This page does not provide a medical diagnosis.
               </p>
             </article>
           )}
@@ -211,7 +236,7 @@ export default function HistoryPage(): React.JSX.Element {
         <div>
           <h2 className="text-2xl font-bold tracking-tight">History</h2>
           <p className="mt-1 text-sm text-slate-600">
-            Review the status and dates of your previous assessments.
+            Review the results and dates of your previous assessments.
           </p>
         </div>
 
@@ -263,19 +288,25 @@ export default function HistoryPage(): React.JSX.Element {
                   >
                     <div className="flex flex-col justify-between gap-3 sm:flex-row sm:items-center">
                       <div className="min-w-0">
-                        <p className="break-all font-semibold text-slate-900">
-                          Assessment {assessment.id}
-                        </p>
-                        <p className="mt-1 text-sm text-slate-500">
+                        <p className="font-semibold text-slate-900">
                           {formatDate(assessment.createdAt)}
                         </p>
+                        <p className="mt-1 text-sm text-slate-600">
+                          {assessment.topCondition
+                            ? `Top possible condition: ${assessment.topCondition}`
+                            : "No saved result"}
+                        </p>
                       </div>
-                      <span className="w-fit rounded-full bg-teal-50 px-3 py-1 text-sm font-semibold text-teal-800">
-                        {formatState(assessment.state)}
-                      </span>
+                      {assessment.riskLevel ? (
+                        <RiskBadge level={assessment.riskLevel} className="w-fit" />
+                      ) : (
+                        <span className="w-fit rounded-full bg-teal-50 px-3 py-1 text-sm font-semibold text-teal-800">
+                          {formatState(assessment.state)}
+                        </span>
+                      )}
                     </div>
                     <span className="mt-3 inline-block text-sm font-semibold text-teal-800">
-                      View details
+                      {assessment.riskLevel ? "View result" : "View details"}
                     </span>
                   </Link>
                 </li>

@@ -12,7 +12,7 @@
  * - FR-08: External map search link for recommended medical specialty (no doctor data stored).
  * - NFR-06: WCAG 2.1 AA accessible landmarks, contrast, and focus states.
  *
- * Owner: Mann (Frontend + Deployment Â· Testing) Â· Task: S1-MAN-3, S2-NIS-13 Â· Requirements: DR-01, DR-02, FR-06, FR-15, FR-22, FR-23, FR-24, FR-08, NFR-06
+ * Owner: Mann (Frontend + Deployment Â· Testing) Â· Task: S1-MAN-3, S2-NIS-13, S2-NIS-16 Â· Requirements: DR-01, DR-02, FR-06, FR-15, FR-22, FR-23, FR-24, FR-08, NFR-06
  */
 
 import React from "react";
@@ -40,6 +40,10 @@ export interface ResultPageProps {
   title?: string;
   /** Optional callback invoked when a candidate condition item is selected. */
   onSelectCondition?: (condition: ConditionItem) => void;
+  /** Optional subtitle override, e.g. when a past result is shown from history. */
+  subtitle?: string;
+  /** Optional extra header controls, e.g. a link back to history. */
+  headerActions?: React.ReactNode;
 }
 
 /** Standard default result dataset used when no external result is injected. */
@@ -112,6 +116,8 @@ export function ResultPage({
   emergencyNumber = "112",
   title = "Assessment Result",
   onSelectCondition,
+  subtitle = "Clinical Triage & Candidate Conditions Summary",
+  headerActions,
 }: ResultPageProps): React.ReactElement {
   const riskLevel: RiskLevel = result.riskLevel || "CONSULT_DOCTOR";
   const riskConfig = getRiskConfig(riskLevel);
@@ -131,8 +137,9 @@ export function ResultPage({
   return (
     <AppLayout
       title={title}
-      subtitle="Clinical Triage & Candidate Conditions Summary"
+      subtitle={subtitle}
       emergencyNumber={emergencyNumber}
+      headerActions={headerActions}
       showStartOver={Boolean(onStartNewAssessment)}
       onStartOver={handleStartOver}
     >

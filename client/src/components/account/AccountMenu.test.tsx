@@ -75,8 +75,14 @@ describe("AccountMenu", () => {
     const menu = screen.getByRole("menu", { name: "Account" });
     expect(menu).toHaveTextContent("Signed in as");
     expect(menu).toHaveTextContent("asha@example.com");
-    expect(screen.getByRole("menuitem", { name: /my history/i })).toHaveAttribute("href", "/history");
-    expect(screen.getByRole("menuitem", { name: /my profile/i })).toHaveAttribute("href", "/profile");
+    expect(screen.getByRole("menuitem", { name: /my history/i })).toHaveAttribute(
+      "href",
+      "/history",
+    );
+    expect(screen.getByRole("menuitem", { name: /my profile/i })).toHaveAttribute(
+      "href",
+      "/profile",
+    );
     expect(screen.getByRole("menuitem", { name: /privacy & data/i })).toHaveAttribute(
       "href",
       "/privacy",

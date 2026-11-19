@@ -14,7 +14,8 @@ Responsibilities:
       assessments never fail because of the optional photo step (S2-NIS-14).
 
 Owner: Nisarg (integration), Darshil (persistence)
-Task: S2-NIS-13, S2-DAR-11 · Requirements: FR-01, FR-03, FR-06, FR-20, DR-02
+Task: S2-NIS-13, S2-DAR-11, S2-NIS-16
+Requirements: FR-01, FR-02, FR-03, FR-06, FR-20, DR-02
 """
 
 import asyncio
@@ -36,6 +37,7 @@ from app.schemas.assessment import (
 )
 from app.schemas.enums import AssessmentState
 from app.schemas.message import MessageRead
+from app.models.assessment import Assessment
 from app.schemas.result import AssessmentResult
 from app.schemas.symptom import SymptomRead, SymptomUpdate
 from app.services.ai.gateway import AiGateway
@@ -226,6 +228,7 @@ class OrchestratorAssessmentService:
                         assessment_id, db_session=db_session
                     )
                 self._results[assessment_id] = result
+                self._save_result_for_account(assessment_id, result)
                 logger.info(
                     "assessment_analyzed",
                     assessment_id=str(assessment_id),
@@ -236,6 +239,30 @@ class OrchestratorAssessmentService:
             state=AssessmentState.COMPLETED,
             result_available=True,
         )
+
+    def _save_result_for_account(
+        self, assessment_id: UUID, result: AssessmentResult
+    ) -> None:
+        """Keep the result on an account-owned assessment so history can show it.
+
+        Guest assessments are not saved (data minimisation, DR-06). This runs in
+        its own session after the analysis committed, so a failure here is
+        logged and never affects the result the user is shown.
+        """
+        try:
+            with self._db_session() as db_session:
+                if db_session is None:
+                    return
+                row = db_session.get(Assessment, assessment_id)
+                if row is None or row.user_id is None:
+                    return
+                row.result = result.model_dump(mode="json", by_alias=True)
+        except Exception as exc:  # noqa: BLE001
+            logger.warning(
+                "assessment_result_save_failed",
+                assessment_id=str(assessment_id),
+                error=type(exc).__name__,
+            )
 
     async def generate_result(self, assessment_id: UUID) -> AssessmentResult:
         """The result built by ``analyze_assessment``.

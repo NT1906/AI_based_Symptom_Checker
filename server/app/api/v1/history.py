@@ -1,6 +1,7 @@
 """Expose the history routes with injected authentication and persistence.
 
 Owner: Harsh · Task: S2-HAR-1 · Issue: #172 · Requirements: FR-02
+Saved results in history: Nisarg · Task: S2-NIS-16 · Issue: #313
 """
 
 from collections.abc import Callable
@@ -11,11 +12,11 @@ from fastapi import APIRouter, Depends, Path, Query, Response, status
 
 from app.api.deps import CurrentUserDep, SessionFactoryDep
 from app.core.errors import ErrorResponse
-from app.schemas.assessment import AssessmentRead
 from app.services.privacy.history import (
     DEFAULT_PAGE_SIZE,
     MAX_PAGE_OFFSET,
     MAX_PAGE_SIZE,
+    HistoryDetail,
     HistoryPage,
     HistoryService,
 )
@@ -136,16 +137,17 @@ def create_history_router(
 
     @router.get(
         "/{assessment_id}",
-        response_model=AssessmentRead,
+        response_model=HistoryDetail,
         status_code=status.HTTP_200_OK,
         summary="Read a past assessment",
         description=(
-            "Return stored metadata and lifecycle state for one past assessment "
-            "session owned by the authenticated account."
+            "Return stored metadata, lifecycle state and, when it was saved, the "
+            "finished result for one past assessment owned by the authenticated "
+            "account."
         ),
         responses={
             status.HTTP_200_OK: {
-                "model": AssessmentRead,
+                "model": HistoryDetail,
                 "description": "Historical assessment details successfully retrieved.",
                 "content": {
                     "application/json": {
@@ -204,8 +206,8 @@ def create_history_router(
         response: Response,
         user_id: Annotated[UUID, Depends(get_user_id)],
         service: Annotated[HistoryService, Depends(get_service)],
-    ) -> AssessmentRead:
-        """Return stored metadata for one assessment owned by the current account."""
+    ) -> HistoryDetail:
+        """Return one assessment owned by the current account, with its result."""
         response.headers["Cache-Control"] = "no-store"
         return service.get_detail(user_id, assessment_id)
 
