@@ -380,13 +380,23 @@ async def test_result_conditions_use_categorical_confidence_not_percentages(
 @pytest.mark.anyio
 async def test_urgent_result_exposes_emergency_number_112(
     async_client: AsyncClient,
+    assessment_create_payload: dict[str, Any],
 ) -> None:
-    """URGENT result must include emergencyNumber='112' (FR-15, AI_RULES §2 rule 5)."""
-    from app.api.v1._assessment_stubs import STUB_URGENT_ASSESSMENT_ID
+    """URGENT result must include emergencyNumber='112' (FR-15, AI_RULES §2 rule 5).
 
-    resp = await async_client.get(
-        f"/api/v1/assessments/{STUB_URGENT_ASSESSMENT_ID}/result"
+    Runs the real engine since S2-NIS-13: a red-flag message must end URGENT.
+    """
+    create = await async_client.post(
+        "/api/v1/assessments", json=assessment_create_payload
     )
+    aid = create.json()["id"]
+    await async_client.post(
+        f"/api/v1/assessments/{aid}/messages",
+        json={"content": "I have severe chest pain and I can't breathe properly"},
+    )
+    await async_client.post(f"/api/v1/assessments/{aid}/analyze")
+
+    resp = await async_client.get(f"/api/v1/assessments/{aid}/result")
     assert resp.status_code == status.HTTP_200_OK
     data = resp.json()
     assert data["riskLevel"] == "URGENT"

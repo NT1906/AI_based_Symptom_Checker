@@ -29,8 +29,89 @@ from app.core.logging import configure_logging, get_logger
 from app.core.request_id import RequestIdMiddleware
 from app.core.upload import configure_multipart_spool
 from app.db.session import create_db_engine, create_session_factory
+from app.middleware.cors import (
+    ALLOWED_HEADERS,
+    ALLOWED_METHODS,
+    EXPOSED_HEADERS,
+    PREFLIGHT_MAX_AGE_SECONDS,
+    CorsPolicy,
+)
+from app.middleware.rate_limits import RateLimitPolicy, configure_rate_limits
+from app.middleware.scoped_limits import ScopedRateLimitMiddleware
+from app.middleware.security_headers import SecurityHeadersMiddleware
+from starlette.middleware.cors import CORSMiddleware
 
 logger = get_logger(__name__)
+
+OPENAPI_TAGS = [
+    {
+        "name": "health",
+        "description": (
+            "Liveness and readiness probes indicating API service health and version."
+        ),
+    },
+    {
+        "name": "auth",
+        "description": (
+            "Authentication, registration, session management with Argon2id hashing, "
+            "HttpOnly JWT cookie rotation, and anti-CSRF token distribution."
+        ),
+    },
+    {
+        "name": "assessments",
+        "description": (
+            "Conversational symptom triage sessions, dialogue message processing, "
+            "canonical symptom recognition, in-memory photo sanitization, and "
+            "deterministic clinical risk evaluation with non-diagnostic guidance."
+        ),
+    },
+    {
+        "name": "consents",
+        "description": (
+            "Explicit versioned consent tracking adhering to DPDP Act "
+            "and GDPR data protection regulations."
+        ),
+    },
+    {
+        "name": "history",
+        "description": (
+            "Authenticated retrieval of past completed symptom assessment summaries "
+            "and dialogue records."
+        ),
+    },
+    {
+        "name": "profile",
+        "description": (
+            "Optional clinical context profile management (coarse age band, "
+            "biological sex, chronic conditions) for personalized triage guidance "
+            "with zero-cache privacy controls."
+        ),
+    },
+    {
+        "name": "privacy",
+        "description": (
+            "Data subject rights: account data export and privacy-compliant "
+            "data erasure."
+        ),
+    },
+]
+
+API_DESCRIPTION = (
+    "## AI-Based Symptom Checker API\n\n"
+    "An informational triage aid backend providing structured conversational "
+    "symptom collection, clinical condition prediction, and deterministic risk "
+    "tier evaluation.\n\n"
+    "### Medical Safety & Regulatory Notice (AI_RULES.md §2, DR-01, DR-02)\n"
+    "- **Non-Diagnostic Aid:** This service is strictly an informational tool "
+    "and does **not** provide medical diagnoses or prescriptions.\n"
+    "- **Emergency Invariant:** Any detected red-flag symptom triggers an "
+    "immediate `URGENT` risk tier and provides emergency number guidance (112).\n"
+    "- **Deterministic Safety:** Clinical risk tiers (`SELF_CARE`, `CONSULT_DOCTOR`, "
+    "`URGENT`) are governed by deterministic rules. Uncertainty always escalates "
+    "risk, never lowers it.\n"
+    "- **Privacy & Zero-PII:** Symptom photos are processed strictly in volatile "
+    "memory and never stored. User message text is excluded from structured logs."
+)
 
 
 @asynccontextmanager
@@ -79,18 +160,50 @@ def create_app() -> FastAPI:
     # symptom image uploads up to 5 MB remain strictly in volatile memory (DR-06).
     configure_multipart_spool()
 
+    docs_url = None if settings.app_env == "production" else "/docs"
+    redoc_url = None if settings.app_env == "production" else "/redoc"
+
     app = FastAPI(
         title="AI-Based Symptom Checker API",
-        description=(
-            "Informational triage aid backend providing symptom collection, "
-            "prediction orchestration, and risk engine evaluation."
-        ),
+        description=API_DESCRIPTION,
         version=settings.app_version,
+        openapi_tags=OPENAPI_TAGS,
+        contact={
+            "name": "AI-Based Symptom Checker Team",
+            "url": "https://github.com/NT1906/AI_based_Symptom_Checker",
+        },
+        license_info={
+            "name": "MIT",
+            "identifier": "MIT",
+        },
         lifespan=lifespan,
+        docs_url=docs_url,
+        redoc_url=redoc_url,
     )
 
     register_error_handlers(app)
+    controls = configure_rate_limits(app, RateLimitPolicy())
+    app.add_middleware(ScopedRateLimitMiddleware, controls=controls)
     app.add_middleware(RequestIdMiddleware)
+    app.add_middleware(
+        SecurityHeadersMiddleware,
+        enable_hsts=settings.app_env in ("staging", "production"),
+    )
+
+    cors_policy = CorsPolicy(
+        allowed_origins=settings.cors_allowed_origins,
+        allow_credentials=settings.cors_allow_credentials,
+    )
+    if cors_policy.allowed_origins:
+        app.add_middleware(
+            CORSMiddleware,
+            allow_origins=list(cors_policy.allowed_origins),
+            allow_credentials=cors_policy.allow_credentials,
+            allow_methods=list(ALLOWED_METHODS),
+            allow_headers=list(ALLOWED_HEADERS),
+            expose_headers=list(EXPOSED_HEADERS),
+            max_age=PREFLIGHT_MAX_AGE_SECONDS,
+        )
 
     app.include_router(health.router, prefix="/api/v1")
     app.include_router(auth.router, prefix="/api/v1")

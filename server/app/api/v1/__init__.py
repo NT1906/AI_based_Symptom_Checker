@@ -6,6 +6,7 @@ from app.api.v1 import (
     consents,
     health,
     history,
+    privacy,
     profile,
 )
 
@@ -15,5 +16,6 @@ __all__ = [
     "consents",
     "health",
     "history",
+    "privacy",
     "profile",
 ]

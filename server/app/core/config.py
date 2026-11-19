@@ -11,6 +11,7 @@ Requirements: FR-01, NFR-03, NFR-08
 from functools import lru_cache
 from typing import Literal
 
+from pydantic import field_validator
 from pydantic_settings import BaseSettings, SettingsConfigDict
 
 
@@ -62,6 +63,16 @@ class Settings(BaseSettings):
     cv_provider: str = "mock"
     cv_model_repo: str = "NT1906/skin-cv"
     cv_model_revision: str = "main"
+    cors_allowed_origins: tuple[str, ...] = ()
+    cors_allow_credentials: bool = True
+
+    @field_validator("jwt_secret")
+    @classmethod
+    def validate_jwt_secret_strength(cls, v: str) -> str:
+        """Enforce minimum secret length for cryptographic security (OWASP A02)."""
+        if len(v.strip()) < 32:
+            raise ValueError("jwt_secret must be at least 32 characters long")
+        return v
 
 
 @lru_cache

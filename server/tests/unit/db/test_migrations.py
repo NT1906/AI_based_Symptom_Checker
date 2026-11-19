@@ -1,8 +1,8 @@
 """Migration fidelity, offline PostgreSQL SQL, and local settings tests.
 
 Owner: Harsh, Kavya, Nishith
-Tasks: S0-HAR-1, S1-KAV-4, S2-NIT-3
-Requirements: FR-01, NFR-10, idea § 10
+Tasks: S0-HAR-1, S1-KAV-4, S2-NIT-3, S2-NIT-4
+Requirements: FR-01, FR-03, FR-18, NFR-01, NFR-10, idea § 10
 """
 
 from io import StringIO
@@ -39,6 +39,7 @@ def test_migration_matches_models_and_repeated_upgrade(engine: Engine) -> None:
             "profiles",
             "symptoms",
             "audit_logs",
+            "symptom_embeddings",
             "alembic_version",
         }
 

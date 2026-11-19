@@ -12,12 +12,14 @@
  * - FR-08: External map search link for recommended medical specialty (no doctor data stored).
  * - NFR-06: WCAG 2.1 AA accessible landmarks, contrast, and focus states.
  *
- * Owner: Mann (Frontend + Deployment · Testing) · Task: S1-MAN-3 · Requirements: DR-01, DR-02, FR-06, FR-15, FR-22, FR-23, FR-24, FR-08, NFR-06
+ * Owner: Mann (Frontend + Deployment · Testing) · Task: S1-MAN-3, S2-NIS-13 · Requirements: DR-01, DR-02, FR-06, FR-15, FR-22, FR-23, FR-24, FR-08, NFR-06
  */
 
 import React from "react";
 import { AppLayout } from "../components/layout/AppLayout";
 import { ConditionList } from "../components/result/ConditionList";
+import { DoctorReferral } from "../components/result/DoctorReferral";
+import { WhyThisResultPanel } from "../components/result/WhyThisResultPanel";
 import { RiskBadge, getRiskConfig } from "../components/result/RiskBadge";
 import type {
   AssessmentResultData,
@@ -117,13 +119,6 @@ export function ResultPage({
   const conditions = result.conditions || [];
   const guidance = result.guidance;
   const referral = result.referral;
-
-  // External map query link ensuring zero doctor data is stored locally (Mann's module boundary)
-  const mapSearchQuery =
-    referral?.mapQuery || `${referral?.specialty || "Doctor"} near me`;
-  const mapSearchUrl = `https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(
-    mapSearchQuery,
-  )}`;
 
   const handleStartOver = () => {
     if (onStartNewAssessment) {
@@ -229,6 +224,11 @@ export function ResultPage({
             onSelectCondition={onSelectCondition}
             emptyMessage="No matching conditions identified for the provided symptoms. Please consult a qualified physician for a clinical evaluation."
           />
+
+          {/* Explanation panel for contributing factors (FR-24) */}
+          {conditions.length > 0 && (
+            <WhyThisResultPanel conditions={conditions} />
+          )}
         </section>
 
         {/* 3. Clinical Guidance Slot (Self-Care & Warning Signs) */}
@@ -257,7 +257,7 @@ export function ResultPage({
                 <div className="space-y-2.5">
                   <h3 className="flex items-center gap-1.5 text-sm font-bold text-slate-900 dark:text-slate-100">
                     <span aria-hidden="true">💡</span>
-                    <span>General Self-Care Steps</span>
+                    <span>{guidance.stepsHeading ?? "General Self-Care Steps"}</span>
                   </h3>
                   <ul className="space-y-2 text-xs leading-relaxed text-slate-700 sm:text-sm dark:text-slate-300">
                     {guidance.selfCareAdvice.map((item, idx) => (
@@ -309,48 +309,29 @@ export function ResultPage({
 
         {/* 4. Specialist Referral Slot (FR-08: External Map Search) */}
         {referral && (
-          <section
-            aria-labelledby="referral-section-heading"
-            className="rounded-2xl border border-slate-200 bg-white p-5 shadow-xs sm:p-6 dark:border-slate-800 dark:bg-slate-900"
-          >
-            <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
-              <div className="space-y-1">
-                <h2
-                  id="referral-section-heading"
-                  className="text-lg font-bold tracking-tight text-slate-900 sm:text-xl dark:text-slate-100"
-                >
-                  Recommended Specialist Evaluation
-                </h2>
-                <p className="text-xs text-slate-600 sm:text-sm dark:text-slate-400">
-                  Based on candidate conditions, clinical assessment suggests consulting a{" "}
-                  <strong className="text-teal-700 dark:text-teal-400">
-                    {referral.specialty}
-                  </strong>
-                  .
-                </p>
-                {referral.secondarySpecialties && referral.secondarySpecialties.length > 0 && (
-                  <p className="text-xs text-slate-500 dark:text-slate-400">
-                    Other relevant specialties: {referral.secondarySpecialties.join(", ")}
-                  </p>
-                )}
-              </div>
+          <DoctorReferral
+            referral={referral}
+            title="Recommended Specialist Evaluation"
+          />
+        )}
 
-              <div className="flex flex-col gap-1 sm:items-end">
-                <a
-                  href={mapSearchUrl}
-                  target="_blank"
-                  rel="noopener noreferrer"
-                  className="inline-flex min-h-[44px] items-center justify-center gap-2 rounded-xl bg-teal-600 px-4 py-2.5 text-sm font-semibold text-white shadow-xs transition hover:bg-teal-700 focus:outline-none focus:ring-4 focus:ring-teal-500/40"
-                  aria-label={`Find a ${referral.specialty} near you on external map`}
-                >
-                  <span aria-hidden="true">🗺️</span>
-                  <span>Find a {referral.specialty} Near Me</span>
-                </a>
-                <span className="text-[11px] text-slate-400">
-                  Opens external map search. No doctor or personal data is stored.
-                </span>
-              </div>
-            </div>
+        {/* 4b. Limits of this result, as stated by the server (S2-NIS-13) */}
+        {result.limitations && result.limitations.length > 0 && (
+          <section
+            aria-labelledby="limitations-heading"
+            className="rounded-2xl border border-slate-200 bg-white p-5 text-sm text-slate-700 sm:p-6 dark:border-slate-800 dark:bg-slate-900 dark:text-slate-300"
+          >
+            <h2
+              id="limitations-heading"
+              className="text-base font-bold text-slate-900 dark:text-slate-100"
+            >
+              About this result
+            </h2>
+            <ul className="mt-2 list-disc space-y-1 pl-5">
+              {result.limitations.map((item) => (
+                <li key={item}>{item}</li>
+              ))}
+            </ul>
           </section>
         )}
 

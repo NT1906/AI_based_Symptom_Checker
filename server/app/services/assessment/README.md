@@ -1,6 +1,6 @@
 # Assessment Service Module
 
-**Owner:** Darshil (Assessment Orchestration) · **Task:** S1-DAR-2, S1-DAR-3, S1-DAR-4, S2-DAR-1, S2-DAR-2, S2-DAR-3, S2-DAR-4, S2-DAR-6, S2-DAR-7, S2-DAR-8 · **Requirements:** idea §3, idea §10, FR-02, FR-03, FR-04, FR-05, FR-06, FR-07, FR-16, FR-17, FR-19, FR-20, FR-21, FR-25, DR-05, NFR-01, NFR-03, NFR-05
+**Owner:** Darshil (Assessment Orchestration) · **Task:** S1-DAR-2, S1-DAR-3, S1-DAR-4, S2-DAR-1, S2-DAR-2, S2-DAR-3, S2-DAR-4, S2-DAR-6, S2-DAR-7, S2-DAR-8, S2-DAR-9, S2-DAR-10, S2-DAR-11 · **Requirements:** idea §3, idea §10, FR-01, FR-02, FR-03, FR-04, FR-05, FR-06, FR-07, FR-15, FR-16, FR-17, FR-19, FR-20, FR-21, FR-25, DR-02, DR-05, NFR-01, NFR-03, NFR-05, NFR-10
 
 The Assessment Service orchestrates the conversational symptom assessment lifecycle. It provides:
 1. **Assessment State Machine**: Strictly governs valid states and enforces medical-safety guards throughout the user experience.
@@ -11,6 +11,9 @@ The Assessment Service orchestrates the conversational symptom assessment lifecy
 6. **Guest Assessment Claiming**: Allows anonymous guests to transfer assessment history into a registered user account upon sign-up (`claim_assessment()`, `claim_guest_session()`) per idea §10.
 7. **Idempotent Message Processing & Transactions**: Eliminates double answers on client retry, handles rapid concurrent submissions via per-session async locks, and enforces atomic transactions across database and in-memory session changes (NFR-05).
 8. **Performance SLA & Result Latency Budget**: Guarantees that `generate_result()` computes triage classification within `RESULT_DEADLINE_SECONDS = 5.0` s (p95 latency ≤ 5 s on staging per NFR-01). Structured logs emit elapsed time on completion and warn on budget overruns.
+9. **Canonical Symptom ID Mapping (S2-DAR-9)**: Injects `SymptomResolver` to map free-text extracted symptom names (e.g. "Chest pain", "tummy ache", "seene me dard") to canonical symptom IDs (`chest_pain`, `abdominal_pain`) before reaching the condition predictor and deterministic risk engine (DR-02, FR-03, FR-06). Unresolved names remain in session for user confirmation but are safely excluded from risk evaluation.
+10. **Red Flag Skip-Clarification Fast Path (S2-DAR-10)**: Evaluates mapped symptoms with deterministic `find_red_flags()` directly after intake. When any red flag is detected, immediately skips further clarification turns and transitions to `CONFIRMING` with fixed safe 112 emergency notice (`RED_FLAG_EMERGENCY_PROMPT`), allowing rapid confirmation and immediate urgent triage (FR-06, FR-15, DR-02, AI_RULES.md §2.5).
+11. **Database Persistence & User History Linkage (S2-DAR-11)**: Bridges in-memory assessment chat sessions to the relational database. Coordinates database sessions across turns via `OrchestratorAssessmentService`, records chat turns atomically, links assessments to the authenticated user token (protecting against body mass assignment), and surfaces final risk levels from audit logs so the History view reliably renders completed records (FR-01, FR-20, DR-02, NFR-10).
 
 ---
 
@@ -228,7 +231,79 @@ Per **NFR-01** (Performance & Responsiveness), the clinical assessment result ge
 
 ---
 
-## 13. Running Unit Tests
+## 13. Canonical Symptom ID Mapping (S2-DAR-9)
+
+Per **DR-02**, **FR-03**, and **FR-06**, free-text symptom names extracted by the AI or visual findings must be mapped to canonical symptom IDs before reaching the condition predictor and the deterministic risk engine:
+
+- **The Safety Gap**: LLM extractors may return colloquial, capitalized, or hyphenated variants (e.g. `"Chest pain"` or `"chest-pain"` instead of canonical `"chest_pain"`). Unmapped names prevent deterministic red-flag rules from firing, creating a clinical safety risk.
+- **SymptomResolver Integration**: The orchestrator injects `SymptomResolver` (S2-NIS-7):
+  - Normalizes symptom names via exact dictionary lookup (display names, lay terms, transliterations).
+  - Matches approximate terms via pgvector semantic embeddings (`MatchMethod.SEMANTIC`).
+  - Degrades gracefully to exact-only if embedding or database components are unavailable.
+- **Intake & Execution Pipeline**:
+  - `process_message()`: Resolves extracted AI symptoms before merging into the assessment session.
+  - `merge_image_findings()`: Resolves visual finding symptom names to canonical IDs.
+  - `generate_result()`: Maps all confirmed symptoms to canonical IDs before evaluating condition predictions and risk engine red flags.
+- **Unresolved Symptom Policy**:
+  - Symptoms that do not match canonical vocabulary remain in `session.symptoms` so the patient still sees their reported symptoms on the confirmation screen.
+  - Unresolved symptoms are excluded from predictor and risk engine inputs to avoid misleading scoring.
+  - Unresolved symptoms emit a privacy-compliant telemetry log: `logger.info("symptom_unresolved", name_length=len(name))` (recording name length only, never the raw text).
+- **Test Coverage**: Verified in `tests/unit/assessment/test_canonical_symptom_mapping.py` covering exact matches, colloquial lay terms, Hindi phrases, semantic embeddings, and privacy logging.
+
+---
+
+## 14. Red Flag Skip-Clarification Fast Path (S2-DAR-10)
+
+Per **FR-06**, **FR-15**, **DR-02**, and **AI_RULES.md §2.5**:
+When an intake message reports severe red-flag symptoms (such as crushing chest pain or severe shortness of breath), delaying triage with clarifying questions poses an acute medical safety risk:
+
+- **Clinical Rationale**:
+  - Asking follow-up clarification questions (e.g. "Did the pain build up gradually?") when red flags are already present stalls emergency care.
+  - In a medical emergency, the user must be directed to call **112** immediately while allowing swift confirmation so the final urgent triage screen can be presented at once.
+- **Deterministic Red Flag Detection**:
+  - In `AssessmentOrchestrator.process_message()`, mapped symptoms are immediately checked via `find_red_flags()` from `app.services.prediction.risk_engine`.
+  - The check is 100% deterministic with zero LLM involvement.
+  - If any red flag triggers, clarification is completely bypassed and state transitions straight to `CONFIRMING`.
+- **Fixed Safety Text**:
+  - The orchestrator issues `RED_FLAG_EMERGENCY_PROMPT`:
+    `"Some of what you describe can be serious. If you think this is an emergency, call 112 now. Please confirm your symptoms so we can show your result."`
+  - Assistant message type is set to `MessageType.CONFIRMATION` and result type is `"CONFIRMATION"`.
+- **Fault-Tolerant Fallback**:
+  - If `find_red_flags()` raises an exception or fails, the orchestrator logs a structured warning (`red_flag_check_failed`) and safely falls back to standard clarification logic without crashing.
+- **Test Coverage**:
+  - Verified in `tests/unit/assessment/test_red_flag_skip_clarification.py` covering first-message red flags, non-red-flag clarification paths, red flags introduced during clarification turns, and fault-tolerant fallback behavior.
+
+---
+
+## 15. Database Persistence & User History Linkage (S2-DAR-11)
+
+Per **FR-01**, **FR-20**, **DR-02**, and **NFR-10**:
+Chat assessments conducted through `OrchestratorAssessmentService` and `AssessmentOrchestrator` are automatically persisted to the relational database and linked to the authenticated user so that past assessments render properly on the user history dashboard (`GET /api/v1/history`).
+
+- **Architecture & Lifecycle**:
+  - `OrchestratorAssessmentService` exposes a `session_factory` and a context manager `_db_session()` that yields a database session per turn.
+  - In each turn (`create_assessment`, `process_message`, `confirm_symptoms`, `analyze_assessment`), `db_session` is forwarded to `AssessmentOrchestrator`.
+  - The orchestrator persists the `DbAssessment`, `DbAssessmentMessage`, and `DbAssessmentSymptom` records using existing repositories (`SqlAlchemyAssessmentRepository`, `SqlAlchemyMessageRepository`, `SqlAlchemySymptomRepository`).
+- **User ID Linking & Mass-Assignment Protection**:
+  - In `POST /api/v1/assessments`, `user_id` is derived strictly from the verified JWT access token (`user: OptionalUserDep = None`).
+  - If authenticated, `user_id = user.id`. For anonymous guests, `user_id = None`.
+  - Any `userId` provided in the JSON request body is ignored and never bound, preventing privilege escalation and mass-assignment vulnerabilities.
+- **Risk Level & Audit Log History Projection**:
+  - Because `DbAssessment` table stores the core assessment record and `AuditLog` stores clinical analysis decisions (`risk_level`), `AssessmentRead` in `server/app/schemas/assessment.py` dynamically resolves `risk_level` from the associated `AuditLog` via `@model_validator(mode="before")`.
+  - When history endpoints serialize `DbAssessment` instances, `riskLevel` is cleanly populated without altering the base table schema or breaking repository contracts.
+- **Fault-Tolerant DB Resilience**:
+  - Database persistence runs inside a nested savepoint / try-catch block (`_persist_and_cache`).
+  - If a database failure occurs during chat intake, the transaction rolls back gracefully and emits a structured warning (`assessment_db_persist_failed`). The in-memory chat session continues uninterrupted, ensuring the user experience never degrades.
+- **Test Coverage**:
+  - Verified in `tests/unit/assessment/test_chat_persistence.py` covering:
+    - Logged-in assessment persistence and appearance in history with populated risk level.
+    - Guest assessment isolation (guest assessments do not leak into user history).
+    - Mass-assignment rejection when `userId` is passed in the request body.
+    - Non-crashing in-memory chat resilience when the database raises operational errors.
+
+---
+
+## 16. Running Unit Tests
 
 From `server/`:
 

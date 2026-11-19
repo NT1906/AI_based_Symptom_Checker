@@ -1,0 +1,67 @@
+
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <meta name="theme-color" content="#0f766e" />
+  <title>You're Offline | Symptom Checker</title>
+  <style>
+    * { box-sizing: border-box; }
+    body {
+      margin: 0;
+      min-height: 100vh;
+      display: grid;
+      place-items: center;
+      padding: 24px;
+      background: #f8fafc;
+      color: #0f172a;
+      font-family: Arial, sans-serif;
+    }
+    main {
+      width: 100%;
+      max-width: 460px;
+      padding: 36px 28px;
+      text-align: center;
+      background: white;
+      border: 1px solid #e2e8f0;
+      border-radius: 20px;
+      box-shadow: 0 10px 30px rgba(15, 23, 42, 0.06);
+    }
+    h1 { margin: 0 0 12px; font-size: 26px; }
+    p { color: #475569; line-height: 1.65; }
+    a {
+      display: inline-block;
+      margin-top: 18px;
+      padding: 12px 22px;
+      color: white;
+      background: #0f766e;
+      border-radius: 10px;
+      text-decoration: none;
+      font-weight: 600;
+    }
+    .notice {
+      margin-top: 24px;
+      padding: 12px;
+      background: #fef2f2;
+      border-radius: 10px;
+      color: #991b1b;
+      font-size: 14px;
+    }
+  </style>
+</head>
+<body>
+  <main>
+    <h1>You're offline</h1>
+    <p>
+      We couldn't connect to the Symptom Checker.
+      Please check your internet connection and try again.
+    </p>
+    <a href="/">Try again</a>
+    <p class="notice">
+      If you are experiencing a medical emergency, contact emergency
+      services immediately. In India, call 112.
+    </p>
+  </main>
+</body>
+</html>
