@@ -15,6 +15,7 @@ from uuid import uuid4
 import pytest
 from sqlalchemy import Engine
 from sqlalchemy.exc import IntegrityError
+from sqlalchemy.orm import Session
 
 from app.db.session import create_session_factory
 from app.models.consent import Consent
@@ -45,7 +46,7 @@ from app.repositories.symptom_repository import (
 )
 
 
-def _create_test_consent(session) -> Consent:
+def _create_test_consent(session: Session) -> Consent:
     """Helper to persist a valid consent record for assessment foreign key."""
     consent = Consent(policy_version="test-consent-v1.0")
     session.add(consent)

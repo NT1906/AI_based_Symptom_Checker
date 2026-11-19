@@ -41,6 +41,20 @@ export interface ConditionListProps {
   title?: string;
 }
 
+/** Props for the WhyThisResultPanel component (FR-24). */
+export interface WhyThisResultPanelProps {
+  /** Candidate conditions presented to the user. */
+  conditions: ConditionItem[];
+  /** Confirmed symptoms reported by user. */
+  reportedSymptoms?: string[];
+  /** Whether the panel starts expanded. */
+  defaultExpanded?: boolean;
+  /** Section heading title override. */
+  title?: string;
+  /** Custom container styling classes. */
+  className?: string;
+}
+
 /** Clinical guidance information covering self-care recommendations and warning signs. */
 export interface TriageGuidance {
   /** Summary or headline for the guidance section. */
@@ -51,7 +65,12 @@ export interface TriageGuidance {
   warningSigns?: string[];
   /** Recommended timeframe for seeking medical evaluation (e.g. within 24-48 hours). */
   timeframe?: string;
+  /** Heading for `selfCareAdvice`; defaults to "General Self-Care Steps" (S2-NIS-13). */
+  stepsHeading?: string;
 }
+
+/** Supported external map search providers (FR-08, idea §9). */
+export type MapProvider = "google" | "osm" | "apple";
 
 /** External doctor or clinic referral recommendation based on medical specialty. */
 export interface ReferralInfo {
@@ -61,6 +80,28 @@ export interface ReferralInfo {
   secondarySpecialties?: string[];
   /** Suggested external map query string (e.g. "General Physician near me"). */
   mapQuery?: string;
+}
+
+/** Props for the DoctorReferral component (FR-08, idea §9, S2-MAN-2). */
+export interface DoctorReferralProps {
+  /** Referral configuration bundle or primary specialty name. */
+  referral?: ReferralInfo | null;
+  /** Direct primary medical specialty override (e.g. "General Physician", "Dermatologist"). */
+  specialty?: string | null;
+  /** Secondary or complementary specialties. */
+  secondarySpecialties?: string[];
+  /** Custom map search query override (defaults to "<specialty> near me"). */
+  mapQuery?: string | null;
+  /** Preferred external map provider (defaults to "google"). */
+  provider?: MapProvider;
+  /** Optional location hint (e.g. city or postal code). */
+  location?: string | null;
+  /** Custom section title. */
+  title?: string;
+  /** Optional callback invoked when the user clicks an external map search link. */
+  onReferralClick?: (specialty: string, targetUrl: string) => void;
+  /** Optional container CSS class name. */
+  className?: string;
 }
 
 /** Complete assessment result data bundle composed by ResultPage. */
@@ -77,4 +118,6 @@ export interface AssessmentResultData {
   referral?: ReferralInfo;
   /** ISO timestamp of when the assessment result was generated. */
   completedAt?: string;
+  /** Plain-language limits of this result, from the server (S2-NIS-13). */
+  limitations?: string[];
 }

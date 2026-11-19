@@ -581,3 +581,22 @@ The client compares stored consent with the active version before entering
 chat. A mismatch returns the user to the consent flow. During a rollout, an
 older client cannot submit acceptance for a notice it does not display.
 Deploy the updated notice and its version together.
+
+## Account data rights (DR-06, NFR-04)
+
+`GET /api/v1/privacy/export` downloads the authenticated user's data as JSON
+with `Cache-Control: no-store`. Only the current account's data is eligible.
+Passwords, password hashes, guest tokens, auth tokens and internal security
+metadata must be excluded.
+
+`DELETE /api/v1/privacy/data` erases data scoped to the authenticated account.
+It requires the application's CSRF validation and returns 204 once the
+database transaction commits. A failure returns an error rather than a
+successful deletion response. Neither route takes an account ID from the caller.
+
+The routes use the shared authentication and the same CSRF check as the
+auth routes. Missing or mismatched CSRF tokens return 401.
+
+The export route returns persisted account information, profile, and owned
+assessments with consent, messages, and symptoms. The deletion route is
+registered only when the application has the transactional #163 adapter.

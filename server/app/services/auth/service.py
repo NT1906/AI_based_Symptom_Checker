@@ -73,10 +73,7 @@ class AuthService:
                     select(User).where(User.email == payload.email)
                 )
                 if existing is not None:
-                    logger.warning(
-                        "registration_email_conflict",
-                        email=payload.email,
-                    )
+                    logger.warning("registration_email_conflict")
                     raise ConflictError(
                         "An account with this email address already exists.",
                         details={"email": payload.email},
@@ -90,10 +87,7 @@ class AuthService:
                 session.add(user)
                 session.flush()
 
-                logger.info(
-                    "user_registered",
-                    user_id=str(user.id),
-                )
+                logger.info("user_registered")
                 return UserRead(
                     id=user.id,
                     email=user.email,
@@ -121,23 +115,17 @@ class AuthService:
             if user is None or user.password_hash is None:
                 # Why: Equalize timing to mitigate user enumeration attacks
                 verify_dummy_password(payload.password)
-                logger.warning(
-                    "authentication_failed_unknown_user",
-                    email=payload.email,
-                )
+                logger.warning("authentication_failed_unknown_user")
                 raise UnauthorizedError("Invalid email or password.")
 
             if not verify_password(payload.password, user.password_hash):
-                logger.warning(
-                    "authentication_failed_invalid_password",
-                    user_id=str(user.id),
-                )
+                logger.warning("authentication_failed_invalid_password")
                 raise UnauthorizedError("Invalid email or password.")
 
             access_token = create_access_token(user.id, user.email, self.settings)
             refresh_token, _ = create_refresh_token(user.id, user.email, self.settings)
 
-            logger.info("user_authenticated", user_id=str(user.id))
+            logger.info("user_authenticated")
             return (
                 UserRead(
                     id=user.id,
@@ -169,11 +157,7 @@ class AuthService:
 
         # Detect reuse of an already rotated or revoked refresh token
         if jti in self._revoked_tokens:
-            logger.warning(
-                "refresh_token_reuse_detected",
-                jti=jti,
-                user_id=user_id_str,
-            )
+            logger.warning("refresh_token_reuse_detected")
             raise UnauthorizedError(
                 "Refresh token has been revoked or already rotated."
             )
@@ -196,7 +180,7 @@ class AuthService:
         new_access_token = create_access_token(user.id, user.email, self.settings)
         new_refresh_token, _ = create_refresh_token(user.id, user.email, self.settings)
 
-        logger.info("auth_session_refreshed", user_id=str(user.id))
+        logger.info("auth_session_refreshed")
         return user, new_access_token, new_refresh_token
 
     def revoke_token(self, raw_token: str) -> None:
@@ -210,7 +194,7 @@ class AuthService:
             jti = claims.get("jti")
             if jti:
                 self._revoked_tokens.add(jti)
-                logger.info("refresh_token_revoked", jti=jti)
+                logger.info("refresh_token_revoked")
         except UnauthorizedError:
             pass
 

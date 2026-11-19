@@ -33,9 +33,9 @@ describe("ResultPage", () => {
     expect(screen.getByRole("status")).toHaveTextContent("Consult a Doctor");
 
     // Conditions
-    expect(screen.getByText("Migraine with Photophobia")).toBeInTheDocument();
+    expect(screen.getAllByText("Migraine with Photophobia").length).toBeGreaterThanOrEqual(1);
     expect(screen.getByText("Likely")).toBeInTheDocument();
-    expect(screen.getByText("Tension-type Headache")).toBeInTheDocument();
+    expect(screen.getAllByText("Tension-type Headache").length).toBeGreaterThanOrEqual(1);
     expect(screen.getByText("Possible")).toBeInTheDocument();
 
     // Guidance slot
@@ -157,7 +157,7 @@ describe("ResultPage", () => {
 
     render(<ResultPage result={minimalResult} />);
 
-    expect(screen.getByText("Mild Fatigue")).toBeInTheDocument();
+    expect(screen.getAllByText("Mild Fatigue").length).toBeGreaterThanOrEqual(1);
     expect(screen.queryByText("General Self-Care Steps")).not.toBeInTheDocument();
     expect(screen.queryByText("Recommended Specialist Evaluation")).not.toBeInTheDocument();
   });

@@ -13,7 +13,7 @@ from app.schemas.assessment import (
     AssessmentStateResponse,
     ProcessResult,
 )
-from app.schemas.base import SchemaBase
+from app.schemas.base import RequestSchemaBase, SchemaBase
 from app.schemas.condition import Condition
 from app.schemas.enums import (
     AssessmentState,
@@ -48,6 +48,7 @@ from app.schemas.symptom import (
     SymptomCreate,
     SymptomRead,
     SymptomUpdate,
+    UpdateSymptomsRequest,
 )
 
 __all__ = [
@@ -73,6 +74,7 @@ __all__ = [
     "ProfileRead",
     "ProfileUpdate",
     "ReferralInfo",
+    "RequestSchemaBase",
     "RiskLevel",
     "SchemaBase",
     "Severity",
@@ -81,4 +83,5 @@ __all__ = [
     "SymptomRead",
     "SymptomSource",
     "SymptomUpdate",
+    "UpdateSymptomsRequest",
 ]

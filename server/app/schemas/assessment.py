@@ -5,24 +5,31 @@ Responsibilities:
     - Support guest assessment claiming and ownership transfer into user accounts.
     - Provide read and state snapshot schemas for assessment lifecycle endpoints.
     - Export AssessmentState and AssessmentResult for cross-module consumption.
+    - Include final triage risk level on AssessmentRead for assessment
+      history (S2-DAR-11).
 
-Owner: Darshil (orchestration) · Task: S2-DAR-1 · Requirements: idea §10
+Owner: Darshil (orchestration) · Task: S2-DAR-1, S2-DAR-7, S2-DAR-11
+Requirements: idea §10, NFR-03, FR-20
 """
 
 from datetime import UTC, datetime
+from typing import Any
 from uuid import UUID
 
-from pydantic import Field
+from pydantic import Field, model_validator
 
-from app.schemas.base import SchemaBase
+from app.schemas.base import RequestSchemaBase, SchemaBase
 from app.schemas.enums import AssessmentState
 from app.schemas.message import MessageRead
 from app.schemas.result import AssessmentResult
 from app.schemas.symptom import Symptom, SymptomRead
 
 
-class AssessmentCreate(SchemaBase):
-    """Payload to initialize a new assessment with user consent."""
+class AssessmentCreate(RequestSchemaBase):
+    """Payload to initialize a new assessment with user consent.
+
+    Enforces mass-assignment protection (extra='forbid') and validates consentId.
+    """
 
     consent_id: UUID = Field(..., description="Unique consent record identifier")
     user_id: UUID | None = Field(
@@ -54,6 +61,49 @@ class AssessmentRead(SchemaBase):
         default_factory=lambda: datetime.now(UTC),
         description="Timestamp in UTC",
     )
+    risk_level: str | None = Field(
+        default=None,
+        description="Final triage risk level (e.g. SELF_CARE, CONSULT_DOCTOR, URGENT)",
+    )
+
+    @model_validator(mode="before")
+    @classmethod
+    def _populate_risk_level(cls, data: Any) -> Any:
+        if isinstance(data, dict):
+            return data
+        if hasattr(data, "id"):
+            current_risk = getattr(data, "risk_level", None)
+            if current_risk is None:
+                try:
+                    from sqlalchemy import desc, select
+                    from sqlalchemy.orm import object_session
+
+                    from app.models.audit_log import AuditLog
+
+                    sess = object_session(data)
+                    if sess is not None:
+                        risk = sess.scalar(
+                            select(AuditLog.risk_level)
+                            .where(
+                                AuditLog.assessment_id == data.id,
+                                AuditLog.risk_level.is_not(None),
+                            )
+                            .order_by(desc(AuditLog.created_at))
+                            .limit(1)
+                        )
+                        if risk is not None:
+                            try:
+                                data.risk_level = risk
+                            except AttributeError:
+                                pass
+                except Exception:
+                    pass
+            elif hasattr(current_risk, "value"):
+                try:
+                    data.risk_level = current_risk.value
+                except AttributeError:
+                    pass
+        return data
 
 
 class AssessmentStateResponse(SchemaBase):
@@ -80,8 +130,11 @@ class AssessmentStateResponse(SchemaBase):
     )
 
 
-class ClaimAssessmentRequest(SchemaBase):
-    """Payload to claim a guest assessment into a registered user account."""
+class ClaimAssessmentRequest(RequestSchemaBase):
+    """Payload to claim a guest assessment into a registered user account.
+
+    Enforces mass-assignment protection (extra='forbid') and validates credentials.
+    """
 
     user_id: UUID = Field(
         ...,

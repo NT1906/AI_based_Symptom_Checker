@@ -7,8 +7,8 @@ Responsibilities:
     - Translate upstream provider errors into typed AiError subclasses.
     - Load versioned prompt templates adhering to medical-safety invariants.
 
-Owner: Nishith · Tasks: S1-NIT-3, S2-NIT-1, S2-NIT-2
-Requirements: NFR-05, FR-18, FR-19, NFR-07, idea "out of scope"
+Owner: Nishith · Tasks: S1-NIT-3, S2-NIT-1, S2-NIT-2, S2-NIT-5
+Requirements: NFR-01, NFR-05, FR-18, FR-19, NFR-07, idea "out of scope"
 """
 
 import asyncio
@@ -37,6 +37,7 @@ from app.services.ai.gateway import (
     AiValidationError,
 )
 from app.services.ai.intent import IntentClassifier
+from app.services.ai.latency_budget import LatencyBudget
 from app.services.ai.missing_info import (
     detect_missing_information,
     should_request_clarification,
@@ -78,6 +79,7 @@ class OpenAiProvider:
         max_retries: int = DEFAULT_MAX_RETRIES,
         base_backoff_seconds: float = DEFAULT_BASE_BACKOFF_SECONDS,
         client: AsyncOpenAI | None = None,
+        latency_budget_seconds: float | None = None,
     ) -> None:
         """Initialize the OpenAiProvider instance.
 
@@ -88,6 +90,7 @@ class OpenAiProvider:
             max_retries: Number of retries on transient errors (default 2).
             base_backoff_seconds: Initial backoff duration for exponential backoff.
             client: Optional preconfigured AsyncOpenAI client (for testing).
+            latency_budget_seconds: Optional end-to-end budget across retries.
 
         Raises:
             AiError: If no API key is provided and no client is supplied.
@@ -100,12 +103,13 @@ class OpenAiProvider:
         self._timeout = timeout
         self._max_retries = max_retries
         self._base_backoff_seconds = base_backoff_seconds
+        self._latency_budget_seconds = latency_budget_seconds
         self._client = client or AsyncOpenAI(api_key=resolved_key, timeout=timeout)
         self._intent_classifier = IntentClassifier()
 
     async def _execute_with_retry(
         self,
-        call_fn: Callable[[], Awaitable[T]],
+        call_fn: Callable[[float], Awaitable[T]],
         action_name: str,
     ) -> T:
         """Execute an asynchronous call with exponential backoff on transient errors.
@@ -121,24 +125,34 @@ class OpenAiProvider:
             - LengthFinishReasonError (token cap exceeded)
 
         Args:
-            call_fn: Zero-argument callable returning an awaitable.
+            call_fn: Callable taking attempt timeout seconds and returning awaitable.
             action_name: Descriptive label for logging.
 
         Returns:
             The successful return value of call_fn.
 
         Raises:
-            AiTimeoutError: If timeout occurs and retries are exhausted.
+            AiTimeoutError: If timeout or latency budget is exhausted.
             AiValidationError: If response parsing fails or token limit is reached.
             AiError: For client errors or when retries are exhausted.
         """
+        budget = (
+            LatencyBudget(self._latency_budget_seconds)
+            if self._latency_budget_seconds is not None
+            else None
+        )
         attempts = 0
         max_attempts = 1 + self._max_retries
         last_exc: Exception | None = None
 
         while attempts < max_attempts:
+            attempt_timeout = (
+                budget.timeout_for(self._timeout, action_name=action_name)
+                if budget is not None
+                else self._timeout
+            )
             try:
-                return await call_fn()
+                return await call_fn(attempt_timeout)
             except (AiTimeoutError, AiValidationError, AiError):
                 raise
             except (APITimeoutError, TimeoutError) as exc:
@@ -154,14 +168,25 @@ class OpenAiProvider:
                         f"OpenAI {action_name} timed out after {attempts} attempts."
                     ) from exc
                 delay = self._base_backoff_seconds * (2 ** (attempts - 1))
+                clamped = budget.clamped_backoff(delay) if budget is not None else delay
+                if clamped is None:
+                    logger.error(
+                        "openai_budget_exhausted_before_retry",
+                        action=action_name,
+                        attempts=attempts,
+                    )
+                    raise AiTimeoutError(
+                        f"OpenAI {action_name} latency budget exhausted after "
+                        f"{attempts} attempts."
+                    ) from exc
                 logger.warning(
                     "openai_timeout_retry",
                     action=action_name,
                     attempt=attempts,
-                    delay=delay,
+                    delay=clamped,
                 )
-                if delay > 0:
-                    await asyncio.sleep(delay)
+                if clamped > 0:
+                    await asyncio.sleep(clamped)
             except (RateLimitError, InternalServerError, APIConnectionError) as exc:
                 attempts += 1
                 last_exc = exc
@@ -175,14 +200,25 @@ class OpenAiProvider:
                         f"OpenAI {action_name} failed after {attempts} attempts: {exc}"
                     ) from exc
                 delay = self._base_backoff_seconds * (2 ** (attempts - 1))
+                clamped = budget.clamped_backoff(delay) if budget is not None else delay
+                if clamped is None:
+                    logger.error(
+                        "openai_budget_exhausted_before_retry",
+                        action=action_name,
+                        attempts=attempts,
+                    )
+                    raise AiTimeoutError(
+                        f"OpenAI {action_name} latency budget exhausted after "
+                        f"{attempts} attempts."
+                    ) from exc
                 logger.warning(
                     "openai_transient_retry",
                     action=action_name,
                     attempt=attempts,
-                    delay=delay,
+                    delay=clamped,
                 )
-                if delay > 0:
-                    await asyncio.sleep(delay)
+                if clamped > 0:
+                    await asyncio.sleep(clamped)
             except LengthFinishReasonError as exc:
                 logger.error("openai_length_finish_error", action=action_name)
                 raise AiValidationError(
@@ -196,14 +232,14 @@ class OpenAiProvider:
                 logger.error(
                     "openai_client_error",
                     action=action_name,
-                    error=str(exc),
+                    error_type=type(exc).__name__,
                 )
                 raise AiError(f"OpenAI {action_name} client error: {exc}") from exc
             except Exception as exc:
                 logger.error(
                     "openai_unexpected_error",
                     action=action_name,
-                    error=str(exc),
+                    error_type=type(exc).__name__,
                 )
                 raise AiError(
                     f"OpenAI {action_name} unexpected failure: {exc}"
@@ -266,7 +302,7 @@ class OpenAiProvider:
             ).replace("{user_message}", cleaned_msg)
         )
 
-        async def _call() -> ExtractionResult:
+        async def _call(attempt_timeout: float) -> ExtractionResult:
             logger.info("openai_extraction_started", model=self._model)
             completion = await self._client.beta.chat.completions.parse(
                 model=self._model,
@@ -277,7 +313,7 @@ class OpenAiProvider:
                     },
                 ],
                 response_format=ExtractionResult,
-                timeout=self._timeout,
+                timeout=attempt_timeout,
             )
             choice = completion.choices[0]
             if getattr(choice.message, "refusal", None):
@@ -386,7 +422,7 @@ class OpenAiProvider:
             .replace("{previously_asked_questions}", history_text)
         )
 
-        async def _call() -> ClarificationResult:
+        async def _call(attempt_timeout: float) -> ClarificationResult:
             logger.info("openai_clarification_started", model=self._model)
             completion = await self._client.beta.chat.completions.parse(
                 model=self._model,
@@ -397,7 +433,7 @@ class OpenAiProvider:
                     }
                 ],
                 response_format=ClarificationResult,
-                timeout=self._timeout,
+                timeout=attempt_timeout,
             )
             choice = completion.choices[0]
             if getattr(choice.message, "refusal", None):

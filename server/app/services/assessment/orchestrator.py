@@ -11,6 +11,18 @@ Responsibilities:
     - Pass profile context (age, chronic conditions) into analysis (FR-02, S2-DAR-3).
     - Guarantee idempotent message processing and transactions (NFR-05, S2-DAR-4).
     - Guard assessment ownership and block cross-user access (NFR-03, S2-DAR-6).
+    - Enforce strict input validation, length limits, and null byte
+      rejection (NFR-03, S2-DAR-7).
+    - Enforce p95 result latency ≤ 5 s budget for generate_result() (NFR-01,
+      S2-DAR-8): emit result_generated log with elapsed_ms; warn on overrun.
+    - Map extracted symptom names to canonical IDs via SymptomResolver before
+      passing to predictor and risk engine (DR-02, FR-03, FR-06, S2-DAR-9).
+    - Keep unresolved symptom names in session for user confirmation while
+      excluding them from risk engine and predictor inputs, logging name length only.
+    - Detect red-flag symptoms in intake messages, skip clarification, and
+      transition directly to CONFIRMING with fixed 112 notice (S2-DAR-10, FR-06, FR-15).
+    - Save chat assessments, turns, and triage results to database linked to logged-in
+      user with single-transaction resilience (S2-DAR-11, FR-01, FR-20, DR-02).
     - Provide restart_assessment() to cleanly reset an assessment session (FR-25).
     - Claim anonymous guest assessments into registered accounts (idea §10).
     - Step back to chat from CONFIRMING or READY for conversational edits.
@@ -19,10 +31,13 @@ Responsibilities:
     - Run real analysis in generate_result() via condition predictor, risk engine,
       and result composer with safety-wording validation (FR-05, FR-06, FR-07, DR-05).
 
-Owner: Darshil (assessment) · Task: S2-DAR-6 · Requirements: NFR-03, NFR-05, FR-02
+Owner: Darshil (assessment) · Task: S2-DAR-6, S2-DAR-7, S2-DAR-8, S2-DAR-9,
+  S2-DAR-10, S2-DAR-11
+Requirements: NFR-01, NFR-03, NFR-05, FR-01, FR-02, DR-02, FR-03, FR-06, FR-15, FR-20
 """
 
 import asyncio
+import time
 from collections.abc import Sequence
 from dataclasses import dataclass, field
 from datetime import UTC, datetime
@@ -43,6 +58,7 @@ from app.schemas.enums import (
     DurationUnit,
     MessageRole,
     MessageType,
+    RiskLevel,
     Severity,
     SymptomSource,
 )
@@ -67,12 +83,13 @@ from app.services.prediction.condition_predictor import (
     ConditionModel,
 )
 from app.services.prediction.result_composer import ResultComposer
-from app.services.prediction.risk_engine import assess_risk
+from app.services.prediction.risk_engine import assess_risk, find_red_flags
 from app.services.prediction.risk_schemas import ReportedSymptom
 from app.services.privacy.safety_guard import (
     UnsafeWordingError,
     assert_safe_wording,
 )
+from app.services.retrieval import SymptomResolver
 from app.services.assessment.exceptions import (
     AssessmentAccessDeniedError,
     AssessmentServiceError,
@@ -84,6 +101,18 @@ from app.services.assessment.state_machine import (
 )
 
 logger = get_logger(__name__)
+
+# NFR-01 / S2-DAR-8: p95 result latency SLA.  generate_result() must complete
+# within this budget on staging.  Exceeding it emits a WARNING so it appears
+# in the structured log and can be caught by alerts.
+RESULT_DEADLINE_SECONDS: float = 5.0
+
+# S2-DAR-10 / FR-06, FR-15: Fixed safety prompt returned when red flags are detected
+# in an intake message, skipping clarification and guiding the user to emergency care.
+RED_FLAG_EMERGENCY_PROMPT: str = (
+    "Some of what you describe can be serious. If you think this is an emergency, "
+    "call 112 now. Please confirm your symptoms so we can show your result."
+)
 
 
 def merge_symptoms(
@@ -190,6 +219,8 @@ class AssessmentSession:
     is_low_confidence: bool = False
     guest_session_id: UUID | None = None
     profile: ProfileContext | None = None
+    result: AssessmentResult | None = None
+    risk_level: RiskLevel | None = None
     created_at: datetime = field(default_factory=lambda: datetime.now(UTC))
     updated_at: datetime = field(default_factory=lambda: datetime.now(UTC))
     _idempotency_cache: dict[str, ProcessResult] = field(
@@ -218,6 +249,7 @@ class AssessmentOrchestrator:
         result_composer: ResultComposer | None = None,
         condition_model: ConditionModel | None = None,
         image_analyzer: ImageAnalyzer | None = None,
+        resolver: SymptomResolver | None = None,
     ) -> None:
         """Initialize the AssessmentOrchestrator.
 
@@ -231,6 +263,8 @@ class AssessmentOrchestrator:
                 Defaults to BaselineConditionModel.
             image_analyzer: Optional provider conforming to ImageAnalyzer protocol.
                 Defaults to mock image analyzer.
+            resolver: Optional resolver conforming to SymptomResolver.
+                Defaults to SymptomResolver with exact knowledge vocabulary.
         """
         self._ai_gateway = ai_gateway or get_ai_gateway()
         self._result_composer = result_composer or ResultComposer(
@@ -240,7 +274,13 @@ class AssessmentOrchestrator:
             condition_model or BaselineConditionModel()
         )
         self._image_analyzer = image_analyzer or build_image_analyzer("mock")
+        self._resolver = resolver or SymptomResolver()
         self._sessions: dict[UUID, AssessmentSession] = {}
+
+    @property
+    def resolver(self) -> SymptomResolver:
+        """Return the symptom resolver used for canonical ID mapping."""
+        return self._resolver
 
     def create_assessment(
         self,
@@ -249,6 +289,8 @@ class AssessmentOrchestrator:
         assessment_id: UUID | None = None,
         guest_session_id: UUID | None = None,
         profile: ProfileContext | None = None,
+        *,
+        db_session: Any | None = None,
     ) -> AssessmentRead:
         """Initialize a new assessment session bound to verified consent.
 
@@ -258,6 +300,7 @@ class AssessmentOrchestrator:
             assessment_id: Optional explicit UUID (generated if None).
             guest_session_id: Optional anonymous guest session identifier.
             profile: Optional user clinical profile context (age, chronic conditions).
+            db_session: Optional active SQLAlchemy database session for persistence.
 
         Returns:
             AssessmentRead model representing the initialized assessment.
@@ -289,11 +332,35 @@ class AssessmentOrchestrator:
             updated_at=now,
         )
         self._sessions[aid] = session
-        logger.info(
-            "assessment_created",
-            assessment_id=str(aid),
-            guest_session_id=str(guest_session_id) if guest_session_id else None,
-        )
+
+        if db_session is not None:
+            try:
+                from app.models.assessment import Assessment as DbAssessment
+
+                db_assessment = db_session.get(DbAssessment, aid)
+                if db_assessment is None:
+                    db_assessment = DbAssessment(
+                        id=aid,
+                        consent_id=consent_id,
+                        user_id=user_id,
+                        guest_session_id=guest_session_id,
+                        state=sm.current_state.value,
+                    )
+                    db_session.add(db_assessment)
+                else:
+                    db_assessment.user_id = user_id
+                    db_assessment.guest_session_id = guest_session_id
+                    db_assessment.state = sm.current_state.value
+                if hasattr(db_session, "flush"):
+                    db_session.flush()
+            except Exception as exc:
+                logger.warning(
+                    "assessment_db_create_failed",
+                    assessment_id=str(aid),
+                    error=type(exc).__name__,
+                )
+
+        logger.info("assessment_created", assessment_id=str(aid))
         return AssessmentRead(
             id=aid,
             state=sm.current_state,
@@ -439,8 +506,6 @@ class AssessmentOrchestrator:
                 logger.warning(
                     "unauthorized_access",
                     assessment_id=str(assessment_id),
-                    expected_user_id=str(owner_user_id),
-                    provided_user_id=None,
                     reason="unauthenticated_guest_access_to_user_assessment",
                 )
                 raise AssessmentAccessDeniedError(
@@ -451,8 +516,6 @@ class AssessmentOrchestrator:
                 logger.warning(
                     "unauthorized_access",
                     assessment_id=str(assessment_id),
-                    expected_user_id=str(owner_user_id),
-                    provided_user_id=str(user_id),
                     reason="cross_user_access_attempt",
                 )
                 raise AssessmentAccessDeniedError(
@@ -466,8 +529,6 @@ class AssessmentOrchestrator:
                 logger.warning(
                     "unauthorized_access",
                     assessment_id=str(assessment_id),
-                    expected_guest_session_id=str(owner_guest_id),
-                    provided_user_id=str(user_id),
                     reason="user_access_unclaimed_guest_without_token",
                 )
                 raise AssessmentAccessDeniedError(
@@ -481,8 +542,6 @@ class AssessmentOrchestrator:
                 logger.warning(
                     "unauthorized_access",
                     assessment_id=str(assessment_id),
-                    expected_guest_session_id=str(owner_guest_id),
-                    provided_guest_session_id=None,
                     reason="anonymous_access_without_guest_token",
                 )
                 raise AssessmentAccessDeniedError(
@@ -494,8 +553,6 @@ class AssessmentOrchestrator:
                 logger.warning(
                     "unauthorized_access",
                     assessment_id=str(assessment_id),
-                    expected_guest_session_id=str(owner_guest_id),
-                    provided_guest_session_id=str(guest_session_id),
                     reason="guest_session_mismatch",
                 )
                 raise AssessmentAccessDeniedError(
@@ -507,12 +564,7 @@ class AssessmentOrchestrator:
                     code="GUEST_SESSION_MISMATCH",
                 )
 
-        logger.info(
-            "assessment_access_authorized",
-            assessment_id=str(assessment_id),
-            user_id=str(user_id) if user_id else None,
-            guest_session_id=str(guest_session_id) if guest_session_id else None,
-        )
+        logger.info("assessment_access_authorized", assessment_id=str(assessment_id))
 
     def check_ownership(
         self,
@@ -578,6 +630,7 @@ class AssessmentOrchestrator:
                 )
         if session is None:
             return None
+        risk_lvl = session.risk_level.value if session.risk_level is not None else None
         return AssessmentRead(
             id=session.id,
             state=session.state_machine.current_state,
@@ -586,6 +639,7 @@ class AssessmentOrchestrator:
             guest_session_id=session.guest_session_id,
             created_at=session.created_at,
             updated_at=session.updated_at,
+            risk_level=risk_lvl,
         )
 
     def get_messages(
@@ -760,10 +814,7 @@ class AssessmentOrchestrator:
         session.state_machine.context.profile = profile
         session.updated_at = datetime.now(UTC)
         logger.info(
-            "assessment_profile_context_updated",
-            assessment_id=str(assessment_id),
-            age_band=profile.age_band.value if profile.age_band else None,
-            chronic_conditions_count=len(profile.chronic_conditions),
+            "assessment_profile_context_updated", assessment_id=str(assessment_id)
         )
 
     def get_profile_context(
@@ -889,6 +940,12 @@ class AssessmentOrchestrator:
                 status_code=status.HTTP_404_NOT_FOUND,
             )
 
+        if message and "\x00" in message:
+            raise AssessmentServiceError(
+                message="Message content cannot contain null bytes.",
+                code="INVALID_MESSAGE_CONTENT",
+                status_code=status.HTTP_422_UNPROCESSABLE_ENTITY,
+            )
         cleaned = message.strip() if message else ""
         if not cleaned:
             raise AssessmentServiceError(
@@ -900,6 +957,12 @@ class AssessmentOrchestrator:
             raise AssessmentServiceError(
                 message="Message exceeds maximum allowed length of 4000 characters.",
                 code="MESSAGE_TOO_LONG",
+                status_code=status.HTTP_422_UNPROCESSABLE_ENTITY,
+            )
+        if idempotency_key and "\x00" in idempotency_key:
+            raise AssessmentServiceError(
+                message="Idempotency key cannot contain null bytes.",
+                code="INVALID_IDEMPOTENCY_KEY",
                 status_code=status.HTTP_422_UNPROCESSABLE_ENTITY,
             )
 
@@ -1094,12 +1157,23 @@ class AssessmentOrchestrator:
                     )
                     return result
 
-                # Step 3: Merge newly extracted symptoms into assessment state
+                # Step 3: Resolve extracted symptom names and merge into state
+                resolved_extracted: list[ExtractedSymptom] = []
+                for ext in extraction.symptoms:
+                    resolved = self._resolver.resolve(ext.name)
+                    if resolved is not None:
+                        resolved_extracted.append(
+                            ext.model_copy(update={"name": resolved.symptom_id})
+                        )
+                    else:
+                        logger.info("symptom_unresolved", name_length=len(ext.name))
+                        resolved_extracted.append(ext)
+
                 merged_symptoms = merge_symptoms(
                     existing=[
                         Symptom.model_validate(s.model_dump()) for s in session.symptoms
                     ],
-                    extracted_symptoms=extraction.symptoms,
+                    extracted_symptoms=resolved_extracted,
                 )
                 session.symptoms = [
                     SymptomRead.model_validate(s.model_dump()) for s in merged_symptoms
@@ -1128,55 +1202,130 @@ class AssessmentOrchestrator:
                     session.messages.append(assistant_msg)
                     result_type = "TEXT"
                 else:
-                    has_unresolved_duration = any(
-                        s.duration is None for s in session.symptoms
-                    )
-                    requires_clarification = (
-                        extraction.requires_clarification
-                        or (
-                            sm.current_state == AssessmentState.CLARIFYING
-                            and has_unresolved_duration
-                        )
-                        or (
-                            has_unresolved_duration
-                            and sm.context.clarification_count == 0
-                        )
-                    )
-
-                    if (
-                        requires_clarification
-                        and sm.context.clarification_count
-                        < sm.context.max_clarifications
-                    ):
-                        already_asked = [
-                            m.content
-                            for m in session.messages
-                            if m.message_type == MessageType.CLARIFICATION
+                    # Step 4a: Check for red flags before clarification
+                    # (S2-DAR-10, FR-06, FR-15, DR-02)
+                    has_red_flags = False
+                    red_flag_count = 0
+                    try:
+                        reported_for_red_flags = [
+                            ReportedSymptom(id=s.name, severity=s.severity)
+                            for s in session.symptoms
                         ]
-                        clarification_res = (
-                            await self._ai_gateway.generate_clarification(
-                                structured_state={
-                                    "symptoms": [
-                                        s.model_dump() for s in session.symptoms
-                                    ]
-                                },
-                                already_asked=already_asked,
+                        red_flags = find_red_flags(reported_for_red_flags)
+                        has_red_flags = len(red_flags) > 0
+                        red_flag_count = len(red_flags)
+                    except Exception as exc:  # noqa: BLE001
+                        logger.warning(
+                            "red_flag_check_failed",
+                            assessment_id=str(assessment_id),
+                            error=type(exc).__name__,
+                        )
+                        has_red_flags = False
+
+                    if has_red_flags:
+                        logger.info(
+                            "red_flag_detected_skip_clarification",
+                            assessment_id=str(assessment_id),
+                            red_flag_count=red_flag_count,
+                        )
+                        if sm.current_state != AssessmentState.CONFIRMING:
+                            sm.proceed_to_confirmation()
+                        assistant_msg = MessageRead(
+                            id=uuid4(),
+                            assessment_id=assessment_id,
+                            position=len(session.messages),
+                            role=MessageRole.ASSISTANT,
+                            content=RED_FLAG_EMERGENCY_PROMPT,
+                            message_type=MessageType.CONFIRMATION,
+                            created_at=datetime.now(UTC),
+                        )
+                        session.messages.append(assistant_msg)
+                        result_type = "CONFIRMATION"
+                    else:
+                        has_unresolved_duration = any(
+                            s.duration is None for s in session.symptoms
+                        )
+                        requires_clarification = (
+                            extraction.requires_clarification
+                            or (
+                                sm.current_state == AssessmentState.CLARIFYING
+                                and has_unresolved_duration
+                            )
+                            or (
+                                has_unresolved_duration
+                                and sm.context.clarification_count == 0
                             )
                         )
-                        if clarification_res.should_ask and clarification_res.question:
-                            sm.request_clarification()
-                            assistant_msg = MessageRead(
-                                id=uuid4(),
-                                assessment_id=assessment_id,
-                                position=len(session.messages),
-                                role=MessageRole.ASSISTANT,
-                                content=clarification_res.question,
-                                message_type=MessageType.CLARIFICATION,
-                                created_at=datetime.now(UTC),
+
+                        if (
+                            requires_clarification
+                            and sm.context.clarification_count
+                            < sm.context.max_clarifications
+                        ):
+                            already_asked = [
+                                m.content
+                                for m in session.messages
+                                if m.message_type == MessageType.CLARIFICATION
+                            ]
+                            clarification_res = (
+                                await self._ai_gateway.generate_clarification(
+                                    structured_state={
+                                        "symptoms": [
+                                            s.model_dump(mode="json")
+                                            for s in session.symptoms
+                                        ]
+                                    },
+                                    already_asked=already_asked,
+                                )
                             )
-                            session.messages.append(assistant_msg)
-                            result_type = "CLARIFICATION"
+                            if (
+                                clarification_res.should_ask
+                                and clarification_res.question
+                            ):
+                                sm.request_clarification()
+                                assistant_msg = MessageRead(
+                                    id=uuid4(),
+                                    assessment_id=assessment_id,
+                                    position=len(session.messages),
+                                    role=MessageRole.ASSISTANT,
+                                    content=clarification_res.question,
+                                    message_type=MessageType.CLARIFICATION,
+                                    created_at=datetime.now(UTC),
+                                )
+                                session.messages.append(assistant_msg)
+                                result_type = "CLARIFICATION"
+                            else:
+                                sm.proceed_to_confirmation()
+                                confirm_text = (
+                                    "Thank you for providing those details. "
+                                    "Please review and confirm your symptoms "
+                                    "so we can analyze them."
+                                )
+                                assistant_msg = MessageRead(
+                                    id=uuid4(),
+                                    assessment_id=assessment_id,
+                                    position=len(session.messages),
+                                    role=MessageRole.ASSISTANT,
+                                    content=confirm_text,
+                                    message_type=MessageType.CONFIRMATION,
+                                    created_at=datetime.now(UTC),
+                                )
+                                session.messages.append(assistant_msg)
+                                result_type = "CONFIRMATION"
                         else:
+                            if (
+                                requires_clarification
+                                or sm.context.clarification_count
+                                >= sm.context.max_clarifications
+                            ):
+                                session.is_low_confidence = True
+                                sm.context.is_low_confidence = True
+                                logger.info(
+                                    "clarification_cap_reached_low_confidence_flagged",
+                                    assessment_id=str(assessment_id),
+                                    clarification_count=sm.context.clarification_count,
+                                )
+
                             sm.proceed_to_confirmation()
                             confirm_text = (
                                 "Thank you for providing those details. "
@@ -1194,37 +1343,6 @@ class AssessmentOrchestrator:
                             )
                             session.messages.append(assistant_msg)
                             result_type = "CONFIRMATION"
-                    else:
-                        if (
-                            requires_clarification
-                            or sm.context.clarification_count
-                            >= sm.context.max_clarifications
-                        ):
-                            session.is_low_confidence = True
-                            sm.context.is_low_confidence = True
-                            logger.info(
-                                "clarification_cap_reached_low_confidence_flagged",
-                                assessment_id=str(assessment_id),
-                                clarification_count=sm.context.clarification_count,
-                            )
-
-                        sm.proceed_to_confirmation()
-                        confirm_text = (
-                            "Thank you for providing those details. "
-                            "Please review and confirm your symptoms "
-                            "so we can analyze them."
-                        )
-                        assistant_msg = MessageRead(
-                            id=uuid4(),
-                            assessment_id=assessment_id,
-                            position=len(session.messages),
-                            role=MessageRole.ASSISTANT,
-                            content=confirm_text,
-                            message_type=MessageType.CONFIRMATION,
-                            created_at=datetime.now(UTC),
-                        )
-                        session.messages.append(assistant_msg)
-                        result_type = "CONFIRMATION"
 
                 session.updated_at = datetime.now(UTC)
                 logger.info(
@@ -1278,7 +1396,9 @@ class AssessmentOrchestrator:
                 if hasattr(db_session, "begin_nested")
                 else None
             )
+            _write_succeeded = False
             try:
+                from app.models.assessment import Assessment as DbAssessment
                 from app.repositories.assessment_repository import (
                     update_assessment_state,
                 )
@@ -1286,6 +1406,19 @@ class AssessmentOrchestrator:
                     create_message as db_create_message,
                 )
                 from app.repositories.symptom_repository import upsert_symptom
+
+                db_assessment = db_session.get(DbAssessment, session.id)
+                if db_assessment is None:
+                    db_assessment = DbAssessment(
+                        id=session.id,
+                        consent_id=session.consent_id,
+                        user_id=session.user_id,
+                        guest_session_id=session.guest_session_id,
+                        state=session.state_machine.current_state.value,
+                    )
+                    db_session.add(db_assessment)
+                    if hasattr(db_session, "flush"):
+                        db_session.flush()
 
                 db_create_message(
                     session=db_session,
@@ -1327,14 +1460,23 @@ class AssessmentOrchestrator:
                     assessment_id=session.id,
                     new_state=session.state_machine.current_state.value,
                 )
+                _write_succeeded = True
                 if savepoint is not None:
                     savepoint.commit()
                 elif hasattr(db_session, "flush"):
                     db_session.flush()
-            except Exception:
+            except Exception as exc:
                 if savepoint is not None:
                     savepoint.rollback()
-                raise
+                if _write_succeeded:
+                    # Commit phase failed — data may be inconsistent; re-raise.
+                    raise
+                # Write phase failed — log and continue so user chat is unaffected.
+                logger.warning(
+                    "database_turn_persistence_failed",
+                    assessment_id=str(session.id),
+                    error=type(exc).__name__,
+                )
 
         if idempotency_key:
             session._idempotency_cache[f"key:{idempotency_key}"] = result
@@ -1531,6 +1673,7 @@ class AssessmentOrchestrator:
         *,
         user_id: UUID | None = None,
         guest_session_id: UUID | None = None,
+        db_session: Any | None = None,
     ) -> list[SymptomRead]:
         """Confirm the list of recognized symptoms and transition session to READY.
 
@@ -1543,6 +1686,7 @@ class AssessmentOrchestrator:
             symptoms: Optional updated or confirmed symptoms list.
             user_id: Optional caller user ID for ownership validation.
             guest_session_id: Optional caller guest session ID for ownership validation.
+            db_session: Optional active SQLAlchemy database session for persistence.
 
         Returns:
             list[SymptomRead]: The confirmed symptoms list.
@@ -1558,6 +1702,7 @@ class AssessmentOrchestrator:
                 assessment_id=assessment_id,
                 user_id=user_id,
                 guest_session_id=guest_session_id,
+                db_session=db_session,
             )
 
         session = self._sessions.get(assessment_id)
@@ -1566,6 +1711,13 @@ class AssessmentOrchestrator:
                 message=f"Assessment '{assessment_id}' was not found.",
                 code="ASSESSMENT_NOT_FOUND",
                 status_code=status.HTTP_404_NOT_FOUND,
+            )
+
+        if symptoms is not None and len(symptoms) > 50:
+            raise AssessmentServiceError(
+                message="Cannot confirm more than 50 symptoms at once.",
+                code="TOO_MANY_SYMPTOMS",
+                status_code=status.HTTP_422_UNPROCESSABLE_ENTITY,
             )
 
         sm = session.state_machine
@@ -1617,6 +1769,49 @@ class AssessmentOrchestrator:
         ]
         session.state_machine.confirm_symptoms()
         session.updated_at = datetime.now(UTC)
+
+        if db_session is not None:
+            try:
+                from app.repositories.assessment_repository import (
+                    update_assessment_state,
+                )
+                from app.repositories.symptom_repository import upsert_symptom
+
+                for sym in session.symptoms:
+                    dur_dict = sym.duration.model_dump() if sym.duration else None
+                    sev_str = (
+                        sym.severity.value
+                        if hasattr(sym.severity, "value")
+                        else str(sym.severity)
+                    )
+                    src_str = (
+                        sym.source.value
+                        if hasattr(sym.source, "value")
+                        else str(sym.source)
+                    )
+                    upsert_symptom(
+                        session=db_session,
+                        assessment_id=session.id,
+                        name=sym.name,
+                        severity=sev_str,
+                        duration=dur_dict,
+                        body_site=sym.body_location,
+                        source=src_str,
+                    )
+                update_assessment_state(
+                    session=db_session,
+                    assessment_id=session.id,
+                    new_state=session.state_machine.current_state.value,
+                )
+                if hasattr(db_session, "flush"):
+                    db_session.flush()
+            except Exception as exc:
+                logger.warning(
+                    "confirm_symptoms_db_save_failed",
+                    assessment_id=str(assessment_id),
+                    error=type(exc).__name__,
+                )
+
         logger.info(
             "symptoms_confirmed",
             assessment_id=str(assessment_id),
@@ -1664,6 +1859,13 @@ class AssessmentOrchestrator:
                 message=f"Assessment '{assessment_id}' was not found.",
                 code="ASSESSMENT_NOT_FOUND",
                 status_code=status.HTTP_404_NOT_FOUND,
+            )
+
+        if len(symptoms) > 50:
+            raise AssessmentServiceError(
+                message="Cannot update more than 50 symptoms in a single request.",
+                code="TOO_MANY_SYMPTOMS",
+                status_code=status.HTTP_422_UNPROCESSABLE_ENTITY,
             )
 
         self._ensure_editable_state(session)
@@ -1721,10 +1923,36 @@ class AssessmentOrchestrator:
 
         self._ensure_editable_state(session)
 
+        if "\x00" in symptom.name:
+            raise AssessmentServiceError(
+                message="Symptom name cannot contain null bytes.",
+                code="INVALID_SYMPTOM_NAME",
+                status_code=status.HTTP_422_UNPROCESSABLE_ENTITY,
+            )
+        if symptom.body_location and "\x00" in symptom.body_location:
+            raise AssessmentServiceError(
+                message="Body location cannot contain null bytes.",
+                code="INVALID_BODY_LOCATION",
+                status_code=status.HTTP_422_UNPROCESSABLE_ENTITY,
+            )
+
         cleaned_name = symptom.name.strip().lower()
+        if not cleaned_name:
+            raise AssessmentServiceError(
+                message="Symptom name cannot be blank.",
+                code="INVALID_SYMPTOM_NAME",
+                status_code=status.HTTP_422_UNPROCESSABLE_ENTITY,
+            )
+
         existing = next(
             (s for s in session.symptoms if s.name.lower() == cleaned_name), None
         )
+        if existing is None and len(session.symptoms) >= 50:
+            raise AssessmentServiceError(
+                message="Cannot add more than 50 symptoms to an assessment.",
+                code="SYMPTOM_LIMIT_EXCEEDED",
+                status_code=status.HTTP_422_UNPROCESSABLE_ENTITY,
+            )
         if existing is not None:
             if symptom.severity != Severity.UNKNOWN:
                 existing.severity = symptom.severity
@@ -1751,11 +1979,7 @@ class AssessmentOrchestrator:
             s.model_dump() for s in session.symptoms
         ]
         session.updated_at = datetime.now(UTC)
-        logger.info(
-            "symptom_added",
-            assessment_id=str(assessment_id),
-            symptom_name=target.name,
-        )
+        logger.info("symptom_added", assessment_id=str(assessment_id))
         return target
 
     async def remove_symptom(
@@ -1789,6 +2013,20 @@ class AssessmentOrchestrator:
                 user_id=user_id,
                 guest_session_id=guest_session_id,
             )
+
+        if isinstance(symptom_id, str):
+            if "\x00" in symptom_id:
+                raise AssessmentServiceError(
+                    message="Symptom identifier cannot contain null bytes.",
+                    code="INVALID_SYMPTOM_IDENTIFIER",
+                    status_code=status.HTTP_422_UNPROCESSABLE_ENTITY,
+                )
+            if not symptom_id.strip():
+                raise AssessmentServiceError(
+                    message="Symptom identifier cannot be blank.",
+                    code="INVALID_SYMPTOM_IDENTIFIER",
+                    status_code=status.HTTP_422_UNPROCESSABLE_ENTITY,
+                )
 
         session = self._sessions.get(assessment_id)
         if session is None:
@@ -1824,16 +2062,12 @@ class AssessmentOrchestrator:
                 status_code=status.HTTP_404_NOT_FOUND,
             )
 
-        removed = session.symptoms.pop(target_idx)
+        session.symptoms.pop(target_idx)
         session.state_machine.context.symptoms = [
             s.model_dump() for s in session.symptoms
         ]
         session.updated_at = datetime.now(UTC)
-        logger.info(
-            "symptom_removed",
-            assessment_id=str(assessment_id),
-            symptom_name=removed.name,
-        )
+        logger.info("symptom_removed", assessment_id=str(assessment_id))
         return list(session.symptoms)
 
     async def edit_symptom(
@@ -1878,6 +2112,19 @@ class AssessmentOrchestrator:
 
         self._ensure_editable_state(session)
 
+        if symptom_update.name and "\x00" in symptom_update.name:
+            raise AssessmentServiceError(
+                message="Symptom name cannot contain null bytes.",
+                code="INVALID_SYMPTOM_NAME",
+                status_code=status.HTTP_422_UNPROCESSABLE_ENTITY,
+            )
+        if symptom_update.body_location and "\x00" in symptom_update.body_location:
+            raise AssessmentServiceError(
+                message="Body location cannot contain null bytes.",
+                code="INVALID_BODY_LOCATION",
+                status_code=status.HTTP_422_UNPROCESSABLE_ENTITY,
+            )
+
         if symptom_update.id is None and not symptom_update.name:
             raise AssessmentServiceError(
                 message="Symptom edit payload must specify an id or name.",
@@ -1917,11 +2164,7 @@ class AssessmentOrchestrator:
             s.model_dump() for s in session.symptoms
         ]
         session.updated_at = datetime.now(UTC)
-        logger.info(
-            "symptom_edited",
-            assessment_id=str(assessment_id),
-            symptom_name=target.name,
-        )
+        logger.info("symptom_edited", assessment_id=str(assessment_id))
         return target
 
     async def restart_assessment(
@@ -2146,11 +2389,7 @@ class AssessmentOrchestrator:
                 session.guest_session_id = guest_session_id
             session.updated_at = datetime.now(UTC)
 
-        logger.info(
-            "guest_assessment_claimed",
-            assessment_id=str(assessment_id),
-            user_id=str(user_id),
-        )
+        logger.info("guest_assessment_claimed", assessment_id=str(assessment_id))
 
         if session is not None:
             return AssessmentRead(
@@ -2302,12 +2541,7 @@ class AssessmentOrchestrator:
                             )
                         )
 
-        logger.info(
-            "guest_session_claimed",
-            guest_session_id=str(guest_session_id),
-            user_id=str(user_id),
-            count=len(results),
-        )
+        logger.info("guest_session_claimed", count=len(results))
         return results
 
     async def generate_result(
@@ -2318,6 +2552,7 @@ class AssessmentOrchestrator:
         *,
         user_id: UUID | None = None,
         guest_session_id: UUID | None = None,
+        db_session: Any | None = None,
     ) -> AssessmentResult:
         """Trigger analysis and transition session through ANALYZING to COMPLETED.
 
@@ -2325,7 +2560,8 @@ class AssessmentOrchestrator:
         1. Transitions state machine from READY to ANALYZING.
         2. Incorporates optional user profile context (age band, chronic conditions)
            into the analysis pipeline (FR-02, S2-DAR-3).
-        3. Maps confirmed symptoms to ReportedSymptom domain representations.
+        3. Maps confirmed symptoms to canonical IDs via SymptomResolver (S2-DAR-9,
+           DR-02, FR-03, FR-06). Excludes unresolved symptoms from model inputs.
         4. Predicts ranked conditions via the configured condition model.
         5. Evaluates clinical risk level deterministically via the risk engine.
         6. Composes AssessmentResult with safety-wording guard validation.
@@ -2340,6 +2576,7 @@ class AssessmentOrchestrator:
                 If omitted, falls back to profile context attached to the session.
             user_id: Optional caller user ID for ownership validation.
             guest_session_id: Optional caller guest session ID for ownership validation.
+            db_session: Optional active SQLAlchemy database session for persistence.
 
         Returns:
             AssessmentResult with triage risk tier, conditions, and safety disclaimer.
@@ -2355,6 +2592,7 @@ class AssessmentOrchestrator:
                 assessment_id=assessment_id,
                 user_id=user_id,
                 guest_session_id=guest_session_id,
+                db_session=db_session,
             )
 
         session = self._sessions.get(assessment_id)
@@ -2373,11 +2611,21 @@ class AssessmentOrchestrator:
         sm = session.state_machine
         sm.start_analysis()
 
-        reported = [
-            ReportedSymptom(id=s.name, severity=s.severity) for s in session.symptoms
-        ]
-        symptom_ids = [s.name for s in session.symptoms]
-        predictions = self._condition_model.predict(symptom_ids)
+        _t0 = time.monotonic()
+
+        reported: list[ReportedSymptom] = []
+        symptom_ids: list[str] = []
+        for s in session.symptoms:
+            resolved = self._resolver.resolve(s.name)
+            if resolved is not None:
+                canonical_id = resolved.symptom_id
+                reported.append(ReportedSymptom(id=canonical_id, severity=s.severity))
+                symptom_ids.append(canonical_id)
+            else:
+                logger.info("symptom_unresolved", name_length=len(s.name))
+
+        deduped_symptom_ids = list(dict.fromkeys(symptom_ids))
+        predictions = self._condition_model.predict(deduped_symptom_ids)
         decision = assess_risk(reported, predictions)
 
         try:
@@ -2397,8 +2645,48 @@ class AssessmentOrchestrator:
             session.updated_at = datetime.now(UTC)
             raise
 
+        _elapsed = time.monotonic() - _t0
+        _elapsed_ms = round(_elapsed * 1000)
+        if _elapsed > RESULT_DEADLINE_SECONDS:
+            logger.warning(
+                "result_latency_budget_exceeded",
+                assessment_id=str(assessment_id),
+                elapsed_ms=_elapsed_ms,
+                budget_ms=int(RESULT_DEADLINE_SECONDS * 1000),
+            )
+        else:
+            logger.info(
+                "result_generated",
+                assessment_id=str(assessment_id),
+                elapsed_ms=_elapsed_ms,
+                budget_ms=int(RESULT_DEADLINE_SECONDS * 1000),
+            )
+
         sm.complete_analysis()
         session.updated_at = datetime.now(UTC)
+        session.result = result
+        session.risk_level = decision.level
+
+        if db_session is not None:
+            try:
+                from app.repositories.assessment_repository import (
+                    update_assessment_state,
+                )
+
+                update_assessment_state(
+                    session=db_session,
+                    assessment_id=session.id,
+                    new_state=sm.current_state.value,
+                )
+                if hasattr(db_session, "flush"):
+                    db_session.flush()
+            except Exception as exc:
+                logger.warning(
+                    "generate_result_db_save_failed",
+                    assessment_id=str(assessment_id),
+                    error=type(exc).__name__,
+                )
+
         return result
 
     async def merge_image_findings(
@@ -2487,9 +2775,20 @@ class AssessmentOrchestrator:
         if not extracted:
             return session.symptoms
 
+        resolved_extracted: list[ExtractedSymptom] = []
+        for ext in extracted:
+            resolved = self._resolver.resolve(ext.name)
+            if resolved is not None:
+                resolved_extracted.append(
+                    ext.model_copy(update={"name": resolved.symptom_id})
+                )
+            else:
+                logger.info("symptom_unresolved", name_length=len(ext.name))
+                resolved_extracted.append(ext)
+
         merged = merge_symptoms(
             existing=[Symptom.model_validate(s.model_dump()) for s in session.symptoms],
-            extracted_symptoms=extracted,
+            extracted_symptoms=resolved_extracted,
             default_source=SymptomSource.IMAGE_FINDING,
         )
 
@@ -2585,6 +2884,8 @@ class AssessmentOrchestrator:
 
 
 __all__ = [
+    "RED_FLAG_EMERGENCY_PROMPT",
+    "RESULT_DEADLINE_SECONDS",
     "AssessmentOrchestrator",
     "AssessmentSession",
     "merge_symptoms",

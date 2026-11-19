@@ -1,6 +1,7 @@
 """Assessment ownership, consent linkage, and state persistence.
 
-Owner: Harsh, Dimple, Kavya · Task: S0-HAR-1, S1-DIM-4, S1-KAV-4
+Owner: Harsh, Dimple, Kavya, Nishith
+Tasks: S0-HAR-1, S1-DIM-4, S1-KAV-4, S2-NIT-4, S2-NIT-6
 Requirements: FR-01, NFR-01, idea § 10
 """
 
@@ -35,7 +36,18 @@ class Assessment(RecordMixin, Base):
         ),
         Index("ix_assessments_created_at", "created_at"),
         Index("ix_assessments_user_id_created_at", "user_id", "created_at"),
+        Index(
+            "ix_assessments_user_id_state_created_at",
+            "user_id",
+            "state",
+            "created_at",
+        ),
         Index("ix_assessments_guest_session_id", "guest_session_id"),
+        Index(
+            "ix_assessments_guest_session_id_created_at",
+            "guest_session_id",
+            "created_at",
+        ),
     )
 
     user_id: Mapped[UUID | None] = mapped_column(

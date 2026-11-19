@@ -147,4 +147,48 @@ describe("ConsentStep", () => {
     expect(onConsented).not.toHaveBeenCalled();
     expect(useConsentStore.getState().consentId).toBeNull();
   });
+
+  it("invokes onDeclined when the user presses the Escape key (WCAG 2.1 SC 2.1.2)", async () => {
+    const user = userEvent.setup();
+    const { onDeclined, onConsented } = renderConsentStep();
+
+    await user.keyboard("{Escape}");
+
+    expect(onDeclined).toHaveBeenCalledOnce();
+    expect(onConsented).not.toHaveBeenCalled();
+  });
+
+  it("traps focus inside the modal dialog upon Tab cycling (WCAG 2.1 SC 2.1.2, NFR-06)", async () => {
+    const user = userEvent.setup();
+    renderConsentStep();
+
+    const checkbox = screen.getByRole("checkbox");
+    const declineBtn = screen.getByRole("button", { name: /decline/i });
+    const agreeBtn = screen.getByRole("button", { name: /i agree/i });
+
+    // Enable the agree button by checking the checkbox
+    await user.click(checkbox);
+    expect(checkbox).toBeChecked();
+    expect(agreeBtn).toBeEnabled();
+
+    // Focus starts on the first focusable element (checkbox)
+    checkbox.focus();
+    expect(checkbox).toHaveFocus();
+
+    // Tab -> decline button
+    await user.tab();
+    expect(declineBtn).toHaveFocus();
+
+    // Tab -> agree button
+    await user.tab();
+    expect(agreeBtn).toHaveFocus();
+
+    // Tab from last element wraps to first (checkbox)
+    await user.tab();
+    expect(checkbox).toHaveFocus();
+
+    // Shift+Tab from first element wraps to last (agree button)
+    await user.tab({ shift: true });
+    expect(agreeBtn).toHaveFocus();
+  });
 });

@@ -157,12 +157,12 @@ describe("SymptomConfirmationCard", () => {
 
     // Select suggested symptom
     const suggestionButton = screen.getByRole("button", {
-      name: /Nausea or feeling sick/i,
+      name: /Nausea/i,
     });
     fireEvent.click(suggestionButton);
 
     // Verify added to symptoms list
-    expect(screen.getByText(/3\. Nausea or feeling sick/i)).toBeInTheDocument();
+    expect(screen.getByText(/3\. Nausea/i)).toBeInTheDocument();
 
     // Confirm includes the new symptom
     const confirmButton = screen.getByRole("button", {
@@ -175,7 +175,7 @@ describe("SymptomConfirmationCard", () => {
         mockInitialSymptoms[0],
         mockInitialSymptoms[1],
         expect.objectContaining({
-          name: "Nausea or feeling sick",
+          name: "Nausea",
           source: "USER_CONFIRMED",
         }),
       ]),

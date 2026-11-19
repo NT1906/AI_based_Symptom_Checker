@@ -4,10 +4,21 @@
  */
 
 export {
+  DoctorReferral,
+  buildMapSearchUrl,
+  DOCTOR_REFERRAL_DATA_NOTICE,
+  DEFAULT_REFERRAL_SPECIALTY,
+} from "./DoctorReferral";
+
+export {
   ConditionList,
   getConfidenceLabel,
   getConfidenceBadgeClass,
 } from "./ConditionList";
+
+export {
+  WhyThisResultPanel,
+} from "./WhyThisResultPanel";
 
 export {
   RiskBadge,
@@ -24,8 +35,11 @@ export type {
   ConditionItem,
   ConfidenceTier,
   ConditionListProps,
+  WhyThisResultPanelProps,
   RiskLevel,
   TriageGuidance,
   ReferralInfo,
+  DoctorReferralProps,
+  MapProvider,
   AssessmentResultData,
 } from "./types";

@@ -1,9 +1,9 @@
 # Database foundation
 
-Owner: Harsh, Dimple, Kavya, Nishith · Tasks: S0-HAR-1, S1-DIM-4, S1-KAV-4, S1-NIT-4, S2-KAV-3 · Issues: #9, #38, #37, #36, #161 · Requirements: FR-01, FR-02, FR-17, NFR-01, idea § 10
+Owner: Harsh, Dimple, Kavya, Nishith · Tasks: S0-HAR-1, S1-DIM-4, S1-KAV-4, S1-NIT-4, S2-KAV-3, S2-NIT-3, S2-NIT-4, S2-NIT-6 · Issues: #9, #38, #37, #36, #161, #159, #160, #198 · Requirements: FR-01, FR-02, FR-03, FR-17, FR-18, NFR-01, NFR-10, DR-02, idea § 10
 
 This change supplies PostgreSQL-oriented SQLAlchemy 2 models, session factories,
-Alembic migrations (revisions `0001_database_foundation` through `0005_user_profile`),
+Alembic migrations (revisions `0001_database_foundation` through `0008_query_perf_indexes`),
 repositories, fictional seed data, and isolated unit tests.
 
 ## Current status and team handoff
@@ -100,7 +100,27 @@ Password hashes are opaque and nullable. Auth must reject password login for a
 NULL hash; seed accounts deliberately have no login credential. Hashing and
 validation belong to the auth module. Never store plaintext passwords.
 
-No image column, doctor directory, profile fields, prediction scores, or medical
+## History queries, pagination, and ownership filters (S2-KAV-4, FR-02)
+
+Per FR-02, authenticated users can review their assessment history with efficient,
+paginated querying and strict data ownership isolation:
+- **Covering Index Optimization:** Queries on `user_id` ordered by `created_at` DESC
+  are covered by the composite index `ix_assessments_user_id_created_at`.
+- **Query-Level IDOR Protection:** Ownership filters operate directly in SQL
+  `WHERE` clauses (`WHERE assessments.id = :id AND assessments.user_id = :user_id`),
+  ensuring cross-user assessment records are never leaked or loaded into memory.
+- **Unified Ownership Resolver:** `get_assessment_by_ownership` verifies access for
+  either registered accounts or unclaimed guest sessions.
+- **Rich Filtering & Lookahead:** `query_assessment_history` provides filtering by
+  single or multiple states, timestamp bounds (`created_after`, `created_before`),
+  configurable ordering direction, and optional relation eager loading (`selectinload`
+  for messages, symptoms, and consent) to eliminate N+1 queries.
+- **Accurate Pagination:** `count_assessments_by_user` enables exact page calculations
+  matching active state and date filters.
+- **Safe Account Erasure:** `delete_assessment_for_user` and `delete_assessments_for_user`
+  enforce strict user boundaries during individual or bulk data deletion (DR-06).
+
+No image column, doctor directory, prediction scores, or medical
 recommendations are introduced. Structured symptom JSONB is S1-HAR-2.
 
 ## Windows local setup (existing Docker database)
@@ -220,4 +240,105 @@ Per idea § 10 and FR-02, users may optionally save minimal clinical context to 
 - **Clinical Sex:** Biological sex is captured solely for clinical risk calibration (`female`, `male`, `other`, `prefer_not_to_say`) with an optional `sex` alias.
 - **Chronic Conditions:** Self-reported conditions (e.g. `["Diabetes", "Asthma"]`) are stored as structured JSON/JSONB text arrays.
 - **Cascading Lifecycle:** The `profiles` table maintains a 1-to-1 foreign key to `users.id` with `ON DELETE CASCADE`. If an account is deleted, the health profile is purged immediately.
+
+---
+
+## Audit Logs & System Traceability (S2-NIT-3, NFR-10)
+
+Owner: Nishith · Task: S2-NIT-3 · Issue: #159 · Requirement: NFR-10
+
+Revision `0006_audit_log` establishes the `audit_logs` table for tracking clinical triage evaluations, risk assessments, and model reproducibility:
+
+```mermaid
+erDiagram
+    USERS ||--o{ AUDIT_LOGS : "who (SET NULL on delete)"
+    GUEST_SESSIONS ||--o{ AUDIT_LOGS : "who (SET NULL on delete)"
+    ASSESSMENTS ||--o{ AUDIT_LOGS : "logs (SET NULL on delete)"
+```
+
+### Privacy & Compliance Invariants (DPDP Act 2023, DR-06, S2-HAR-7)
+- **Zero PII Leakage:** The audit table strictly records operational metadata, model/engine lineages, and non-identifying telemetry. Freeform text, dialogue turns, patient names, and phone numbers are forbidden.
+- **Graceful Anonymization on Erasure:** Foreign keys for `user_id`, `guest_session_id`, and `assessment_id` configure `ON DELETE SET NULL`. If a patient invokes "Delete my data" or a guest session expires, personal linkages clear while historical clinical audit records are preserved for medical compliance and accuracy audits.
+
+### Schema & Indexing
+
+| Column | Type | Nullable | Rationale / Constraint |
+|---|---|---|---|
+| `id` | `UUID` | No | Primary key. |
+| `created_at` | `TIMESTAMPTZ` | No | Immutable audit event timestamp ("when"). Indexed. |
+| `user_id` | `UUID` | Yes | Foreign key to `users.id` (`ON DELETE SET NULL`). Indexed. |
+| `guest_session_id` | `UUID` | Yes | Foreign key to `guest_sessions.id` (`ON DELETE SET NULL`). Indexed. |
+| `assessment_id` | `UUID` | Yes | Foreign key to `assessments.id` (`ON DELETE SET NULL`). Indexed. |
+| `action` | `VARCHAR(64)` | No | Audit action category (`ANALYSIS`, `RECOMMENDATION`, `TRIAGE`). Check: nonblank. Indexed. |
+| `risk_level` | `VARCHAR(32)` | Yes | Triage severity tier (`SELF_CARE`, `CONSULT_DOCTOR`, `URGENT`). Indexed. |
+| `risk_engine_version` | `VARCHAR(32)` | Yes | Pinned deterministic rule version (e.g. `1.1.0`). |
+| `condition_model_version` | `VARCHAR(64)` | Yes | Model version (e.g. `baseline_v1`). |
+| `cv_model_version` | `VARCHAR(64)` | Yes | CV image classifier revision if image was analyzed. |
+| `ai_model` | `VARCHAR(64)` | Yes | AI Gateway LLM model identifier. |
+| `details` | `JSONB` / `JSON` | No | Structured non-PII operational context (rules fired, driving conditions, telemetry). Default `{}`. |
+
+---
+
+## History Query Optimization & pgvector Embeddings (S2-NIT-4, S2-NIS-7)
+
+Owner: Nishith · Task: S2-NIT-4 · Issue: #160 · Requirements: NFR-01, FR-02, FR-03, FR-18, DR-02
+
+Revision `0007_history_indexes_pgvector` delivers two major database tier capabilities:
+
+### 1. History Query Indexing (FR-02, NFR-01)
+- Adds composite covering index `ix_assessments_user_id_state_created_at` on `(user_id, state, created_at)`.
+- Accelerates filtered queries in `query_assessment_history` and `list_assessments_by_user` (e.g. `WHERE user_id = :uid AND state = 'COMPLETED' ORDER BY created_at DESC`), enabling index-only scans for assessment history pagination.
+
+### 2. Dense Semantic Vector Retrieval with pgvector (S2-NIS-7, DR-02)
+- Provisions PostgreSQL `vector` extension (`CREATE EXTENSION IF NOT EXISTS vector;`).
+- Adds `symptom_embeddings` table to store 384-dimensional dense sentence embeddings (`all-MiniLM-L6-v2`, L2-normalized) for ~700 items (100 canonical symptoms + 602 lay terms).
+- **Strict Determinism (DR-02):** **No HNSW or IVFFlat index is created.** An exact linear scan over 700 rows executes in < 2 ms and guarantees that repeated nearest-neighbor queries return identical clinical symptom candidates.
+- Pinned model revision tracking via `model_revision` and unique constraint `uq_symptom_embeddings_revision_phrase` on `(model_revision, phrase)`.
+- Index `ix_symptom_embeddings_model_revision` on `(model_revision)` enables instant scoping to the active model commit.
+
+| Column | Type | Nullable | Rationale / Constraint |
+|---|---|---|---|
+| `id` | `BIGSERIAL` | No | Autoincrementing primary key. |
+| `symptom_id` | `VARCHAR(64)` | No | Canonical symptom ID (e.g. `chest_pain`). Check: non-blank. |
+| `phrase` | `VARCHAR(256)` | No | Natural-language lay term or symptom name. Check: non-blank. |
+| `model_revision` | `VARCHAR(64)` | No | Pinned Hugging Face commit hash of embedding model. |
+| `embedding` | `vector(384)` | No | L2-normalized 384-dimensional dense embedding vector. |
+| `created_at` | `TIMESTAMPTZ` | No | Server default `CURRENT_TIMESTAMP`. |
+
+### 3. Neon Staging Migration Review Runbook
+1. **Offline SQL Generation:** Inspect generated DDL without database credentials:
+   ```powershell
+   alembic upgrade head --sql
+   ```
+2. **Online Staging Migration:** On Neon PostgreSQL 16 staging branch:
+   ```powershell
+   alembic upgrade head
+   ```
+3. **Verification:** Confirm `vector` extension and table creation:
+   ```sql
+   SELECT extname, extversion FROM pg_extension WHERE extname = 'vector';
+   SELECT COUNT(*) FROM symptom_embeddings;
+   ```
+
+---
+
+## Query Performance Review & Index Fixes (S2-NIT-6)
+
+Owner: Nishith · Task: S2-NIT-6 · Issue: #198 · Requirement: NFR-01
+
+Revision `0008_query_perf_indexes` adds 5 backward-compatible composite and foreign-key indexes identified during the `EXPLAIN ANALYZE` review across all 12 hot-path queries (full report in [query-performance-review.md](query-performance-review.md)):
+
+- `ix_assessments_guest_session_id_created_at` on `assessments (guest_session_id, created_at)` — eliminates `Sort` on guest history pagination.
+- `ix_guest_sessions_claimed_by_user_id` on `guest_sessions (claimed_by_user_id)` — eliminates full `Seq Scan` during DPDP `delete_user_account` (`ON DELETE SET NULL`).
+- `ix_audit_logs_assessment_id_created_at` on `audit_logs (assessment_id, created_at)` — eliminates `Sort` on assessment audit listings.
+- `ix_audit_logs_user_id_created_at` on `audit_logs (user_id, created_at)` — eliminates `Sort` on user audit listings.
+- `ix_audit_logs_action_created_at` on `audit_logs (action, created_at)` — eliminates `Sort` / filter discard on time-windowed compliance queries.
+
+Reproduce `EXPLAIN (ANALYZE, BUFFERS)` on Neon staging or local PostgreSQL:
+
+```powershell
+python -m app.db.query_perf --database-url "$env:DATABASE_URL"
+```
+
+
 

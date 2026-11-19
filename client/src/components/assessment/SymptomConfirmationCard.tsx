@@ -109,8 +109,10 @@ export function SymptomConfirmationCard({
     const newSymptom: ConfirmedSymptom = {
       id: `symptom-${Date.now()}-${Math.random().toString(36).slice(2, 7)}`,
       name: trimmed,
-      severity: "MODERATE",
-      duration: { value: 1, unit: "DAY" },
+      // Why: the user has not said how bad or how long yet; made-up values
+      // would reach the risk engine as facts. They can set both in the card.
+      severity: "UNKNOWN",
+      duration: null,
       bodyLocation: null,
       source: "USER_CONFIRMED",
     };

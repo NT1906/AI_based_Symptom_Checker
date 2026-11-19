@@ -4,9 +4,10 @@ Responsibilities:
     - Define domain exceptions with error codes and HTTP status codes.
     - Provide FastAPI error handlers returning uniform JSON with requestId.
     - Prevent leaking internal stack traces or database errors to clients.
+    - Provide graceful degradation error handling for AI, CV, and Database failures.
 
-Owner: Vivek (core) · Task: S0-VIV-1, S1-VIV-2, S1-VIV-4
-Requirements: NFR-05, NFR-08, NFR-10
+Owner: Vivek (core) · Task: S0-VIV-1, S1-VIV-2, S1-VIV-4, S2-VIV-6
+Requirements: NFR-03, NFR-05, NFR-08, NFR-10
 """
 
 from collections.abc import Sequence
@@ -17,10 +18,23 @@ from fastapi.exceptions import RequestValidationError
 from fastapi.responses import JSONResponse
 from pydantic import BaseModel, ConfigDict
 from pydantic.alias_generators import to_camel
+from sqlalchemy.exc import (
+    IntegrityError,
+    InterfaceError,
+    OperationalError,
+    SQLAlchemyError,
+    TimeoutError as DbTimeoutError,
+)
 from starlette.exceptions import HTTPException as StarletteHTTPException
 
 from app.core.logging import get_logger
-from app.core.request_id import REQUEST_ID_HEADER, generate_request_id
+from app.core.request_id import (
+    REQUEST_ID_HEADER,
+    _extract_route_template,
+    generate_request_id,
+)
+from app.middleware.security_headers import SECURITY_HEADERS
+from app.services.ai.gateway import AiError, AiTimeoutError, AiValidationError
 
 logger = get_logger(__name__)
 
@@ -165,6 +179,140 @@ class ExternalServiceError(AppError):
         )
 
 
+# ---------------------------------------------------------------------------
+# S2-VIV-6 Graceful Degradation: AI, CV, and Database Typed Exceptions (NFR-05)
+# ---------------------------------------------------------------------------
+
+
+class AiProviderUnavailableError(ExternalServiceError):
+    """AI provider is unreachable, exhausted quota, or unconfigured."""
+
+    def __init__(
+        self,
+        message: str = "AI service is currently unavailable. Please try again later.",
+        details: Any | None = None,
+    ) -> None:
+        """Initialize AiProviderUnavailableError with status 503."""
+        super().__init__(message=message, details=details)
+        self.code = "AI_PROVIDER_UNAVAILABLE"
+        self.status_code = status.HTTP_503_SERVICE_UNAVAILABLE
+
+
+class AiTimeoutAppError(AppError):
+    """AI provider call exceeded latency budget or request timeout."""
+
+    def __init__(
+        self,
+        message: str = "AI service request timed out. Please try again.",
+        details: Any | None = None,
+    ) -> None:
+        """Initialize AiTimeoutAppError with status 504."""
+        super().__init__(
+            message=message,
+            code="AI_TIMEOUT",
+            status_code=status.HTTP_504_GATEWAY_TIMEOUT,
+            details=details,
+        )
+
+
+class AiInvalidResponseError(ExternalServiceError):
+    """AI provider returned an output that failed schema validation."""
+
+    def __init__(
+        self,
+        message: str = "AI service returned an invalid response. Please try again.",
+        details: Any | None = None,
+    ) -> None:
+        """Initialize AiInvalidResponseError with status 502."""
+        super().__init__(message=message, details=details)
+        self.code = "AI_INVALID_RESPONSE"
+        self.status_code = status.HTTP_502_BAD_GATEWAY
+
+
+class CvModelUnavailableError(AppError):
+    """Computer vision model or provider is unavailable or unconfigured."""
+
+    def __init__(
+        self,
+        message: str = "Photo analysis is not available right now.",
+        details: Any | None = None,
+    ) -> None:
+        """Initialize CvModelUnavailableError with status 503."""
+        super().__init__(
+            message=message,
+            code="CV_MODEL_UNAVAILABLE",
+            status_code=status.HTTP_503_SERVICE_UNAVAILABLE,
+            details=details,
+        )
+
+
+class CvInferenceFailedError(AppError):
+    """Computer vision model failed during image inference or execution."""
+
+    def __init__(
+        self,
+        message: str = "Photo analysis failed. Assessment will continue with text.",
+        details: Any | None = None,
+    ) -> None:
+        """Initialize CvInferenceFailedError with status 502."""
+        super().__init__(
+            message=message,
+            code="CV_INFERENCE_FAILED",
+            status_code=status.HTTP_502_BAD_GATEWAY,
+            details=details,
+        )
+
+
+class DatabaseUnavailableError(AppError):
+    """Database is temporarily unreachable, timed out, or connection pool exhausted."""
+
+    def __init__(
+        self,
+        message: str = (
+            "Database service is temporarily unavailable. Please try again later."
+        ),
+        details: Any | None = None,
+    ) -> None:
+        """Initialize DatabaseUnavailableError with status 503."""
+        super().__init__(
+            message=message,
+            code="DATABASE_UNAVAILABLE",
+            status_code=status.HTTP_503_SERVICE_UNAVAILABLE,
+            details=details,
+        )
+
+
+class DatabaseIntegrityError(ConflictError):
+    """Database unique constraint or foreign key conflict occurred."""
+
+    def __init__(
+        self,
+        message: str = "Database constraint violation or conflict.",
+        details: Any | None = None,
+    ) -> None:
+        """Initialize DatabaseIntegrityError with status 409."""
+        super().__init__(message=message, details=details)
+        self.code = "CONFLICT"
+        self.status_code = status.HTTP_409_CONFLICT
+
+
+class DatabaseOperationFailedError(AppError):
+    """General database execution or query failure."""
+
+    def __init__(
+        self,
+        message: str = "A database operation failed. Please try again later.",
+        details: Any | None = None,
+    ) -> None:
+        """Initialize DatabaseOperationFailedError with status 500."""
+        super().__init__(
+            message=message,
+            code="DATABASE_OPERATION_FAILED",
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            details=details,
+        )
+
+
 def _resolve_request_id(request: Request) -> str:
     """Extract request ID from ASGI scope or generate a fallback.
 
@@ -224,12 +372,13 @@ async def app_error_handler(request: Request, exc: AppError) -> JSONResponse:
     # user-entered symptoms or personal health data (AI_RULES §2.12, §4.9).
     logger.warning(
         "app_error_occurred",
-        path=request.url.path,
+        route=_extract_route_template(request.scope),
         method=request.method,
         code=exc.code,
         status_code=exc.status_code,
         request_id=request_id,
     )
+    headers = {**SECURITY_HEADERS, REQUEST_ID_HEADER: request_id}
     return JSONResponse(
         status_code=exc.status_code,
         content=ErrorResponse(
@@ -238,6 +387,7 @@ async def app_error_handler(request: Request, exc: AppError) -> JSONResponse:
             details=exc.details,
             request_id=request_id,
         ).model_dump(mode="json", by_alias=True),
+        headers=headers,
     )
 
 
@@ -256,10 +406,11 @@ async def validation_error_handler(
     request_id = _resolve_request_id(request)
     logger.info(
         "request_validation_failed",
-        path=request.url.path,
+        route=_extract_route_template(request.scope),
         method=request.method,
         request_id=request_id,
     )
+    headers = {**SECURITY_HEADERS, REQUEST_ID_HEADER: request_id}
     return JSONResponse(
         status_code=status.HTTP_422_UNPROCESSABLE_ENTITY,
         content=ErrorResponse(
@@ -268,6 +419,7 @@ async def validation_error_handler(
             details=_sanitize_validation_errors(exc.errors()),
             request_id=request_id,
         ).model_dump(mode="json", by_alias=True),
+        headers=headers,
     )
 
 
@@ -296,6 +448,7 @@ async def http_exception_handler(
     elif exc.status_code == status.HTTP_403_FORBIDDEN:
         code = "FORBIDDEN"
 
+    headers = {**SECURITY_HEADERS, REQUEST_ID_HEADER: request_id, **(exc.headers or {})}
     return JSONResponse(
         status_code=exc.status_code,
         content=ErrorResponse(
@@ -304,7 +457,107 @@ async def http_exception_handler(
             details=None,
             request_id=request_id,
         ).model_dump(mode="json", by_alias=True),
-        headers=exc.headers,
+        headers=headers,
+    )
+
+
+async def ai_error_handler(request: Request, exc: Exception) -> JSONResponse:
+    """Handle unhandled AI provider and gateway errors safely.
+
+    Translates untyped AiError subclasses into safe, typed HTTP responses without
+    leaking API keys, prompt templates, or internal provider stack traces.
+
+    Args:
+        request: The incoming FastAPI request.
+        exc: The captured AiError instance.
+
+    Returns:
+        JSONResponse: Standardized ErrorResponse with typed error code and status.
+    """
+    request_id = _resolve_request_id(request)
+    if isinstance(exc, AiTimeoutError):
+        code = "AI_TIMEOUT"
+        status_code = status.HTTP_504_GATEWAY_TIMEOUT
+        message = "AI service request timed out. Please try again."
+    elif isinstance(exc, AiValidationError):
+        code = "AI_INVALID_RESPONSE"
+        status_code = status.HTTP_502_BAD_GATEWAY
+        message = "AI service returned an invalid response. Please try again."
+    else:
+        code = "AI_PROVIDER_UNAVAILABLE"
+        status_code = status.HTTP_503_SERVICE_UNAVAILABLE
+        message = "AI service is currently unavailable. Please try again later."
+
+    logger.warning(
+        "ai_error_handled",
+        route=_extract_route_template(request.scope),
+        method=request.method,
+        code=code,
+        status_code=status_code,
+        error_type=type(exc).__name__,
+        request_id=request_id,
+    )
+    headers = {**SECURITY_HEADERS, REQUEST_ID_HEADER: request_id}
+    return JSONResponse(
+        status_code=status_code,
+        content=ErrorResponse(
+            code=code,
+            message=message,
+            details=None,
+            request_id=request_id,
+        ).model_dump(mode="json", by_alias=True),
+        headers=headers,
+    )
+
+
+async def sqlalchemy_error_handler(
+    request: Request, exc: SQLAlchemyError
+) -> JSONResponse:
+    """Handle unhandled SQLAlchemy database errors safely.
+
+    Masks all raw SQL queries, parameters, database schemas, and connection strings
+    to prevent credential and architectural leakage (NFR-03, NFR-05, OWASP A01/A05).
+
+    Args:
+        request: The incoming FastAPI request.
+        exc: The captured SQLAlchemyError instance.
+
+    Returns:
+        JSONResponse: Standardized ErrorResponse without database internals.
+    """
+    request_id = _resolve_request_id(request)
+    if isinstance(exc, (OperationalError, DbTimeoutError, InterfaceError)):
+        code = "DATABASE_UNAVAILABLE"
+        status_code = status.HTTP_503_SERVICE_UNAVAILABLE
+        message = "Database service is temporarily unavailable. Please try again later."
+    elif isinstance(exc, IntegrityError):
+        code = "CONFLICT"
+        status_code = status.HTTP_409_CONFLICT
+        message = "Database constraint violation or conflict."
+    else:
+        code = "DATABASE_OPERATION_FAILED"
+        status_code = status.HTTP_500_INTERNAL_SERVER_ERROR
+        message = "A database operation failed. Please try again later."
+
+    logger.error(
+        "database_error_handled",
+        route=_extract_route_template(request.scope),
+        method=request.method,
+        code=code,
+        status_code=status_code,
+        error_type=type(exc).__name__,
+        request_id=request_id,
+    )
+    headers = {**SECURITY_HEADERS, REQUEST_ID_HEADER: request_id}
+    return JSONResponse(
+        status_code=status_code,
+        content=ErrorResponse(
+            code=code,
+            message=message,
+            details=None,
+            request_id=request_id,
+        ).model_dump(mode="json", by_alias=True),
+        headers=headers,
     )
 
 
@@ -321,11 +574,11 @@ async def unhandled_exception_handler(request: Request, exc: Exception) -> JSONR
     request_id = _resolve_request_id(request)
     logger.error(
         "unhandled_exception",
-        path=request.url.path,
+        route=_extract_route_template(request.scope),
         method=request.method,
         request_id=request_id,
     )
-    headers = {REQUEST_ID_HEADER: request_id}
+    headers = {**SECURITY_HEADERS, REQUEST_ID_HEADER: request_id}
     return JSONResponse(
         status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
         content=ErrorResponse(
@@ -347,4 +600,6 @@ def register_error_handlers(app: FastAPI) -> None:
     app.add_exception_handler(StarletteHTTPException, http_exception_handler)  # type: ignore[arg-type]
     app.add_exception_handler(AppError, app_error_handler)  # type: ignore[arg-type]
     app.add_exception_handler(RequestValidationError, validation_error_handler)  # type: ignore[arg-type]
+    app.add_exception_handler(AiError, ai_error_handler)
+    app.add_exception_handler(SQLAlchemyError, sqlalchemy_error_handler)  # type: ignore[arg-type]
     app.add_exception_handler(Exception, unhandled_exception_handler)
