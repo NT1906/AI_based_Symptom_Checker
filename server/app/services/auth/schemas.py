@@ -6,6 +6,7 @@ Responsibilities:
     - Define logout, token refresh, and CSRF token responses.
 
 Owner: Vivek (auth) · Task: S2-VIV-1, S2-VIV-2 · Requirements: FR-01, NFR-03
+Change password: Nisarg · Task: S2-NIS-18 · Issue: #315
 """
 
 import re
@@ -50,6 +51,31 @@ class UserRegisterRequest(SchemaBase):
         if not _EMAIL_REGEX.match(normalized):
             raise ValueError("Invalid email address format.")
         return normalized
+
+
+class ChangePasswordRequest(SchemaBase):
+    """Payload for changing the logged-in user's password (S2-NIS-18)."""
+
+    current_password: str = Field(
+        ...,
+        min_length=1,
+        max_length=128,
+        description="The password the user logs in with now",
+    )
+    new_password: str = Field(
+        ...,
+        min_length=8,
+        max_length=128,
+        description="The new password (min 8, max 128 characters)",
+    )
+
+    @field_validator("new_password")
+    @classmethod
+    def validate_new_password_not_blank(cls, value: str) -> str:
+        """Reject an empty or whitespace-only new password."""
+        if not value.strip():
+            raise ValueError("Password cannot be empty or solely whitespace.")
+        return value
 
 
 class UserLoginRequest(SchemaBase):

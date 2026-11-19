@@ -593,6 +593,14 @@ metadata must be excluded.
 It requires the application's CSRF validation and returns 204 once the
 database transaction commits. A failure returns an error rather than a
 successful deletion response. Neither route takes an account ID from the caller.
+Deletion removes the user, profile, assessments (with messages, symptoms,
+consents and saved results); audit-log rows are kept but unlinked from the user
+and assessments. The response clears the session cookies (S2-NIS-18, #315).
+
+`POST /api/v1/auth/change-password` takes `{currentPassword, newPassword}`
+(new password 8–128 characters) with the CSRF header and returns 204. A wrong
+current password, or a new password equal to it, returns 422 with
+`details.field`; the current session stays signed in (S2-NIS-18, #315).
 
 The routes use the shared authentication and the same CSRF check as the
 auth routes. Missing or mismatched CSRF tokens return 401.

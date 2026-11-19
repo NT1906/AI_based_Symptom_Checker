@@ -7,6 +7,7 @@ Responsibilities:
     - Resolve authenticated user records by ID.
 
 Owner: Vivek (auth) · Task: S2-VIV-1, S2-VIV-2 · Requirements: FR-01, NFR-03
+Change password: Nisarg · Task: S2-NIS-18 · Issue: #315
 """
 
 from uuid import UUID
@@ -15,10 +16,11 @@ from sqlalchemy import select
 from sqlalchemy.orm import Session, sessionmaker
 
 from app.core.config import Settings
-from app.core.errors import ConflictError, UnauthorizedError
+from app.core.errors import ConflictError, UnauthorizedError, ValidationError
 from app.core.logging import get_logger
 from app.models.user import User
 from app.services.auth.schemas import (
+    ChangePasswordRequest,
     UserLoginRequest,
     UserRead,
     UserRegisterRequest,
@@ -216,3 +218,36 @@ class AuthService:
                 email=user.email,
                 created_at=user.created_at,
             )
+
+    async def change_password(
+        self, user_id: UUID, payload: ChangePasswordRequest
+    ) -> None:
+        """Replace the user's password after checking the current one.
+
+        Args:
+            user_id: The logged-in user's identifier.
+            payload: Current and new password.
+
+        Raises:
+            UnauthorizedError: If the account no longer exists.
+            ValidationError: If the current password is wrong, or the new one
+                equals it.
+        """
+        with self._session_factory() as session:
+            with session.begin():
+                user = session.get(User, user_id)
+                if user is None or user.password_hash is None:
+                    raise UnauthorizedError("User account no longer exists")
+                if not verify_password(payload.current_password, user.password_hash):
+                    logger.warning("password_change_rejected_wrong_current")
+                    raise ValidationError(
+                        "Your current password is incorrect.",
+                        details={"field": "currentPassword"},
+                    )
+                if payload.new_password == payload.current_password:
+                    raise ValidationError(
+                        "Choose a new password that differs from the current one.",
+                        details={"field": "newPassword"},
+                    )
+                user.password_hash = hash_password(payload.new_password)
+        logger.info("password_changed")

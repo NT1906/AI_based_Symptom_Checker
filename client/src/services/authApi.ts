@@ -2,6 +2,7 @@
 /**
  * @file Typed authentication API services.
  * Owner: Rutva · Task: S2-RUT-1 · Issue: #180
+ * Change password: Nisarg · Task: S2-NIS-18 · Issue: #315
  *
  * Uses HttpOnly session cookies and generated OpenAPI contracts.
  * Credentials and authentication tokens are never persisted in browser storage.
@@ -14,6 +15,7 @@ import type {
   UserRead,
   UserRegisterRequest,
 } from "../types";
+import { csrfHeaders } from "./csrf";
 
 /** Structured error returned by an authentication API request. */
 export class AuthApiError extends Error {
@@ -91,6 +93,10 @@ async function requestJson<T>(
     );
   }
 
+  if (response.status === 204) {
+    return undefined as T;
+  }
+
   return (await response.json()) as T;
 }
 
@@ -142,4 +148,27 @@ export function logoutUser(): Promise<LogoutResponse> {
  */
 export function getCurrentUser(): Promise<UserRead> {
   return requestJson<UserRead>("/api/v1/auth/me");
+}
+
+/** Payload for changing the logged-in user's password. */
+export type ChangePasswordRequest = {
+  /** The password the user logs in with now. */
+  currentPassword: string;
+  /** The new password (8 to 128 characters). */
+  newPassword: string;
+};
+
+/**
+ * Change the logged-in user's password (S2-NIS-18, #315).
+ *
+ * @param request - Current and new password.
+ * @returns Resolves when the password was changed; the session stays active.
+ * @throws AuthApiError: 422 for a wrong current or invalid new password, 401 when logged out.
+ */
+export function changePassword(request: ChangePasswordRequest): Promise<void> {
+  return requestJson<void>("/api/v1/auth/change-password", {
+    method: "POST",
+    body: JSON.stringify(request),
+    headers: csrfHeaders(),
+  });
 }

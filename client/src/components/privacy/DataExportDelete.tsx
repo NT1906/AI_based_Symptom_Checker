@@ -1,6 +1,7 @@
 /**
  * @file DataExportDelete — privacy controls for statutory data export and permanent deletion.
  * Owner: Dimple · Task: S2-DIM-3 · Requirements: DR-06, DR-08
+ * Real account deletion and guest handling: Nisarg · Task: S2-NIS-18 · Issue: #315
  *
  * Implements DPDP Act 2023 user rights:
  * - Export: self-service download of personal and assessment records in JSON.
@@ -9,14 +10,17 @@
  */
 
 import React, { useState } from "react";
+import { queryClient } from "../../lib/queryClient";
 import {
   fetchUserDataExport,
   deleteUserData,
+  NotLoggedInError,
   triggerJsonDownload,
   type UserDataExport,
 } from "../../services/privacyApi";
 import { useConsentStore } from "../../stores/consentStore";
 import { useAssessmentStore } from "../../stores/assessmentStore";
+import { useAuthStore } from "../../stores/authStore";
 import {
   COLOR_TOKENS,
   SHADOW_TOKENS,
@@ -47,6 +51,7 @@ export function DataExportDelete({
 }: DataExportDeleteProps): React.ReactElement {
   const consentStore = useConsentStore();
   const assessmentStore = useAssessmentStore();
+  const accountUser = useAuthStore((s) => s.user);
 
   const [isExporting, setIsExporting] = useState(false);
   const [isDeleting, setIsDeleting] = useState(false);
@@ -103,26 +108,39 @@ export function DataExportDelete({
     setStatusMessage(null);
 
     try {
-      await deleteUserData();
+      // Why: guests have no account, so there is nothing to erase on the
+      // server yet; say so instead of claiming a deletion (S2-NIS-18).
+      if (accountUser) {
+        await deleteUserData();
+      }
 
       // Clear all client stores (DR-06 compliance: zero persistence)
       consentStore.clearConsent();
       assessmentStore.clearAssessment();
+      queryClient.clear();
+      if (accountUser) {
+        useAuthStore.setState({ user: null, status: "unauthenticated", errorMessage: null });
+      }
 
       setShowConfirmModal(false);
       setStatusMessage({
         type: "success",
-        text: "All your data has been permanently deleted from our servers and this browser session.",
+        text: accountUser
+          ? "All your data has been permanently deleted: your account, assessments, saved results and profile. You have been logged out."
+          : "This browser session has been cleared. You are not logged in, so no account data is stored; guest sessions are purged automatically after 24 hours.",
       });
 
       if (onDataDeleted) {
         onDataDeleted();
       }
-    } catch {
+    } catch (error) {
       setShowConfirmModal(false);
       setStatusMessage({
         type: "error",
-        text: "Unable to complete data deletion. Please try again.",
+        text:
+          error instanceof NotLoggedInError
+            ? "Your session has ended. Please log in again to delete your account."
+            : "Unable to complete data deletion. Please try again.",
       });
     } finally {
       setIsDeleting(false);

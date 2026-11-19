@@ -1,6 +1,7 @@
 """Expose authenticated export and deletion for account data.
 
 Owner: Harsh · Task: S2-HAR-2 · Issue: #173 · Requirements: DR-06, NFR-04
+Account deletion wiring: Nisarg · Task: S2-NIS-18 · Issue: #315
 """
 
 from collections.abc import Callable
@@ -10,8 +11,15 @@ from uuid import UUID
 from fastapi import APIRouter, Depends, Response, status
 from pydantic import JsonValue
 
-from app.api.deps import CurrentUserDep, SessionFactoryDep, verify_csrf_token
+from app.api.deps import (
+    CurrentUserDep,
+    SessionFactoryDep,
+    SettingsDep,
+    verify_csrf_token,
+)
+from app.api.v1.auth import clear_auth_cookies
 from app.core.errors import ErrorResponse
+from app.services.privacy.account_deletion import AccountDataRepository
 from app.services.privacy.account_export import AccountExport
 from app.services.privacy.data_rights import DataRightsService
 
@@ -27,6 +35,11 @@ class AccountExporter(Protocol):
 def get_account_export(session_factory: SessionFactoryDep) -> AccountExport:
     """Provide the database-backed account exporter."""
     return AccountExport(session_factory)
+
+
+def get_data_rights_service(session_factory: SessionFactoryDep) -> DataRightsService:
+    """Provide the database-backed data-rights service (export and deletion)."""
+    return DataRightsService(AccountDataRepository(session_factory))
 
 
 def create_privacy_router(
@@ -137,12 +150,15 @@ def create_privacy_router(
     def delete_data(
         current_user: CurrentUserDep,
         service: Annotated[DataRightsService, Depends(get_delete_service)],
+        settings: SettingsDep,
     ) -> Response:
-        """Erase the authenticated account's data after CSRF validation."""
+        """Erase the account's data after CSRF validation and end the session."""
         service.delete(current_user.id)
-        return Response(status_code=204, headers={"Cache-Control": "no-store"})
+        response = Response(status_code=204, headers={"Cache-Control": "no-store"})
+        clear_auth_cookies(response, settings)
+        return response
 
     return router
 
 
-router = create_privacy_router(get_account_export)
+router = create_privacy_router(get_account_export, get_data_rights_service)
