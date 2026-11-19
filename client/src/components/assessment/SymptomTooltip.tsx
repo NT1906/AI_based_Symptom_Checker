@@ -1,8 +1,10 @@
 /**
  * @file Interactive symptom definition tooltip component.
  * Owner: Mann (Frontend + Deployment · Testing) · Task: S2-MAN-3 · Requirements: FR-18
+ * Restyle (design tokens, lucide icons, dark mode): Nisarg · S2-NIS-22 (#323)
  */
 
+import { X } from "lucide-react";
 import {
   type KeyboardEvent,
   useEffect,
@@ -95,12 +97,12 @@ export function SymptomTooltip({
         aria-expanded={isOpen}
         aria-describedby={isOpen ? tooltipId : undefined}
         aria-label={`Definition for ${entry?.name || symptom}`}
-        className="group inline-flex items-center gap-1 text-left text-inherit underline decoration-teal-500/50 decoration-dotted underline-offset-2 hover:decoration-teal-600 focus:outline-none focus:ring-2 focus:ring-teal-500 focus:ring-offset-1 rounded-xs"
+        className="group inline-flex items-center gap-1 text-left text-inherit underline decoration-primary decoration-dotted underline-offset-2 hover:decoration-primary focus:outline-none focus:ring-2 focus:ring-ring focus:ring-offset-1 rounded-xs"
       >
         <span>{children || entry?.name || symptom}</span>
         <span
           aria-hidden="true"
-          className="inline-flex h-4 w-4 shrink-0 items-center justify-center rounded-full bg-teal-100 text-[10px] font-bold text-teal-800 transition group-hover:bg-teal-200 dark:bg-teal-900/60 dark:text-teal-200"
+          className="inline-flex h-4 w-4 shrink-0 items-center justify-center rounded-full bg-primary/15 text-[10px] font-bold text-primary-strong transition group-hover:bg-primary/25"
         >
           ℹ
         </span>
@@ -111,18 +113,18 @@ export function SymptomTooltip({
         <span
           id={tooltipId}
           role="tooltip"
-          className="absolute bottom-full left-1/2 z-50 mb-2 w-72 -translate-x-1/2 rounded-xl border border-teal-200 bg-white p-3.5 text-xs text-slate-700 shadow-lg dark:border-teal-900 dark:bg-slate-900 dark:text-slate-200"
+          className="absolute bottom-full left-1/2 z-50 mb-2 w-72 -translate-x-1/2 rounded-xl border border-primary/25 bg-card p-3.5 text-xs text-muted-foreground shadow-lg"
         >
           {/* Header */}
-          <span className="mb-1 flex items-center justify-between border-b border-slate-100 pb-1.5 font-bold text-slate-900 dark:border-slate-800 dark:text-slate-100">
+          <span className="mb-1 flex items-center justify-between border-b border-border pb-1.5 font-bold text-foreground">
             <span>{entry?.name || symptom}</span>
             <button
               type="button"
               onClick={() => setIsOpen(false)}
               aria-label="Close definition tooltip"
-              className="rounded-sm text-slate-400 hover:text-slate-600 dark:hover:text-slate-200"
+              className="rounded-sm text-muted-foreground hover:text-muted-foreground"
             >
-              ✕
+              <X className="size-5" aria-hidden="true" />
             </button>
           </span>
 
@@ -130,7 +132,7 @@ export function SymptomTooltip({
           <span className="block leading-relaxed">{definition}</span>
 
           {/* Safe Non-Diagnostic Disclaimer */}
-          <span className="mt-2 block border-t border-slate-100 pt-1.5 text-[10px] text-slate-400 dark:border-slate-800">
+          <span className="mt-2 block border-t border-border pt-1.5 text-[10px] text-muted-foreground">
             Informational triage aid only. Not a medical diagnosis.
           </span>
         </span>

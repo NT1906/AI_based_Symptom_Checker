@@ -1,6 +1,7 @@
 /**
  * @file Self-care guidance cards for low-risk clinical assessment outcomes.
  * Owner: Dimple · Task: S2-DIM-2, S2-DIM-5 · Requirements: idea §8, DR-01, DR-05, NFR-06
+ * Restyle (design tokens, lucide icons, dark mode): Nisarg · S2-NIS-22 (#323)
  *
  * Medical-safety rules (AI_RULES.md §2):
  * - Renders ONLY when risk tier is explicitly SELF_CARE (returns null otherwise).
@@ -10,13 +11,9 @@
  * - Gracefully provides clinically sound defaults if guidance data is incomplete.
  */
 
+import { Check, Droplets, House, Stethoscope, TriangleAlert } from "lucide-react";
 import React from "react";
 import type { RiskLevel } from "./RiskBadge";
-import {
-  COLOR_TOKENS,
-  SHADOW_TOKENS,
-  ACCESSIBILITY_TOKENS,
-} from "../../theme/tokens";
 
 /** Props for the SelfCareGuidanceCard component. */
 export interface SelfCareGuidanceCardProps {
@@ -109,24 +106,21 @@ export function SelfCareGuidanceCard({
       <section
         role="region"
         aria-label="Self-care guidance status"
-        className={`rounded-2xl border border-amber-200 bg-amber-50/80 p-5 shadow-xs sm:p-6 ${className}`}
-        style={{
-          boxShadow: SHADOW_TOKENS.sm,
-        }}
+        className={`rounded-xl border border-warning/25 bg-warning/5 p-5 shadow-xs sm:p-6 ${className}`}
       >
         <div className="flex items-start gap-3">
           <span className="text-2xl" aria-hidden="true">
-            ⚠️
+            <TriangleAlert className="size-5" aria-hidden="true" />
           </span>
           <div className="space-y-2">
-            <h2 className="text-base font-bold text-amber-950 sm:text-lg">
+            <h2 className="text-base font-bold text-warning-strong sm:text-lg">
               Self-Care Information Notice
             </h2>
-            <p className="text-sm text-amber-900 leading-relaxed">
+            <p className="text-sm text-warning-strong leading-relaxed">
               {errorMsg} Although detailed guidance could not be loaded, your
               assessment remains in the low-risk tier.
             </p>
-            <ul className="mt-2 list-disc pl-5 space-y-1 text-xs text-amber-900 sm:text-sm">
+            <ul className="mt-2 list-disc pl-5 space-y-1 text-xs text-warning-strong sm:text-sm">
               <li>Rest and stay hydrated with water or oral fluids.</li>
               <li>Monitor your symptoms closely over the next 24 to 48 hours.</li>
               <li>
@@ -134,7 +128,7 @@ export function SelfCareGuidanceCard({
                 promptly.
               </li>
             </ul>
-            <p className="pt-2 text-xs text-slate-600 italic">
+            <p className="pt-2 text-xs text-muted-foreground italic">
               {DISCLAIMER_TEXT}
             </p>
           </div>
@@ -163,29 +157,26 @@ export function SelfCareGuidanceCard({
     <section
       role="region"
       aria-labelledby="self-care-heading"
-      className={`space-y-6 rounded-3xl border border-emerald-200 bg-white p-5 shadow-sm sm:p-7 ${className}`}
-      style={{
-        boxShadow: SHADOW_TOKENS.md,
-      }}
+      className={`space-y-6 rounded-xl border border-success/25 bg-card p-5 shadow-sm sm:p-7 ${className}`}
     >
       {/* 1. Header Banner & Safety Notice */}
-      <header className="space-y-2 border-b border-emerald-100 pb-4">
+      <header className="space-y-2 border-b border-success/25 pb-4">
         <div className="flex flex-wrap items-center justify-between gap-2">
           <div className="flex items-center gap-2">
             <span
-              className="inline-flex items-center gap-1.5 rounded-full border border-emerald-300 bg-emerald-50 px-3 py-1 text-xs font-semibold text-emerald-800"
+              className="inline-flex items-center gap-1.5 rounded-full border border-success/40 bg-success/10 px-3 py-1 text-xs font-semibold text-success-strong"
               role="status"
             >
-              <span aria-hidden="true">🏠</span>
+              <House className="size-4 shrink-0" aria-hidden="true" />
               <span>Low-Risk Outcome</span>
             </span>
-            <span className="text-xs font-medium text-slate-600">
+            <span className="text-xs font-medium text-muted-foreground">
               Informational Home Management
             </span>
           </div>
 
           {conditionName && (
-            <span className="text-xs font-semibold text-teal-800 bg-teal-50 rounded-lg px-2.5 py-1 border border-teal-200">
+            <span className="text-xs font-semibold text-primary-strong bg-primary/10 rounded-lg px-2.5 py-1 border border-primary/25">
               Context: {conditionName}
             </span>
           )}
@@ -193,12 +184,12 @@ export function SelfCareGuidanceCard({
 
         <h2
           id="self-care-heading"
-          className="text-xl font-bold tracking-tight text-slate-900 sm:text-2xl"
+          className="text-xl font-bold tracking-tight text-foreground sm:text-2xl"
         >
           Recommended Self-Care &amp; Monitoring
         </h2>
 
-        <p className="text-sm leading-relaxed text-slate-600 sm:text-base">
+        <p className="text-sm leading-relaxed text-muted-foreground sm:text-base">
           {summary ||
             "Your reported symptoms match mild, low-risk conditions that typically resolve with supportive home care."}
         </p>
@@ -207,9 +198,9 @@ export function SelfCareGuidanceCard({
         <div
           role="note"
           aria-label="Safety notice"
-          className="rounded-xl border border-emerald-200/80 bg-emerald-50/60 p-3 text-xs leading-relaxed text-emerald-950 sm:text-sm"
+          className="rounded-xl border border-success/25 bg-success/5 p-3 text-xs leading-relaxed text-success-strong sm:text-sm"
         >
-          <strong className="font-semibold text-emerald-900">
+          <strong className="font-semibold text-success-strong">
             Important Medical Reminder:{" "}
           </strong>
           A low-risk assessment indicates supportive care is reasonable, but{" "}
@@ -223,25 +214,25 @@ export function SelfCareGuidanceCard({
         {/* Card A: Supportive Rest & Hydration */}
         <article
           aria-labelledby="card-rest-heading"
-          className="flex flex-col justify-between rounded-2xl border border-slate-200 bg-slate-50/50 p-4 sm:p-5 transition hover:border-emerald-300 hover:shadow-xs"
+          className="flex flex-col justify-between rounded-xl border border-border bg-muted/60 p-4 sm:p-5 transition hover:border-success/40 hover:shadow-xs"
         >
           <div className="space-y-3">
-            <div className="flex items-center gap-2 text-emerald-800">
+            <div className="flex items-center gap-2 text-success-strong">
               <span className="text-xl" aria-hidden="true">
-                💧
+                <Droplets className="size-5" aria-hidden="true" />
               </span>
               <h3
                 id="card-rest-heading"
-                className="text-base font-bold text-slate-900"
+                className="text-base font-bold text-foreground"
               >
                 Supportive Care Steps
               </h3>
             </div>
-            <ul className="space-y-2 text-xs leading-relaxed text-slate-700 sm:text-sm">
+            <ul className="space-y-2 text-xs leading-relaxed text-muted-foreground sm:text-sm">
               {resolvedAdvice.map((item, index) => (
                 <li key={index} className="flex items-start gap-2">
                   <span
-                    className="mt-1.5 h-1.5 w-1.5 shrink-0 rounded-full bg-emerald-600"
+                    className="mt-1.5 h-1.5 w-1.5 shrink-0 rounded-full bg-success"
                     aria-hidden="true"
                   />
                   <span>{item}</span>
@@ -250,15 +241,15 @@ export function SelfCareGuidanceCard({
             </ul>
 
             {monitoringTips && monitoringTips.length > 0 && (
-              <div className="mt-3 border-t border-slate-200/60 pt-3">
-                <h4 className="text-xs font-bold uppercase tracking-wider text-slate-600">
+              <div className="mt-3 border-t border-border pt-3">
+                <h4 className="text-xs font-bold uppercase tracking-wider text-muted-foreground">
                   Monitoring Tips
                 </h4>
-                <ul className="mt-1.5 space-y-1 text-xs text-slate-600 sm:text-sm">
+                <ul className="mt-1.5 space-y-1 text-xs text-muted-foreground sm:text-sm">
                   {monitoringTips.map((tip, idx) => (
                     <li key={idx} className="flex items-start gap-1.5">
-                      <span className="text-emerald-700" aria-hidden="true">
-                        ✓
+                      <span className="text-success-strong" aria-hidden="true">
+                        <Check className="size-5" aria-hidden="true" />
                       </span>
                       <span>{tip}</span>
                     </li>
@@ -272,29 +263,29 @@ export function SelfCareGuidanceCard({
         {/* Card B: Observation & Red-Flag Escalation */}
         <article
           aria-labelledby="card-escalation-heading"
-          className="flex flex-col justify-between rounded-2xl border border-amber-200 bg-amber-50/40 p-4 sm:p-5 transition hover:border-amber-300 hover:shadow-xs"
+          className="flex flex-col justify-between rounded-xl border border-warning/25 bg-warning/5 p-4 sm:p-5 transition hover:border-warning/40 hover:shadow-xs"
         >
           <div className="space-y-3">
-            <div className="flex items-center gap-2 text-amber-900">
+            <div className="flex items-center gap-2 text-warning-strong">
               <span className="text-xl" aria-hidden="true">
-                ⚠️
+                <TriangleAlert className="size-5" aria-hidden="true" />
               </span>
               <h3
                 id="card-escalation-heading"
-                className="text-base font-bold text-amber-950"
+                className="text-base font-bold text-warning-strong"
               >
                 When to Seek Medical Care
               </h3>
             </div>
-            <p className="text-xs text-amber-900/90 leading-relaxed sm:text-sm">
+            <p className="text-xs text-warning-strong leading-relaxed sm:text-sm">
               Consult a healthcare provider immediately or call{" "}
               <strong>{emergencyNumber}</strong> if you notice:
             </p>
-            <ul className="space-y-2 text-xs leading-relaxed text-amber-950 sm:text-sm">
+            <ul className="space-y-2 text-xs leading-relaxed text-warning-strong sm:text-sm">
               {resolvedWarningSigns.map((item, index) => (
                 <li key={index} className="flex items-start gap-2">
                   <span
-                    className="mt-1.5 h-1.5 w-1.5 shrink-0 rounded-full bg-amber-600"
+                    className="mt-1.5 h-1.5 w-1.5 shrink-0 rounded-full bg-warning"
                     aria-hidden="true"
                   />
                   <span>{item}</span>
@@ -304,7 +295,7 @@ export function SelfCareGuidanceCard({
           </div>
 
           {timeframe && (
-            <div className="mt-4 pt-3 border-t border-amber-200/60 text-xs text-amber-900">
+            <div className="mt-4 pt-3 border-t border-warning/25 text-xs text-warning-strong">
               <span className="font-semibold">Observation window: </span>
               <span>Re-evaluate if symptoms persist past {timeframe}.</span>
             </div>
@@ -315,19 +306,16 @@ export function SelfCareGuidanceCard({
       {/* 3. Action bar & Physician Consultation Link */}
       <footer className="space-y-4 pt-2">
         {onConsultDoctorClick && (
-          <div className="flex flex-col sm:flex-row items-center justify-between gap-3 rounded-2xl border border-slate-200 bg-slate-50 p-4">
-            <div className="text-xs text-slate-600 sm:text-sm text-center sm:text-left">
+          <div className="flex flex-col sm:flex-row items-center justify-between gap-3 rounded-xl border border-border bg-muted/60 p-4">
+            <div className="text-xs text-muted-foreground sm:text-sm text-center sm:text-left">
               Prefer speaking with a professional for reassurance?
             </div>
             <button
               type="button"
               onClick={onConsultDoctorClick}
-              className="inline-flex min-h-[44px] items-center justify-center gap-2 rounded-xl border border-slate-300 bg-white px-4 py-2.5 text-xs font-semibold text-slate-800 shadow-xs transition hover:bg-slate-100 focus:outline-none focus:ring-4 focus:ring-teal-500/20 sm:text-sm"
-              style={{
-                minHeight: ACCESSIBILITY_TOKENS.minTouchTarget,
-              }}
+              className="inline-flex min-h-[44px] items-center justify-center gap-2 rounded-xl border border-input bg-card px-4 py-2.5 text-xs font-semibold text-foreground shadow-xs transition hover:bg-muted focus:outline-none focus:ring-4 focus:ring-ring/20 sm:text-sm"
             >
-              <span>🩺</span>
+              <Stethoscope className="size-4 shrink-0" aria-hidden="true" />
               <span>Find Nearby Clinic / Doctor</span>
             </button>
           </div>
@@ -335,10 +323,7 @@ export function SelfCareGuidanceCard({
 
         {/* Mandatory Medical Disclaimer (AI_RULES.md §2 rule 8) */}
         <p
-          className="text-center text-xs leading-relaxed text-slate-500 border-t border-slate-100 pt-3"
-          style={{
-            color: COLOR_TOKENS.neutral.textMuted,
-          }}
+          className="text-center text-xs leading-relaxed text-muted-foreground border-t border-border pt-3"
         >
           {DISCLAIMER_TEXT}
         </p>

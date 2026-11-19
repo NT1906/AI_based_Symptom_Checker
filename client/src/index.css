@@ -5,6 +5,7 @@
  * Colours are CSS variables so every component follows light and dark mode.
  * Dark mode is class based (`.dark` on <html>), set by the theme provider.
  * Risk colours (success / warning / danger) are reserved for triage levels.
+ * `*-strong` variants are for text on light or tinted surfaces (WCAG AA contrast).
  */
 @import "tailwindcss";
 @import "tw-animate-css";
@@ -39,6 +40,10 @@
   --warning-foreground: oklch(0.25 0.05 60);
   --danger: oklch(0.577 0.215 25);
   --danger-foreground: oklch(0.985 0.01 25);
+  --success-strong: oklch(0.43 0.1 160);
+  --warning-strong: oklch(0.47 0.11 60);
+  --danger-strong: oklch(0.48 0.18 25);
+  --primary-strong: oklch(0.42 0.08 195);
   --chart-1: oklch(0.6 0.1 190);
   --chart-2: oklch(0.55 0.13 160);
   --chart-3: oklch(0.72 0.15 70);
@@ -79,6 +84,10 @@
   --warning-foreground: oklch(0.22 0.05 60);
   --danger: oklch(0.68 0.19 22);
   --danger-foreground: oklch(0.16 0.03 25);
+  --success-strong: oklch(0.82 0.12 160);
+  --warning-strong: oklch(0.86 0.12 80);
+  --danger-strong: oklch(0.8 0.13 22);
+  --primary-strong: oklch(0.84 0.1 185);
   --chart-1: oklch(0.76 0.12 185);
   --chart-2: oklch(0.72 0.14 160);
   --chart-3: oklch(0.8 0.14 75);
@@ -101,6 +110,10 @@
   --color-warning-foreground: var(--warning-foreground);
   --color-danger: var(--danger);
   --color-danger-foreground: var(--danger-foreground);
+  --color-success-strong: var(--success-strong);
+  --color-warning-strong: var(--warning-strong);
+  --color-danger-strong: var(--danger-strong);
+  --color-primary-strong: var(--primary-strong);
   --font-heading: var(--font-sans);
   --font-sans: 'Geist Variable', ui-sans-serif, system-ui, sans-serif;
   --color-sidebar-ring: var(--sidebar-ring);
