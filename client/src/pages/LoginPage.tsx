@@ -50,7 +50,7 @@ export default function LoginPage(): React.JSX.Element {
 
     try {
       await login({ email: normalizedEmail, password });
-      navigate("/chat");
+      navigate("/");
     } catch {
       // The auth store exposes a user-friendly error message.
     }

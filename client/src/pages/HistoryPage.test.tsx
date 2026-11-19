@@ -8,7 +8,7 @@
  */
 
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
-import { cleanup, render, screen } from "@testing-library/react";
+import { cleanup, render, screen, within } from "@testing-library/react";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { MemoryRouter, Route, Routes } from "react-router-dom";
 import HistoryPage from "./HistoryPage";
@@ -179,7 +179,7 @@ describe("HistoryPage", () => {
     ).toBeInTheDocument();
 
     expect(
-      screen.getByRole("link", { name: "Log in" }),
+      within(screen.getByRole("main")).getByRole("link", { name: "Log in" }),
     ).toHaveAttribute("href", "/login");
 
     expect(getAssessmentHistory).not.toHaveBeenCalled();
