@@ -10,9 +10,9 @@ Responsibilities:
 Owner: Vivek (api) · Task: S2-VIV-1, S2-VIV-2 · Requirements: FR-01, NFR-03
 """
 
-from typing import Any
+from typing import Annotated, Any
 
-from fastapi import APIRouter, Request, Response, status
+from fastapi import APIRouter, Body, Request, Response, status
 
 from app.api.deps import AuthServiceDep, CurrentUserDep, SettingsDep
 from app.core.config import Settings
@@ -126,10 +126,36 @@ AUTH_ERROR_RESPONSES: dict[int | str, dict[str, Any]] = {
     status.HTTP_401_UNAUTHORIZED: {
         "model": ErrorResponse,
         "description": "Invalid credentials or missing/expired authentication token",
+        "content": {
+            "application/json": {
+                "example": {
+                    "code": "UNAUTHORIZED",
+                    "message": "Invalid email or password",
+                    "details": None,
+                    "requestId": "req_1234567890abcdef",
+                }
+            }
+        },
     },
     status.HTTP_422_UNPROCESSABLE_ENTITY: {
         "model": ErrorResponse,
         "description": "Validation error on payload",
+        "content": {
+            "application/json": {
+                "example": {
+                    "code": "VALIDATION_ERROR",
+                    "message": "Validation failed on one or more fields.",
+                    "details": [
+                        {
+                            "loc": ["body", "email"],
+                            "msg": "value is not a valid email address",
+                            "type": "value_error",
+                        }
+                    ],
+                    "requestId": "req_1234567890abcdef",
+                }
+            }
+        },
     },
 }
 
@@ -145,18 +171,67 @@ AUTH_ERROR_RESPONSES: dict[int | str, dict[str, Any]] = {
         "Returns the created account representation without password hashes."
     ),
     responses={
+        status.HTTP_201_CREATED: {
+            "model": UserRead,
+            "description": "User account created successfully.",
+            "content": {
+                "application/json": {
+                    "example": {
+                        "id": "00000000-0000-4000-8000-0000000000a1",
+                        "email": "patient@example.com",
+                        "createdAt": "2026-11-18T12:00:00Z",
+                    }
+                }
+            },
+        },
         status.HTTP_409_CONFLICT: {
             "model": ErrorResponse,
             "description": "Account with email already exists",
+            "content": {
+                "application/json": {
+                    "example": {
+                        "code": "ACCOUNT_EXISTS",
+                        "message": "A user with this email address already exists",
+                        "details": None,
+                        "requestId": "req_1234567890abcdef",
+                    }
+                }
+            },
         },
         status.HTTP_422_UNPROCESSABLE_ENTITY: {
             "model": ErrorResponse,
             "description": "Validation error on email or password",
+            "content": {
+                "application/json": {
+                    "example": {
+                        "code": "VALIDATION_ERROR",
+                        "message": "Password cannot be empty or solely whitespace.",
+                        "details": None,
+                        "requestId": "req_1234567890abcdef",
+                    }
+                }
+            },
         },
     },
 )
 async def register(
-    payload: UserRegisterRequest,
+    payload: Annotated[
+        UserRegisterRequest,
+        Body(
+            openapi_examples={
+                "valid_registration": {
+                    "summary": "Valid user registration",
+                    "description": (
+                        "Registers a new user with standard email and strong password."
+                    ),
+                    "value": {
+                        "email": "patient@example.com",
+                        "password": "SecurePassword123!",
+                    },
+                }
+            },
+        ),
+    ],
     service: AuthServiceDep,
 ) -> UserRead:
     """Register a new user account.
@@ -181,10 +256,44 @@ async def register(
         "Verifies credentials using Argon2id, generates access and refresh JWTs, "
         "and sets them in HttpOnly cookies with CSRF token protection."
     ),
-    responses=AUTH_ERROR_RESPONSES,
+    responses={
+        status.HTTP_200_OK: {
+            "model": UserRead,
+            "description": (
+                "Authentication successful; sets HttpOnly access and refresh "
+                "session cookies."
+            ),
+            "content": {
+                "application/json": {
+                    "example": {
+                        "id": "00000000-0000-4000-8000-0000000000a1",
+                        "email": "patient@example.com",
+                        "createdAt": "2026-11-18T12:00:00Z",
+                    }
+                }
+            },
+        },
+        **AUTH_ERROR_RESPONSES,
+    },
 )
 async def login(
-    payload: UserLoginRequest,
+    payload: Annotated[
+        UserLoginRequest,
+        Body(
+            openapi_examples={
+                "valid_login": {
+                    "summary": "Standard user login",
+                    "description": (
+                        "Submits credentials to establish an authenticated session."
+                    ),
+                    "value": {
+                        "email": "patient@example.com",
+                        "password": "SecurePassword123!",
+                    },
+                }
+            },
+        ),
+    ],
     response: Response,
     service: AuthServiceDep,
     settings: SettingsDep,
@@ -216,7 +325,38 @@ async def login(
         "Validates the refresh token from cookie, rotates the token, "
         "and sets updated access, refresh, and CSRF cookies."
     ),
-    responses=AUTH_ERROR_RESPONSES,
+    responses={
+        status.HTTP_200_OK: {
+            "model": UserRead,
+            "description": (
+                "Session refreshed; rotates refresh token and issues "
+                "fresh access cookie."
+            ),
+            "content": {
+                "application/json": {
+                    "example": {
+                        "id": "00000000-0000-4000-8000-0000000000a1",
+                        "email": "patient@example.com",
+                        "createdAt": "2026-11-18T12:00:00Z",
+                    }
+                }
+            },
+        },
+        status.HTTP_401_UNAUTHORIZED: {
+            "model": ErrorResponse,
+            "description": "Refresh token cookie missing, expired, or revoked",
+            "content": {
+                "application/json": {
+                    "example": {
+                        "code": "UNAUTHORIZED",
+                        "message": "Refresh token session cookie missing",
+                        "details": None,
+                        "requestId": "req_1234567890abcdef",
+                    }
+                }
+            },
+        },
+    },
 )
 async def refresh(
     request: Request,
@@ -263,6 +403,19 @@ async def refresh(
         "Generates a fresh CSRF token, setting the csrf_token cookie and "
         "response header."
     ),
+    responses={
+        status.HTTP_200_OK: {
+            "model": CsrfTokenResponse,
+            "description": "Fresh CSRF token issued in payload and Set-Cookie header.",
+            "content": {
+                "application/json": {
+                    "example": {
+                        "csrfToken": "a1b2c3d4e5f60718293a4b5c6d7e8f90",
+                    }
+                }
+            },
+        }
+    },
 )
 async def get_csrf(
     response: Response,
@@ -300,6 +453,20 @@ async def get_csrf(
     description=(
         "Clears access, refresh, and CSRF cookies, revoking the active refresh token."
     ),
+    responses={
+        status.HTTP_200_OK: {
+            "model": LogoutResponse,
+            "description": "Session terminated and authentication cookies cleared.",
+            "content": {
+                "application/json": {
+                    "example": {
+                        "status": "ok",
+                        "message": "Successfully logged out",
+                    }
+                }
+            },
+        }
+    },
 )
 async def logout(
     request: Request,
@@ -337,9 +504,32 @@ async def logout(
         "extracted from the HttpOnly session cookie."
     ),
     responses={
+        status.HTTP_200_OK: {
+            "model": UserRead,
+            "description": "Current user account information.",
+            "content": {
+                "application/json": {
+                    "example": {
+                        "id": "00000000-0000-4000-8000-0000000000a1",
+                        "email": "patient@example.com",
+                        "createdAt": "2026-11-18T12:00:00Z",
+                    }
+                }
+            },
+        },
         status.HTTP_401_UNAUTHORIZED: {
             "model": ErrorResponse,
             "description": "Missing, invalid, or expired session token",
+            "content": {
+                "application/json": {
+                    "example": {
+                        "code": "UNAUTHORIZED",
+                        "message": "Authentication required",
+                        "details": None,
+                        "requestId": "req_1234567890abcdef",
+                    }
+                }
+            },
         },
     },
 )

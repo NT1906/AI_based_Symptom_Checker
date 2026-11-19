@@ -43,6 +43,76 @@ from starlette.middleware.cors import CORSMiddleware
 
 logger = get_logger(__name__)
 
+OPENAPI_TAGS = [
+    {
+        "name": "health",
+        "description": (
+            "Liveness and readiness probes indicating API service health and version."
+        ),
+    },
+    {
+        "name": "auth",
+        "description": (
+            "Authentication, registration, session management with Argon2id hashing, "
+            "HttpOnly JWT cookie rotation, and anti-CSRF token distribution."
+        ),
+    },
+    {
+        "name": "assessments",
+        "description": (
+            "Conversational symptom triage sessions, dialogue message processing, "
+            "canonical symptom recognition, in-memory photo sanitization, and "
+            "deterministic clinical risk evaluation with non-diagnostic guidance."
+        ),
+    },
+    {
+        "name": "consents",
+        "description": (
+            "Explicit versioned consent tracking adhering to DPDP Act "
+            "and GDPR data protection regulations."
+        ),
+    },
+    {
+        "name": "history",
+        "description": (
+            "Authenticated retrieval of past completed symptom assessment summaries "
+            "and dialogue records."
+        ),
+    },
+    {
+        "name": "profile",
+        "description": (
+            "Optional clinical context profile management (coarse age band, "
+            "biological sex, chronic conditions) for personalized triage guidance "
+            "with zero-cache privacy controls."
+        ),
+    },
+    {
+        "name": "privacy",
+        "description": (
+            "Data subject rights: account data export and privacy-compliant "
+            "data erasure."
+        ),
+    },
+]
+
+API_DESCRIPTION = (
+    "## AI-Based Symptom Checker API\n\n"
+    "An informational triage aid backend providing structured conversational "
+    "symptom collection, clinical condition prediction, and deterministic risk "
+    "tier evaluation.\n\n"
+    "### Medical Safety & Regulatory Notice (AI_RULES.md §2, DR-01, DR-02)\n"
+    "- **Non-Diagnostic Aid:** This service is strictly an informational tool "
+    "and does **not** provide medical diagnoses or prescriptions.\n"
+    "- **Emergency Invariant:** Any detected red-flag symptom triggers an "
+    "immediate `URGENT` risk tier and provides emergency number guidance (112).\n"
+    "- **Deterministic Safety:** Clinical risk tiers (`SELF_CARE`, `CONSULT_DOCTOR`, "
+    "`URGENT`) are governed by deterministic rules. Uncertainty always escalates "
+    "risk, never lowers it.\n"
+    "- **Privacy & Zero-PII:** Symptom photos are processed strictly in volatile "
+    "memory and never stored. User message text is excluded from structured logs."
+)
+
 
 @asynccontextmanager
 async def lifespan(app: FastAPI) -> AsyncIterator[None]:
@@ -95,11 +165,17 @@ def create_app() -> FastAPI:
 
     app = FastAPI(
         title="AI-Based Symptom Checker API",
-        description=(
-            "Informational triage aid backend providing symptom collection, "
-            "prediction orchestration, and risk engine evaluation."
-        ),
+        description=API_DESCRIPTION,
         version=settings.app_version,
+        openapi_tags=OPENAPI_TAGS,
+        contact={
+            "name": "AI-Based Symptom Checker Team",
+            "url": "https://github.com/NT1906/AI_based_Symptom_Checker",
+        },
+        license_info={
+            "name": "MIT",
+            "identifier": "MIT",
+        },
         lifespan=lifespan,
         docs_url=docs_url,
         redoc_url=redoc_url,
