@@ -2,6 +2,7 @@
 /**
  * @file Provides the text input for the assessment conversation.
  * Owner: Rutva · Task: S1-RUT-1 · Requirements: idea §1, §2
+ * Restyle (design tokens, lucide icons, dark mode): Nisarg · S2-NIS-22 (#323)
  */
 
 import { useState, type FormEvent, type KeyboardEvent } from "react";
@@ -47,7 +48,7 @@ export function MessageInput({
   return (
     <form
       onSubmit={submitMessage}
-      className="flex items-end gap-3 border-t border-slate-200 bg-white p-4"
+      className="flex items-end gap-3 border-t border-border bg-card p-4"
     >
       <label htmlFor="assessment-message" className="sr-only">
         Type your message
@@ -63,13 +64,13 @@ export function MessageInput({
         rows={1}
         maxLength={2000}
         disabled={disabled}
-        className="max-h-32 min-h-11 flex-1 resize-y rounded-xl border border-slate-300 px-4 py-3 text-sm outline-none transition focus:border-teal-600 focus:ring-2 focus:ring-teal-100 disabled:cursor-not-allowed disabled:bg-slate-100"
+        className="max-h-32 min-h-11 flex-1 resize-y rounded-xl border border-input px-4 py-3 text-sm outline-none transition focus:border-primary/60 focus:ring-2 focus:ring-ring disabled:cursor-not-allowed disabled:bg-muted"
       />
 
       <button
         type="submit"
         disabled={disabled || !value.trim()}
-        className="rounded-xl bg-teal-700 px-5 py-3 text-sm font-semibold text-white transition hover:bg-teal-800 disabled:cursor-not-allowed disabled:opacity-50"
+        className="rounded-xl bg-primary px-5 py-3 text-sm font-semibold text-primary-foreground transition hover:bg-primary/90 disabled:cursor-not-allowed disabled:opacity-50"
       >
         Send
       </button>

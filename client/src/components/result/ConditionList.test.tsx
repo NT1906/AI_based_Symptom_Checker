@@ -102,7 +102,7 @@ describe("ConditionList", () => {
     expect(getConfidenceLabel("LIKELY")).toBe("Likely");
     expect(getConfidenceLabel("POSSIBLE")).toBe("Possible");
     expect(getConfidenceLabel("LESS_LIKELY")).toBe("Less likely");
-    expect(getConfidenceBadgeClass("LIKELY")).toContain("bg-teal-100");
+    expect(getConfidenceBadgeClass("LIKELY")).toContain("bg-primary/15");
   });
 
   it("renders empty state fallback when no conditions are present (edge case)", () => {

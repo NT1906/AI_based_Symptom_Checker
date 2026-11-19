@@ -1,8 +1,10 @@
 /**
  * @file Doctor referral component opening external map searches for relevant specialties.
  * Owner: Mann (Frontend + Deployment · Testing) · Task: S2-MAN-2 · Requirements: FR-08, idea §9
+ * Restyle (design tokens, lucide icons, dark mode): Nisarg · S2-NIS-22 (#323)
  */
 
+import { ArrowUpRight, Lock, Map as MapIcon, Stethoscope } from "lucide-react";
 import { useState } from "react";
 import type { DoctorReferralProps, MapProvider } from "./types";
 
@@ -103,26 +105,26 @@ export function DoctorReferral({
   return (
     <section
       aria-labelledby="referral-section-heading"
-      className={`rounded-2xl border border-slate-200 bg-white p-5 shadow-xs sm:p-6 dark:border-slate-800 dark:bg-slate-900 ${className}`}
+      className={`rounded-xl border border-border bg-card p-5 shadow-xs sm:p-6 ${className}`}
     >
       <div className="flex flex-col gap-5 sm:flex-row sm:items-start sm:justify-between">
         {/* Referral description */}
         <div className="space-y-2 max-w-xl">
           <div className="flex items-center gap-2">
             <span className="text-xl" aria-hidden="true">
-              🩺
+              <Stethoscope className="size-5" aria-hidden="true" />
             </span>
             <h2
               id="referral-section-heading"
-              className="text-lg font-bold tracking-tight text-slate-900 sm:text-xl dark:text-slate-100"
+              className="text-lg font-bold tracking-tight text-foreground sm:text-xl"
             >
               {title}
             </h2>
           </div>
 
-          <p className="text-xs text-slate-600 sm:text-sm leading-relaxed dark:text-slate-400">
+          <p className="text-xs text-muted-foreground sm:text-sm leading-relaxed">
             Based on what you reported, you may want to see a{" "}
-            <strong className="font-semibold text-teal-700 dark:text-teal-400">
+            <strong className="font-semibold text-primary">
               {effectiveSpecialty}
             </strong>
             . This is a suggestion, not a diagnosis.
@@ -131,7 +133,7 @@ export function DoctorReferral({
           {/* Secondary specialties, if available */}
           {effectiveSecondary.length > 0 && (
             <div className="pt-2">
-              <p className="text-xs font-medium text-slate-700 dark:text-slate-300">
+              <p className="text-xs font-medium text-muted-foreground">
                 Related specialties to consider:
               </p>
               <div className="mt-1.5 flex flex-wrap gap-2">
@@ -148,12 +150,10 @@ export function DoctorReferral({
                       rel="noopener noreferrer"
                       onClick={() => handleLinkClick(secSpecialty, secUrl)}
                       aria-label={`Search for a ${secSpecialty} near you on external map`}
-                      className="inline-flex items-center gap-1.5 rounded-lg border border-slate-200 bg-slate-50 px-2.5 py-1 text-xs font-medium text-slate-700 transition hover:border-teal-400 hover:bg-teal-50/60 hover:text-teal-800 focus:outline-none focus:ring-2 focus:ring-teal-500 dark:border-slate-700 dark:bg-slate-800 dark:text-slate-300 dark:hover:border-teal-500"
+                      className="inline-flex items-center gap-1.5 rounded-lg border border-border bg-muted/60 px-2.5 py-1 text-xs font-medium text-muted-foreground transition hover:border-primary/40 hover:bg-primary/5 hover:text-primary-strong focus:outline-none focus:ring-2 focus:ring-ring"
                     >
                       <span>{secSpecialty}</span>
-                      <span aria-hidden="true" className="text-[10px] text-slate-400">
-                        ↗
-                      </span>
+                      <ArrowUpRight className="size-3 text-muted-foreground" aria-hidden="true" />
                     </a>
                   );
                 })}
@@ -169,23 +169,23 @@ export function DoctorReferral({
             target="_blank"
             rel="noopener noreferrer"
             onClick={() => handleLinkClick(effectiveSpecialty, primarySearchUrl)}
-            className="inline-flex min-h-[44px] items-center justify-center gap-2 rounded-xl bg-teal-600 px-4 py-2.5 text-sm font-semibold text-white shadow-xs transition hover:bg-teal-700 focus:outline-none focus:ring-4 focus:ring-teal-500/40"
+            className="inline-flex min-h-[44px] items-center justify-center gap-2 rounded-xl bg-primary px-4 py-2.5 text-sm font-semibold text-primary-foreground shadow-xs transition hover:bg-primary/90 focus:outline-none focus:ring-4 focus:ring-ring/40"
             aria-label={`Find a ${effectiveSpecialty} near you on external map`}
           >
-            <span aria-hidden="true">🗺️</span>
+            <MapIcon className="size-4 shrink-0" aria-hidden="true" />
             <span>Find a {effectiveSpecialty} Near Me</span>
           </a>
 
           {/* Map provider toggle */}
-          <div className="flex items-center gap-1 text-[11px] text-slate-500 dark:text-slate-400">
+          <div className="flex items-center gap-1 text-[11px] text-muted-foreground">
             <span>Provider:</span>
             <button
               type="button"
               onClick={() => setActiveProvider("google")}
               className={`px-1.5 py-0.5 rounded transition ${
                 activeProvider === "google"
-                  ? "bg-slate-200 font-semibold text-slate-900 dark:bg-slate-700 dark:text-white"
-                  : "text-slate-600 hover:text-slate-900 dark:text-slate-400"
+                  ? "bg-muted font-semibold text-foreground"
+                  : "text-muted-foreground hover:text-foreground"
               }`}
             >
               Google
@@ -196,8 +196,8 @@ export function DoctorReferral({
               onClick={() => setActiveProvider("osm")}
               className={`px-1.5 py-0.5 rounded transition ${
                 activeProvider === "osm"
-                  ? "bg-slate-200 font-semibold text-slate-900 dark:bg-slate-700 dark:text-white"
-                  : "text-slate-600 hover:text-slate-900 dark:text-slate-400"
+                  ? "bg-muted font-semibold text-foreground"
+                  : "text-muted-foreground hover:text-foreground"
               }`}
             >
               OSM
@@ -207,9 +207,9 @@ export function DoctorReferral({
       </div>
 
       {/* Mandatory privacy & boundary notice (FR-08, idea §9) */}
-      <div className="mt-4 border-t border-slate-100 pt-3 text-[11px] text-slate-500 dark:border-slate-800 dark:text-slate-400">
+      <div className="mt-4 border-t border-border pt-3 text-[11px] text-muted-foreground">
         <p className="flex items-center gap-1.5">
-          <span aria-hidden="true">🔒</span>
+          <Lock className="size-4 shrink-0" aria-hidden="true" />
           <span>{DOCTOR_REFERRAL_DATA_NOTICE}</span>
         </p>
       </div>
