@@ -9,7 +9,9 @@ Responsibilities:
 Owner: Nisarg · Task: S2-NIS-14 (#308) · Requirements: NFR-05, FR-18
 """
 
+import json
 from collections.abc import Iterator
+from typing import Any
 from unittest.mock import AsyncMock, MagicMock
 
 import pytest
@@ -17,14 +19,20 @@ import pytest
 from app.core.config import get_settings
 from app.services.ai.factory import get_ai_gateway
 from app.services.ai.fallback_gateway import FallbackAiGateway
-from app.services.ai.gateway import AiError, AiGateway
+from app.services.ai.gateway import AiError, AiGateway, AiValidationError
 from app.services.ai.gemini_provider import GeminiProvider
 from app.services.ai.groq_provider import (
     DEFAULT_GROQ_MODEL,
     GROQ_BASE_URL,
     GroqProvider,
+    groq_json_schema,
 )
-from app.services.ai.schemas import ExtractedSymptom, ExtractionResult, SeverityEnum
+from app.services.ai.schemas import (
+    ClarificationResult,
+    ExtractedSymptom,
+    ExtractionResult,
+    SeverityEnum,
+)
 from app.services.privacy.gateway import PrivacyAiGateway
 
 
@@ -82,35 +90,114 @@ def test_groq_provider_missing_api_key_raises(
         GroqProvider(api_key=None)
 
 
+def _groq_client(content: str | None, finish_reason: str = "stop") -> MagicMock:
+    """Mock AsyncOpenAI client whose chat.completions.create returns ``content``."""
+    choice = MagicMock()
+    choice.message.content = content
+    choice.message.refusal = None
+    choice.finish_reason = finish_reason
+    completion = MagicMock()
+    completion.choices = [choice]
+    client = MagicMock()
+    client.chat.completions.create = AsyncMock(return_value=completion)
+    return client
+
+
+def _any_of_nodes(node: Any) -> list[list[dict[str, Any]]]:
+    """Collect every anyOf branch list in a JSON schema."""
+    found: list[list[dict[str, Any]]] = []
+    if isinstance(node, dict):
+        if isinstance(node.get("anyOf"), list):
+            found.append(node["anyOf"])
+        for value in node.values():
+            found.extend(_any_of_nodes(value))
+    elif isinstance(node, list):
+        for item in node:
+            found.extend(_any_of_nodes(item))
+    return found
+
+
+def test_groq_schema_merges_enum_and_free_string_branches() -> None:
+    """Enum-or-string unions become one string branch listing the enum values."""
+    schema = groq_json_schema(ClarificationResult)
+    question_type = schema["properties"]["question_type"]["anyOf"]
+    assert question_type[1] == {"type": "null"}
+    assert question_type[0]["type"] == "string"
+    assert "DURATION" in question_type[0]["description"]
+    for branches in _any_of_nodes(schema):
+        strings = [b for b in branches if b.get("type") == "string" or "$ref" in b]
+        assert len(strings) <= 1
+
+
+def test_groq_schema_keeps_object_unions_and_strictness() -> None:
+    """Nullable object refs are untouched and the schema stays strict."""
+    schema = groq_json_schema(ExtractionResult)
+    duration = schema["$defs"]["ExtractedSymptom"]["properties"]["duration"]
+    assert duration["anyOf"][0] == {"$ref": "#/$defs/Duration"}
+    assert schema["additionalProperties"] is False
+
+
 @pytest.mark.asyncio
-async def test_groq_provider_extracts_with_structured_outputs() -> None:
-    """Extraction goes through the shared structured-output path with the Groq model."""
-    expected = ExtractionResult(
+async def test_groq_provider_extracts_with_groq_schema() -> None:
+    """Extraction sends a strict Groq schema and parses the JSON reply."""
+    payload = ExtractionResult(
         symptoms=[
             ExtractedSymptom(
-                name="headache",
-                body_site="head",
-                severity=SeverityEnum.MILD,
+                name="headache", body_site="head", severity=SeverityEnum.MILD
             )
         ],
         associated_symptoms=[],
         requires_clarification=False,
     )
-    choice = MagicMock()
-    choice.message.parsed = expected
-    choice.message.refusal = None
-    completion = MagicMock()
-    completion.choices = [choice]
-    client = MagicMock()
-    client.beta.chat.completions.parse = AsyncMock(return_value=completion)
-
+    client = _groq_client(payload.model_dump_json())
     provider = GroqProvider(client=client, model="openai/gpt-oss-120b")
+
     result = await provider.extract_symptoms("I have a mild headache", "")
 
     assert [s.name for s in result.symptoms] == ["headache"]
-    kwargs = client.beta.chat.completions.parse.call_args.kwargs
+    kwargs = client.chat.completions.create.call_args.kwargs
     assert kwargs["model"] == "openai/gpt-oss-120b"
-    assert kwargs["response_format"] is ExtractionResult
+    fmt = kwargs["response_format"]
+    assert fmt["type"] == "json_schema"
+    assert fmt["json_schema"]["strict"] is True
+    assert fmt["json_schema"]["schema"] == groq_json_schema(ExtractionResult)
+
+
+@pytest.mark.asyncio
+async def test_groq_provider_clarification_parses_free_string_question_type() -> None:
+    """A clarification reply with an enum value parses back into the model."""
+    reply = {
+        "should_ask": True,
+        "question": "How long has the headache lasted?",
+        "question_type": "DURATION",
+        "target_symptom": "headache",
+        "missing_field": "duration",
+    }
+    client = _groq_client(json.dumps(reply))
+    provider = GroqProvider(client=client)
+    state = {"symptoms": [{"name": "headache", "severity": "MILD"}]}
+
+    result = await provider.generate_clarification(state, [])
+
+    assert result.should_ask is True
+    assert result.question == "How long has the headache lasted?"
+
+
+@pytest.mark.asyncio
+async def test_groq_provider_truncated_reply_raises_validation_error() -> None:
+    """A reply cut off at the token limit maps to AiValidationError."""
+    client = _groq_client('{"symptoms": [', finish_reason="length")
+    provider = GroqProvider(client=client)
+    with pytest.raises(AiValidationError, match="truncated"):
+        await provider.extract_symptoms("I have a mild headache", "")
+
+
+@pytest.mark.asyncio
+async def test_groq_provider_empty_reply_raises_validation_error() -> None:
+    """No content and no refusal is treated as an empty payload."""
+    provider = GroqProvider(client=_groq_client(None))
+    with pytest.raises(AiError):
+        await provider.extract_symptoms("I have a mild headache", "")
 
 
 def test_factory_returns_groq_provider_when_configured(
