@@ -1,6 +1,6 @@
 # Database foundation
 
-Owner: Harsh, Dimple, Kavya, Nishith · Tasks: S0-HAR-1, S1-DIM-4, S1-KAV-4, S1-NIT-4, S2-KAV-3, S2-NIT-3, S2-NIT-4, S2-NIT-6 · Issues: #9, #38, #37, #36, #161, #159, #160, #198 · Requirements: FR-01, FR-02, FR-03, FR-17, FR-18, NFR-01, NFR-10, DR-02, idea § 10
+Owner: Harsh, Dimple, Kavya, Nishith · Tasks: S0-HAR-1, S1-DIM-4, S1-KAV-4, S1-NIT-4, S2-KAV-3, S2-NIT-3, S2-NIT-4, S2-NIT-6, S2-NIT-7 · Issues: #9, #38, #37, #36, #161, #159, #160, #198, #199 · Requirements: FR-01, FR-02, FR-03, FR-17, FR-18, NFR-01, NFR-05, NFR-10, DR-02, DR-06, idea § 10
 
 This change supplies PostgreSQL-oriented SQLAlchemy 2 models, session factories,
 Alembic migrations (revisions `0001_database_foundation` through `0008_query_perf_indexes`),
@@ -338,6 +338,20 @@ Reproduce `EXPLAIN (ANALYZE, BUFFERS)` on Neon staging or local PostgreSQL:
 
 ```powershell
 python -m app.db.query_perf --database-url "$env:DATABASE_URL"
+```
+
+---
+
+## Backup & Restore Procedure on Neon (S2-NIT-7)
+
+Owner: Nishith · Task: S2-NIT-7 · Issue: #199 · Requirements: NFR-05, DR-06
+
+The full Neon PITR branching, encrypted `pg_dump`/`pg_restore`, DPDP post-restore erasure hygiene, and verified restore drill documentation lives in [backup-and-restore.md](backup-and-restore.md).
+
+Verify Alembic revision, row counts, and SHA-256 table digests (PII-free) before and after any restore:
+
+```powershell
+python -m app.db.backup_restore verify --database-url "$env:DATABASE_URL"
 ```
 
 
