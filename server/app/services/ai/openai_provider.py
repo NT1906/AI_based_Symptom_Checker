@@ -30,6 +30,8 @@ from openai import (
     RateLimitError,
 )
 
+from pydantic import BaseModel
+
 from app.core.logging import get_logger
 from app.services.ai.gateway import (
     AiError,
@@ -52,6 +54,7 @@ from app.services.ai.schemas import (
 logger = get_logger(__name__)
 
 T = TypeVar("T")
+ModelT = TypeVar("ModelT", bound=BaseModel)
 
 PROMPTS_DIR = Path(__file__).resolve().parent / "prompts"
 EXTRACTION_PROMPT_PATH = PROMPTS_DIR / "extraction.v2.txt"
@@ -247,6 +250,34 @@ class OpenAiProvider:
 
         raise AiError(f"OpenAI {action_name} failed: {last_exc}")
 
+    async def _parse_structured(
+        self,
+        prompt: str,
+        response_format: type[ModelT],
+        timeout: float,
+    ) -> tuple[ModelT | None, str | None]:
+        """Send one user prompt with strict structured outputs.
+
+        Subclasses for OpenAI-compatible providers override this when their
+        structured-output API differs (see GroqProvider).
+
+        Args:
+            prompt: Fully formatted user prompt.
+            response_format: Pydantic model describing the expected output.
+            timeout: Timeout in seconds for this attempt.
+
+        Returns:
+            Tuple of (parsed model or None, refusal text or None).
+        """
+        completion = await self._client.beta.chat.completions.parse(
+            model=self._model,
+            messages=[{"role": "user", "content": prompt}],
+            response_format=response_format,
+            timeout=timeout,
+        )
+        message = completion.choices[0].message
+        return message.parsed, getattr(message, "refusal", None)
+
     async def classify_intent(
         self,
         message: str,
@@ -304,24 +335,12 @@ class OpenAiProvider:
 
         async def _call(attempt_timeout: float) -> ExtractionResult:
             logger.info("openai_extraction_started", model=self._model)
-            completion = await self._client.beta.chat.completions.parse(
-                model=self._model,
-                messages=[
-                    {
-                        "role": "user",
-                        "content": formatted_prompt,
-                    },
-                ],
-                response_format=ExtractionResult,
-                timeout=attempt_timeout,
+            parsed, refusal = await self._parse_structured(
+                formatted_prompt, ExtractionResult, attempt_timeout
             )
-            choice = completion.choices[0]
-            if getattr(choice.message, "refusal", None):
-                raise AiValidationError(
-                    f"Model refused extraction request: {choice.message.refusal}"
-                )
+            if refusal:
+                raise AiValidationError(f"Model refused extraction request: {refusal}")
 
-            parsed = choice.message.parsed
             if parsed is None:
                 raise AiValidationError(
                     "OpenAI returned empty parsed extraction payload."
@@ -424,24 +443,14 @@ class OpenAiProvider:
 
         async def _call(attempt_timeout: float) -> ClarificationResult:
             logger.info("openai_clarification_started", model=self._model)
-            completion = await self._client.beta.chat.completions.parse(
-                model=self._model,
-                messages=[
-                    {
-                        "role": "user",
-                        "content": formatted_prompt,
-                    }
-                ],
-                response_format=ClarificationResult,
-                timeout=attempt_timeout,
+            parsed, refusal = await self._parse_structured(
+                formatted_prompt, ClarificationResult, attempt_timeout
             )
-            choice = completion.choices[0]
-            if getattr(choice.message, "refusal", None):
+            if refusal:
                 raise AiValidationError(
-                    f"Model refused clarification request: {choice.message.refusal}"
+                    f"Model refused clarification request: {refusal}"
                 )
 
-            parsed = choice.message.parsed
             if parsed is None:
                 raise AiValidationError(
                     "OpenAI returned empty parsed clarification payload."
