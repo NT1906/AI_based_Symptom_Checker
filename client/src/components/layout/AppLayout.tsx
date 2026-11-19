@@ -9,12 +9,10 @@
  */
 
 import React from "react";
-import { Activity, Info, Phone, WifiOff } from "lucide-react";
-import { ThemeToggle } from "@/components/theme/ThemeToggle";
-import { AccountMenu } from "../account/AccountMenu";
+import { WifiOff } from "lucide-react";
 import { PageTransition } from "./PageTransition";
-import { RouterLink } from "./RouterLink";
-import { StartNewAssessmentButton } from "./StartNewAssessmentButton";
+import { SiteFooter } from "./SiteFooter";
+import { SiteHeader } from "./SiteHeader";
 
 /** Props for the AppLayout component. */
 export interface AppLayoutProps {
@@ -38,9 +36,7 @@ export interface AppLayoutProps {
   requireConfirmation?: boolean;
 }
 
-/** Standard non-diagnostic medical disclaimer text mandated by DR-01. */
-export const MANDATORY_DISCLAIMER_TEXT =
-  "This application is an informational triage aid and does not provide a medical diagnosis or treatment plan. Always consult a qualified healthcare professional for medical concerns. If you think you may be experiencing a life-threatening medical emergency, call emergency services immediately.";
+export { MANDATORY_DISCLAIMER_TEXT } from "./disclaimer";
 
 /**
  * Root application shell providing header landmarks, responsive container,
@@ -81,71 +77,20 @@ export function AppLayout({
           <span className="inline-flex items-center gap-2">
             <WifiOff className="size-4" aria-hidden="true" />
             <span>
-              You are currently offline. Basic emergency information remains
-              accessible, but active assessment features may be limited.
+              You are currently offline. Basic emergency information remains accessible, but active
+              assessment features may be limited.
             </span>
           </span>
         </div>
       )}
 
-      {/* Top navigation */}
-      <header
-        role="banner"
-        className="sticky top-0 z-40 border-b border-border/70 bg-background/80 backdrop-blur-md supports-[backdrop-filter]:bg-background/70"
-      >
-        <div className="mx-auto flex h-16 max-w-6xl items-center justify-between gap-3 px-4 sm:px-6">
-          <RouterLink
-            to="/"
-            className="group flex min-w-0 items-center gap-2.5 rounded-md focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
-            aria-label="Symptom Checker home"
-          >
-            <span
-              className="flex size-9 shrink-0 items-center justify-center rounded-lg bg-primary text-primary-foreground shadow-sm transition-transform group-hover:scale-105"
-              aria-hidden="true"
-            >
-              <Activity className="size-5" strokeWidth={2.25} />
-            </span>
-            <span className="hidden min-w-0 leading-tight sm:block">
-              <span className="block truncate text-sm font-semibold tracking-tight">
-                Symptom Checker
-              </span>
-              <span className="block truncate text-xs text-muted-foreground">
-                Informational triage aid
-              </span>
-            </span>
-          </RouterLink>
-
-          <div className="flex items-center gap-1.5 sm:gap-2">
-            {/* Always-visible Start New Assessment button with confirm dialog (FR-25) */}
-            {showStartOver && (
-              <StartNewAssessmentButton
-                onConfirm={onStartOver}
-                variant="header"
-                label="Start Over"
-                skipConfirm={!requireConfirmation}
-              />
-            )}
-
-            {headerActions}
-
-            <ThemeToggle />
-            <AccountMenu />
-
-            {/* Emergency quick dial */}
-            <a
-              href={`tel:${emergencyNumber}`}
-              className="inline-flex h-10 items-center gap-1.5 rounded-md bg-danger px-3 text-sm font-semibold text-danger-foreground shadow-sm transition hover:bg-danger/90 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-danger focus-visible:ring-offset-2 focus-visible:ring-offset-background"
-              aria-label={`Call emergency services at ${emergencyNumber}`}
-            >
-              <Phone className="size-4" aria-hidden="true" />
-              <span>
-                <span className="hidden sm:inline">Call </span>
-                {emergencyNumber}
-              </span>
-            </a>
-          </div>
-        </div>
-      </header>
+      <SiteHeader
+        emergencyNumber={emergencyNumber}
+        showStartOver={showStartOver}
+        onStartOver={onStartOver}
+        requireConfirmation={requireConfirmation}
+        headerActions={headerActions}
+      />
 
       {/* Primary content */}
       <main
@@ -163,43 +108,7 @@ export function AppLayout({
         <PageTransition className="flex flex-1 flex-col">{children}</PageTransition>
       </main>
 
-      {/* Persistent medical disclaimer footer (DR-01) */}
-      <footer
-        role="contentinfo"
-        aria-label="Medical safety disclaimer and informational notices"
-        className="mt-auto border-t border-border/70 bg-muted/40"
-      >
-        <div className="mx-auto max-w-6xl space-y-5 px-4 py-8 sm:px-6">
-          <div className="flex gap-3 rounded-xl border border-border bg-card p-4 text-card-foreground shadow-xs sm:p-5">
-            <Info className="mt-0.5 size-5 shrink-0 text-primary" aria-hidden="true" />
-            <div className="space-y-1.5 text-sm">
-              <p className="font-medium">Important: informational use only</p>
-              <p className="leading-relaxed text-muted-foreground">{MANDATORY_DISCLAIMER_TEXT}</p>
-              <p className="text-xs text-muted-foreground">
-                Emergency contact:{" "}
-                <a
-                  href={`tel:${emergencyNumber}`}
-                  className="font-semibold text-danger underline-offset-4 hover:underline"
-                >
-                  {emergencyNumber}
-                </a>
-              </p>
-            </div>
-          </div>
-
-          <div className="flex flex-col items-center justify-between gap-3 text-xs text-muted-foreground sm:flex-row">
-            <p>© 2026 AI-Based Symptom Checker · Group 14</p>
-            <nav aria-label="Footer links" className="flex items-center gap-5">
-              <RouterLink to="/privacy" className="transition-colors hover:text-foreground">
-                Privacy &amp; data
-              </RouterLink>
-              <RouterLink to="/history" className="transition-colors hover:text-foreground">
-                History
-              </RouterLink>
-            </nav>
-          </div>
-        </div>
-      </footer>
+      <SiteFooter emergencyNumber={emergencyNumber} />
     </div>
   );
 }
