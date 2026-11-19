@@ -16,13 +16,21 @@ import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
 import { server } from "../../test/server";
 import { useConsentStore } from "../../stores/consentStore";
+import { useAuthStore } from "../../stores/authStore";
 import { useAssessmentStore } from "../../stores/assessmentStore";
 import { DataExportDelete } from "./DataExportDelete";
+
+const TEST_USER = {
+  id: "user-1",
+  email: "owner@example.com",
+  createdAt: "2026-01-01T00:00:00Z",
+};
 
 describe("DataExportDelete", () => {
   beforeEach(() => {
     useConsentStore.getState().clearConsent();
     useAssessmentStore.getState().clearAssessment();
+    useAuthStore.setState({ user: null, status: "idle", errorMessage: null });
   });
 
   afterEach(() => {
@@ -150,8 +158,9 @@ describe("DataExportDelete", () => {
     const user = userEvent.setup();
     const handleDeleted = vi.fn();
 
-    // Populate stores before deletion
+    // Populate stores before deletion; deletion of an account needs a login.
     useConsentStore.getState().recordConsent("c-123", "1.0.0");
+    useAuthStore.setState({ status: "authenticated", user: TEST_USER });
 
     server.use(
       http.delete("/api/v1/privacy/data", () =>
@@ -184,14 +193,16 @@ describe("DataExportDelete", () => {
       ).toBeInTheDocument();
     });
 
-    // Verify stores were wiped
+    // Verify stores were wiped and the user is signed out locally
     expect(useConsentStore.getState().consentId).toBeNull();
+    expect(useAuthStore.getState().user).toBeNull();
     expect(handleDeleted).toHaveBeenCalledTimes(1);
     expect(screen.queryByRole("dialog")).not.toBeInTheDocument();
   });
 
   it("handles deletion API error with a safe alert notice", async () => {
     const user = userEvent.setup();
+    useAuthStore.setState({ status: "authenticated", user: TEST_USER });
 
     server.use(
       http.delete("/api/v1/privacy/data", () =>
@@ -216,5 +227,61 @@ describe("DataExportDelete", () => {
         screen.getByText(/unable to complete data deletion/i),
       ).toBeInTheDocument();
     });
+  });
+
+  it("sends the CSRF token and treats an empty 204 as success (S2-NIS-18)", async () => {
+    const user = userEvent.setup();
+    useAuthStore.setState({ status: "authenticated", user: TEST_USER });
+    document.cookie = "csrf_token=fixture-csrf";
+    let sentToken: string | null = null;
+    server.use(
+      http.delete("/api/v1/privacy/data", ({ request }) => {
+        sentToken = request.headers.get("X-CSRF-Token");
+        return new HttpResponse(null, { status: 204 });
+      }),
+    );
+
+    render(<DataExportDelete />);
+    await user.click(screen.getByRole("button", { name: /permanently delete all data/i }));
+    await user.click(screen.getByRole("button", { name: /yes, permanently delete/i }));
+
+    expect(await screen.findByText(/you have been logged out/i)).toBeInTheDocument();
+    expect(sentToken).toBe("fixture-csrf");
+    document.cookie = "csrf_token=; expires=Thu, 01 Jan 1970 00:00:00 GMT";
+  });
+
+  it("never claims a server deletion for guests (S2-NIS-18)", async () => {
+    const user = userEvent.setup();
+    useAuthStore.setState({ status: "unauthenticated", user: null });
+    let called = false;
+    server.use(
+      http.delete("/api/v1/privacy/data", () => {
+        called = true;
+        return new HttpResponse(null, { status: 204 });
+      }),
+    );
+
+    render(<DataExportDelete />);
+    await user.click(screen.getByRole("button", { name: /permanently delete all data/i }));
+    await user.click(screen.getByRole("button", { name: /yes, permanently delete/i }));
+
+    expect(await screen.findByText(/you are not logged in/i)).toBeInTheDocument();
+    expect(called).toBe(false);
+  });
+
+  it("asks to log in again when the session has ended (S2-NIS-18)", async () => {
+    const user = userEvent.setup();
+    useAuthStore.setState({ status: "authenticated", user: TEST_USER });
+    server.use(
+      http.delete("/api/v1/privacy/data", () =>
+        HttpResponse.json({ code: "UNAUTHORIZED" }, { status: 401 }),
+      ),
+    );
+
+    render(<DataExportDelete />);
+    await user.click(screen.getByRole("button", { name: /permanently delete all data/i }));
+    await user.click(screen.getByRole("button", { name: /yes, permanently delete/i }));
+
+    expect(await screen.findByRole("alert")).toHaveTextContent(/log in again/i);
   });
 });

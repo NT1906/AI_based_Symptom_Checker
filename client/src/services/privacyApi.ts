@@ -1,6 +1,7 @@
 /**
  * @file Typed API service for privacy management, data export, and data deletion.
  * Owner: Dimple · Task: S2-DIM-3 · Requirements: DR-06, DR-08
+ * Account deletion wiring: Nisarg · Task: S2-NIS-18 · Issue: #315
  *
  * Implements DPDP Act 2023 compliance for user data rights:
  * - Data export (Section 11): structured JSON export of user's session and triage data.
@@ -11,6 +12,7 @@
  */
 
 import { CURRENT_POLICY_VERSION } from "./consentApi";
+import { csrfHeaders } from "./csrf";
 
 /** Shape of the downloadable user data export bundle. */
 export type UserDataExport = {
@@ -105,28 +107,35 @@ export async function fetchUserDataExport(sessionData?: {
   return (await res.json()) as UserDataExport;
 }
 
+/** Thrown when deletion is attempted without a logged-in account. */
+export class NotLoggedInError extends Error {
+  /** Create the error. */
+  constructor() {
+    super("You need to be logged in to delete account data.");
+    this.name = "NotLoggedInError";
+  }
+}
+
 /**
- * Initiates permanent erasure of user data on the server.
+ * Permanently delete the logged-in account and all of its data.
  *
- * Cascades across assessments, symptoms, messages, and consent records.
- * Falls back to local confirmation if the endpoint returns 404 (Rule 2).
+ * Erases the account's assessments, messages, symptoms, consents, profile and
+ * saved results in one server transaction, then the server ends the session.
+ * Sends the CSRF token the server requires (S2-NIS-18, #315).
  *
- * @returns Deletion confirmation payload.
- * @throws Error on unexpected network or server failures.
+ * @returns Deletion confirmation.
+ * @throws NotLoggedInError when there is no valid session (HTTP 401).
+ * @throws Error on any other failure; nothing is reported as deleted.
  */
 export async function deleteUserData(): Promise<DeleteDataResponse> {
   const res = await fetch("/api/v1/privacy/data", {
     method: "DELETE",
-    headers: { Accept: "application/json" },
+    credentials: "include",
+    headers: { Accept: "application/json", ...csrfHeaders() },
   });
 
-  // Fallback for unmerged S2-HAR-2 backend endpoint
-  if (res.status === 404) {
-    return {
-      success: true,
-      deletedAt: new Date().toISOString(),
-      message: "All session and health data has been permanently cleared.",
-    };
+  if (res.status === 401) {
+    throw new NotLoggedInError();
   }
 
   if (!res.ok) {
@@ -135,7 +144,11 @@ export async function deleteUserData(): Promise<DeleteDataResponse> {
     );
   }
 
-  return (await res.json()) as DeleteDataResponse;
+  return {
+    success: true,
+    deletedAt: new Date().toISOString(),
+    message: "Your account and all of its data have been permanently deleted.",
+  };
 }
 
 /**

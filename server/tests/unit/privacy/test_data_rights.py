@@ -79,7 +79,11 @@ def test_data_rights_use_authenticated_identity_and_csrf(tmp_path: Path) -> None
             assert delete.status_code == 204
             assert delete.content == b""
             repo.delete_user_data.assert_called_once_with(owner_id)
+            # Deleting the account also ends the session (S2-NIS-18, #315).
+            assert client.get(EXPORT).status_code == 401
 
+            login = client.post("/api/v1/auth/login", json=credentials)
+            csrf = {"X-CSRF-Token": login.headers["X-CSRF-Token"]}
             repo.delete_user_data.side_effect = SQLAlchemyError("fictional failure")
             failed = client.delete(DELETE, headers=csrf)
             assert failed.status_code == 500
@@ -145,6 +149,7 @@ def test_export_downloads_only_persisted_account_data(tmp_path: Path) -> None:
             assert assessment["symptoms"][0]["name"] == "example symptom"
             assert "private-other@example.com" not in response.text
             assert "password" not in response.text.lower()
-            assert client.delete(DELETE).status_code == 404
+            # The live app now serves deletion, behind CSRF (S2-NIS-18, #315).
+            assert client.delete(DELETE).status_code == 401
     finally:
         engine.dispose()

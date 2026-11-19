@@ -8,17 +8,24 @@ Responsibilities:
     - Enforce token rotation and secure cookie scoping.
 
 Owner: Vivek (api) · Task: S2-VIV-1, S2-VIV-2 · Requirements: FR-01, NFR-03
+Change password: Nisarg · Task: S2-NIS-18 · Issue: #315
 """
 
 from typing import Annotated, Any
 
 from fastapi import APIRouter, Body, Request, Response, status
 
-from app.api.deps import AuthServiceDep, CurrentUserDep, SettingsDep
+from app.api.deps import (
+    AuthServiceDep,
+    CsrfProtectDep,
+    CurrentUserDep,
+    SettingsDep,
+)
 from app.core.config import Settings
 from app.core.errors import ErrorResponse, UnauthorizedError
 from app.core.logging import get_logger
 from app.services.auth.schemas import (
+    ChangePasswordRequest,
     CsrfTokenResponse,
     LogoutResponse,
     UserLoginRequest,
@@ -84,6 +91,16 @@ def _set_auth_cookies(
         path="/",
     )
     response.headers["X-CSRF-Token"] = csrf_token
+
+
+def clear_auth_cookies(response: Response, settings: Settings) -> None:
+    """Clear the session cookies, e.g. after the account was deleted (S2-NIS-18).
+
+    Args:
+        response: FastAPI response object.
+        settings: Application configuration settings.
+    """
+    _clear_auth_cookies(response, settings)
 
 
 def _clear_auth_cookies(
@@ -546,3 +563,46 @@ async def get_current_user_profile(
     """
     logger.info("auth_profile_fetch")
     return current_user
+
+
+@router.post(
+    "/change-password",
+    status_code=status.HTTP_204_NO_CONTENT,
+    response_class=Response,
+    summary="Change the current user's password",
+    description=(
+        "Replaces the logged-in user's password after verifying the current one. "
+        "Requires the CSRF header. The current session stays signed in."
+    ),
+    responses={
+        status.HTTP_401_UNAUTHORIZED: {
+            "model": ErrorResponse,
+            "description": "Not logged in, or missing / invalid CSRF token.",
+        },
+        status.HTTP_422_UNPROCESSABLE_ENTITY: {
+            "model": ErrorResponse,
+            "description": "Current password is wrong, or the new one is invalid.",
+        },
+    },
+)
+async def change_password(
+    payload: ChangePasswordRequest,
+    current_user: CurrentUserDep,
+    service: AuthServiceDep,
+    _csrf: CsrfProtectDep,
+) -> Response:
+    """Change the logged-in user's password (S2-NIS-18).
+
+    Args:
+        payload: Current and new password.
+        current_user: The authenticated user.
+        service: Injected authentication domain service.
+        _csrf: Validated CSRF token (double-submit check).
+
+    Returns:
+        An empty 204 response.
+    """
+    await service.change_password(current_user.id, payload)
+    return Response(
+        status_code=status.HTTP_204_NO_CONTENT, headers={"Cache-Control": "no-store"}
+    )

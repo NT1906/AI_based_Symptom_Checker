@@ -1,6 +1,6 @@
 /**
  * @file Profile page with optional health context fields and privacy explanations.
- * Owner: Dimple · Task: S2-DIM-1 · Requirements: FR-02
+ * Owner: Dimple · Task: S2-DIM-1, S2-NIS-18 (#315 account settings) · Requirements: FR-02
  *
  * Every field is strictly optional. Explanatory "Why we ask" microcopy
  * helps users understand why each datum improves triage accuracy without
@@ -28,6 +28,7 @@ import {
   COLOR_TOKENS,
   SHADOW_TOKENS,
 } from "../theme/tokens";
+import { AccountSettings } from "../components/account/AccountSettings";
 
 /* ------------------------------------------------------------------ */
 /*  Constants                                                          */
@@ -482,6 +483,9 @@ export default function ProfilePage(): React.JSX.Element {
             </p>
           </>
         )}
+
+        {/* ---------- Account settings (logged-in only, S2-NIS-18) ---------- */}
+        <AccountSettings />
       </div>
     </main>
   );
