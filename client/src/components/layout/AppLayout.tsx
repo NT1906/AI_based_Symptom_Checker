@@ -5,10 +5,11 @@
  * FR-25 (always-visible "Start new assessment" button with confirm dialog),
  * and NFR-06 (accessible landmarks, high-contrast typography, and responsive layout).
  *
- * Owner: Mann (Frontend + Deployment · Testing) · Tasks: S0-MAN-1, S1-MAN-4 · Requirements: DR-01, FR-25, NFR-06
+ * Owner: Mann (Frontend + Deployment · Testing) · Tasks: S0-MAN-1, S1-MAN-4, S2-NIS-15 (#312) · Requirements: DR-01, FR-25, NFR-06
  */
 
 import React from "react";
+import { AccountMenu } from "../account/AccountMenu";
 import { StartNewAssessmentButton } from "./StartNewAssessmentButton";
 
 /** Props for the AppLayout component. */
@@ -131,6 +132,8 @@ export function AppLayout({
             )}
 
             {headerActions}
+
+            <AccountMenu />
 
             {/* Emergency Hotline Quick Dial Button */}
             <a

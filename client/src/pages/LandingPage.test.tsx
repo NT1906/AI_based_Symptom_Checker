@@ -8,11 +8,11 @@
  * - Clicking Start shows the consent modal.
  * - Declining consent shows the "declined" state and a go-back button.
  * - Emergency number 112 is present in the disclaimer.
- * - A session that already consented is redirected straight to chat.
+ * - A session that already consented goes straight to chat on Start (S2-NIS-15, #312).
  */
 
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
-import { render, screen, within } from "@testing-library/react";
+import { render, screen, waitFor, within } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { http, HttpResponse } from "msw";
 import { server } from "../test/server";
@@ -43,15 +43,24 @@ describe("LandingPage", () => {
     useConsentStore.setState({ consentId: null, consentedAt: null, policyVersion: null });
   });
 
-  it("redirects a session with active consent straight to chat", async () => {
+  it("keeps the home page open and resumes chat on Start with active consent", async () => {
+    let policyServed = false;
     server.use(
-      http.get("/api/v1/consents/current-policy", () =>
-        HttpResponse.json({ policyVersion: "1.0.0" }),
-      ),
+      http.get("/api/v1/consents/current-policy", () => {
+        policyServed = true;
+        return HttpResponse.json({ policyVersion: "1.0.0" });
+      }),
     );
     useConsentStore.setState({ consentId: "consent-1", policyVersion: "1.0.0" });
+    const user = userEvent.setup();
     renderLanding();
+    await waitFor(() => expect(policyServed).toBe(true));
+    // Let the query settle after the response arrives.
+    await new Promise((resolve) => setTimeout(resolve, 0));
+    expect(screen.queryByText("Chat page")).not.toBeInTheDocument();
+    await user.click(screen.getByRole("button", { name: /start symptom check/i }));
     expect(await screen.findByText("Chat page")).toBeInTheDocument();
+    expect(screen.queryByRole("dialog")).not.toBeInTheDocument();
   });
 
   it("asks for consent again when the stored version is stale", async () => {

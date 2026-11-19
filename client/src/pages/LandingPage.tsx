@@ -1,17 +1,20 @@
 /**
  * @file Landing page — entry point of the app with medical disclaimer and start flow.
- * Owner: Dimple · Task: S1-DIM-2 · Requirements: DR-01
+ * Owner: Dimple · Task: S1-DIM-2, S2-NIS-15 (#312) · Requirements: DR-01, FR-02
  *
  * Responsibilities:
  * - Show the verbatim medical disclaimer before the first user action (DR-01).
  * - Gate the start flow behind the ConsentStep (S1-DIM-1, DR-08).
- * - Route to the assessment chat once both steps are complete.
+ * - Route to the assessment chat once both steps are complete; an already-consented session skips to it.
+ * - Show the account control, and a welcome panel for logged-in users.
  * - Modern, welcoming healthcare UI inspired by Ubie symptom checker.
  */
 
 import { useState } from "react";
 import { useQuery } from "@tanstack/react-query";
-import { Navigate, useNavigate } from "react-router-dom";
+import { useNavigate } from "react-router-dom";
+import { AccountMenu } from "../components/account/AccountMenu";
+import { WelcomeBackPanel } from "../components/account/WelcomeBackPanel";
 import { ConsentStep } from "../components/consent/ConsentStep";
 import { getCurrentPolicyVersion } from "../services/consentApi";
 import { useConsentStore } from "../stores/consentStore";
@@ -39,7 +42,7 @@ const BODY_AREAS = ["Head & Neck", "Chest", "Abdomen", "Limbs & Joints", "Skin"]
  * Landing page shown to every new session.
  *
  * Flow: disclaimer accepted → consent modal → assessment chat.
- * A session with consent for the active policy can resume the chat.
+ * A session with consent for the active policy resumes the chat on Start.
  *
  * @returns The landing page element.
  */
@@ -54,18 +57,16 @@ export default function LandingPage() {
   });
   const [step, setStep] = useState<LandingStep>("disclaimer");
 
-  // Why: hooks must run in the same order on every render, so the redirect for an
-  // already-consented session comes after them and uses <Navigate>, not navigate().
-  if (
-    consentId &&
+  const hasActiveConsent =
+    Boolean(consentId) &&
     activePolicy.isSuccess &&
     !activePolicy.isFetching &&
-    policyVersion === activePolicy.data
-  ) {
-    return <Navigate to="/chat" replace />;
-  }
+    policyVersion === activePolicy.data;
 
-  const handleStart = () => setStep("consent");
+  // Why: the home page stays reachable mid-session (account menu, history);
+  // a session that already consented goes straight back to the chat.
+  const handleStart = () =>
+    hasActiveConsent ? navigate("/chat") : setStep("consent");
   const handleConsented = () => navigate("/chat", { replace: true });
   const handleDeclined = () => setStep("declined");
 
@@ -98,6 +99,7 @@ export default function LandingPage() {
               <span>🚨</span>
               <span>Emergency 112</span>
             </a>
+            <AccountMenu />
           </div>
         </div>
       </header>
@@ -142,6 +144,8 @@ export default function LandingPage() {
             assessment.
           </p>
         </div>
+
+        <WelcomeBackPanel />
 
         {/* Mandatory Medical Disclaimer Card (DR-01) */}
         <div
