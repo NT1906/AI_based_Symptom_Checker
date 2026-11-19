@@ -1,11 +1,11 @@
-/**
- * @file UrgentCareAlert — full-screen overlay shown for URGENT risk results.
- * Owner: Dimple · Task: S1-DIM-3, S2-DIM-5 · Requirements: FR-06, FR-15, DR-02, NFR-06
+﻿/**
+ * @file UrgentCareAlert â€” full-screen overlay shown for URGENT risk results.
+ * Owner: Dimple Â· Task: S1-DIM-3, S2-DIM-5 Â· Requirements: FR-06, FR-15, DR-02, NFR-06
  *
- * Per DR-02 and AI_RULES.md §2 rule 5:
+ * Per DR-02 and AI_RULES.md Â§2 rule 5:
  * - 112 (Unified Emergency) is displayed FIRST and LARGEST.
  * - 108 (Ambulance) is listed as the secondary number.
- * - The mandatory disclaimer is shown (AI_RULES.md §2 rule 8).
+ * - The mandatory disclaimer is shown (AI_RULES.md Â§2 rule 8).
  * - No diagnosis language is used.
  *
  * Implements WCAG 2.1 Level AA modal alertdialog standards (NFR-06):
@@ -24,14 +24,14 @@ export type UrgentCareAlertProps = {
   onDismiss: () => void;
 };
 
-/** Emergency number constants — named so they never appear as magic values. */
+/** Emergency number constants â€” named so they never appear as magic values. */
 const EMERGENCY_UNIFIED = "112" as const;
 const EMERGENCY_AMBULANCE = "108" as const;
 
 /**
  * Full-screen urgent-care alert that is displayed whenever the risk engine
  * returns URGENT. Emergency number 112 is shown first and most prominently
- * (DR-02, AI_RULES.md §2 rule 5).
+ * (DR-02, AI_RULES.md Â§2 rule 5).
  *
  * @param props - Component props.
  * @returns A full-screen alert dialog element.
@@ -50,6 +50,7 @@ export function UrgentCareAlert({ onDismiss }: UrgentCareAlertProps) {
     <div
       ref={dialogRef}
       role="alertdialog"
+      data-testid="urgent-alert"
       aria-modal="true"
       aria-labelledby="urgent-title"
       aria-describedby="urgent-body"
@@ -62,7 +63,7 @@ export function UrgentCareAlert({ onDismiss }: UrgentCareAlertProps) {
             className="mx-auto flex h-14 w-14 items-center justify-center rounded-2xl bg-white/10 text-3xl shadow-inner"
             aria-hidden="true"
           >
-            🚨
+            ðŸš¨
           </div>
           <h1
             id="urgent-title"
@@ -82,13 +83,13 @@ export function UrgentCareAlert({ onDismiss }: UrgentCareAlertProps) {
             <strong className="text-red-700">immediate emergency medical attention</strong>.
           </p>
 
-          {/* Emergency numbers — 112 first and largest (DR-02) */}
+          {/* Emergency numbers â€” 112 first and largest (DR-02) */}
           <div className="mt-6 space-y-3">
-            {/* 112 — primary, largest */}
+            {/* 112 â€” primary, largest */}
             <a
               ref={primaryEmergencyRef}
               href={`tel:${EMERGENCY_UNIFIED}`}
-              aria-label={`Call ${EMERGENCY_UNIFIED} — Unified Emergency (Police, Fire, Ambulance)`}
+              aria-label={`Call ${EMERGENCY_UNIFIED} â€” Unified Emergency (Police, Fire, Ambulance)`}
               className="group flex min-h-[56px] w-full items-center justify-center gap-4 rounded-2xl bg-red-600 p-4 text-white shadow-lg shadow-red-600/30 transition-all hover:bg-red-700 focus-visible:outline-hidden focus-visible:ring-2 focus-visible:ring-red-600 focus-visible:ring-offset-2 active:scale-[0.99]"
             >
               <span className="text-3xl font-black tracking-wider">
@@ -99,15 +100,15 @@ export function UrgentCareAlert({ onDismiss }: UrgentCareAlertProps) {
                   Unified Emergency
                 </span>
                 <span className="text-xs font-medium text-red-100">
-                  Police · Fire · Ambulance
+                  Police Â· Fire Â· Ambulance
                 </span>
               </span>
             </a>
 
-            {/* 108 — secondary, smaller */}
+            {/* 108 â€” secondary, smaller */}
             <a
               href={`tel:${EMERGENCY_AMBULANCE}`}
-              aria-label={`Call ${EMERGENCY_AMBULANCE} — Ambulance (Medical Emergencies)`}
+              aria-label={`Call ${EMERGENCY_AMBULANCE} â€” Ambulance (Medical Emergencies)`}
               className="flex min-h-[48px] w-full items-center justify-center gap-3 rounded-2xl border border-red-200 bg-red-50/80 p-3.5 text-red-800 transition hover:bg-red-100 focus-visible:outline-hidden focus-visible:ring-2 focus-visible:ring-red-400 focus-visible:ring-offset-2"
             >
               <span className="text-2xl font-extrabold tracking-wide">
@@ -128,7 +129,7 @@ export function UrgentCareAlert({ onDismiss }: UrgentCareAlertProps) {
             Or go directly to the nearest emergency room.
           </p>
 
-          {/* Mandatory disclaimer (AI_RULES.md §2 rule 8) */}
+          {/* Mandatory disclaimer (AI_RULES.md Â§2 rule 8) */}
           <div className="mt-5 rounded-xl border border-slate-200 bg-slate-50 px-4 py-3 text-left">
             <p className="text-xs leading-relaxed text-slate-600">
               <strong>Medical Disclaimer:</strong> This is not a medical diagnosis. Always consult a qualified healthcare professional.

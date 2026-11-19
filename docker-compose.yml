@@ -1,6 +1,6 @@
 services:
   db:
-    image: postgres:16-alpine
+    image: pgvector/pgvector:pg16
     container_name: symptom-checker-db
     environment:
       POSTGRES_DB: symptom_checker

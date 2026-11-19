@@ -35,6 +35,9 @@ test.describe("Urgent assessment path", () => {
     expect(emergencyPos).toBeGreaterThan(-1);
 
     // Disclaimer must still be present (DR-01)
-    await expect(page.getByText(/not a medical diagnosis/i)).toBeVisible();
+    await expect(
+  page.getByRole("note", { name: "Medical disclaimer" })
+    .getByText(/not a medical diagnosis/i)
+).toBeVisible();
   });
 });

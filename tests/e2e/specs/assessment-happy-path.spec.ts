@@ -1,11 +1,11 @@
-/**
+﻿/**
  * @file E2E happy-path spec: full assessment flow from consent to result and restart.
  *
  * Covers task S1-MOH-4: start -> describe symptoms -> clarify -> confirm -> result -> restart.
  * This spec runs against the locally running full stack with AI_PROVIDER=mock
- * and CV_PROVIDER=mock so no real APIs are called (AI_RULES §2, NFR-07).
+ * and CV_PROVIDER=mock so no real APIs are called (AI_RULES Â§2, NFR-07).
  *
- * Owner: Mohit (testing) · Task: S0-MOH-1 (scaffold), S1-MOH-4 (impl)
+ * Owner: Mohit (testing) Â· Task: S0-MOH-1 (scaffold), S1-MOH-4 (impl)
  * Requirements: FR-03, FR-04, FR-16, FR-22, FR-25, DR-01
  */
 
@@ -42,7 +42,7 @@ test.describe("Assessment happy path", () => {
     await resultPage.assertConditionsVisible();
     await resultPage.assertRiskBadgeVisible();
 
-    // Step 5: Raw percentages must NOT appear anywhere in the result (AI_RULES §2 rule 3)
+    // Step 5: Raw percentages must NOT appear anywhere in the result (AI_RULES Â§2 rule 3)
     const bodyText = await page.locator("body").innerText();
     expect(bodyText).not.toMatch(/\b\d{1,3}%/);
   });
@@ -61,10 +61,10 @@ test.describe("Assessment happy path", () => {
     await chatPage.clickRestart();
 
     // After restart, the chat input should be available again
-    // Why: Restart resets state to START — the user should be back at the beginning.
+    // Why: Restart resets state to START â€” the user should be back at the beginning.
     await expect(
       chatPage["page"].getByRole("textbox", {
-        name: /describe your symptoms|type a message/i,
+        name: /describe your symptoms|type your message/i,
       })
     ).toBeVisible();
   });

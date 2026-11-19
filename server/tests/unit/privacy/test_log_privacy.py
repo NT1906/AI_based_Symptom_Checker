@@ -1,6 +1,6 @@
-"""Prevent personal values in authentication and error logging.
+﻿"""Prevent personal values in authentication and error logging.
 
-Owner: Harsh · Task: S2-HAR-7 · Issue: #210 · Requirements: NFR-10
+Owner: Harsh Â· Task: S2-HAR-7 Â· Issue: #210 Â· Requirements: NFR-10
 """
 
 import ast
@@ -51,7 +51,7 @@ def test_auth_and_errors_omit_personal_values(
             )
             # httpx logs full URLs independently, so suppress that test-client
             # transport while checking the application sink for raw paths.
-            transport_logger = logging.getLogger("httpx2")
+            transport_logger = logging.getLogger("httpx")
             previous_disabled = transport_logger.disabled
             transport_logger.disabled = True
             try:
