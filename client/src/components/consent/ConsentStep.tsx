@@ -1,5 +1,6 @@
 /**
  * @file Consent step modal shown before any assessment data is saved.
+ * Restyle: Nisarg · Task: S2-NIS-20 · Issue: #321
  * Owner: Dimple · Task: S1-DIM-1, S2-DIM-5 · Requirements: DR-08, NFR-06
  *
  * Displays the consent agreement copy and records acceptance via POST /consents
@@ -21,6 +22,7 @@ import {
   postConsent,
 } from "../../services/consentApi";
 import { useConsentStore } from "../../stores/consentStore";
+import { ShieldCheck } from "lucide-react";
 
 /** Props for the ConsentStep component. */
 export type ConsentStepProps = {
@@ -84,29 +86,29 @@ export function ConsentStep({ onConsented, onDeclined }: ConsentStepProps) {
       aria-modal="true"
       aria-labelledby="consent-title"
       aria-describedby="consent-body"
-      className="fixed inset-0 z-50 flex items-center justify-center bg-slate-900/60 p-4 backdrop-blur-sm"
+      className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 p-4 backdrop-blur-sm animate-in fade-in-0"
     >
-      <div className="w-full max-w-lg overflow-hidden rounded-2xl bg-white shadow-2xl ring-1 ring-slate-900/10">
+      <div className="w-full max-w-lg overflow-hidden rounded-xl border border-border bg-card text-card-foreground shadow-2xl animate-in fade-in-0 zoom-in-95">
         {/* Header */}
-        <div className="border-b border-slate-100 bg-slate-50/60 px-6 py-5">
+        <div className="border-b border-border bg-muted/40 px-6 py-5">
           <div className="flex items-center gap-2">
             <span
-              className="flex h-7 w-7 items-center justify-center rounded-lg bg-teal-100 text-sm"
+              className="flex size-8 items-center justify-center rounded-lg bg-primary/10 text-primary"
               aria-hidden="true"
             >
-              🛡️
+              <ShieldCheck className="size-4" />
             </span>
-            <span className="rounded-full bg-teal-50 px-2.5 py-0.5 text-[11px] font-bold text-teal-800">
+            <span className="rounded-full border border-primary/20 bg-primary/10 px-2.5 py-0.5 text-[11px] font-medium text-primary">
               DPDP Act 2023
             </span>
           </div>
-          <h1
+          <h2
             id="consent-title"
-            className="mt-2 text-xl font-bold tracking-tight text-slate-900"
+            className="mt-3 text-xl font-semibold tracking-tight"
           >
             Your Consent Is Required
-          </h1>
-          <p className="mt-1 text-xs text-slate-600">
+          </h2>
+          <p className="mt-1 text-sm text-muted-foreground">
             Please read and agree to our clinical safety terms before continuing.
           </p>
         </div>
@@ -115,28 +117,28 @@ export function ConsentStep({ onConsented, onDeclined }: ConsentStepProps) {
         <div className="px-6 py-5">
           <pre
             id="consent-body"
-            className="max-h-56 overflow-y-auto whitespace-pre-wrap rounded-xl border border-slate-200 bg-slate-50 p-4 font-sans text-xs leading-relaxed text-slate-700"
+            className="max-h-56 overflow-y-auto whitespace-pre-wrap rounded-lg border border-border bg-muted/50 p-4 font-sans text-xs leading-relaxed text-muted-foreground"
           >
             {CONSENT_TEXT}
           </pre>
 
           {/* Checkbox */}
-          <label className="mt-4 flex min-h-[44px] cursor-pointer items-start gap-3 rounded-lg border border-slate-100 bg-slate-50/50 p-3 transition hover:bg-slate-50">
+          <label className="mt-4 flex min-h-[44px] cursor-pointer items-start gap-3 rounded-lg border border-border p-3 transition hover:bg-accent/50">
             <input
               type="checkbox"
               checked={hasChecked}
               onChange={(e) => setHasChecked(e.target.checked)}
               aria-label="I have read and agree to the terms above"
-              className="mt-0.5 h-4 w-4 shrink-0 rounded border-slate-300 text-teal-600 focus:ring-2 focus:ring-teal-500 focus:outline-hidden"
+              className="mt-0.5 size-4 shrink-0 rounded border-input accent-primary focus-visible:ring-2 focus-visible:ring-ring focus-visible:outline-hidden"
             />
-            <span className="text-xs font-semibold text-slate-800">
+            <span className="text-sm font-medium">
               I have read and agree to the terms above.
             </span>
           </label>
 
           {/* API error */}
           {mutation.isError && (
-            <p role="alert" className="mt-3 text-xs font-semibold text-red-600">
+            <p role="alert" className="mt-3 text-sm font-medium text-destructive">
               {mutation.error instanceof Error
                 ? mutation.error.message
                 : "Unable to record consent. Please try again."}
@@ -145,12 +147,12 @@ export function ConsentStep({ onConsented, onDeclined }: ConsentStepProps) {
         </div>
 
         {/* Footer */}
-        <div className="flex items-center justify-end gap-3 border-t border-slate-100 bg-slate-50/40 px-6 py-4">
+        <div className="flex items-center justify-end gap-3 border-t border-border bg-muted/30 px-6 py-4">
           <button
             type="button"
             onClick={onDeclined}
             disabled={mutation.isPending}
-            className="inline-flex min-h-[44px] items-center justify-center rounded-lg border border-slate-300 bg-white px-4 py-2 text-xs font-bold text-slate-700 shadow-xs transition hover:bg-slate-50 focus-visible:ring-2 focus-visible:ring-teal-600 focus-visible:outline-hidden disabled:opacity-50"
+            className="inline-flex h-10 items-center justify-center rounded-md border border-border bg-background px-4 text-sm font-medium shadow-xs transition hover:bg-accent focus-visible:ring-2 focus-visible:ring-ring focus-visible:outline-hidden disabled:opacity-50"
           >
             Decline
           </button>
@@ -159,7 +161,7 @@ export function ConsentStep({ onConsented, onDeclined }: ConsentStepProps) {
             onClick={handleAgree}
             disabled={!hasChecked || mutation.isPending}
             aria-disabled={!hasChecked || mutation.isPending}
-            className="inline-flex min-h-[44px] items-center justify-center rounded-lg bg-teal-600 px-5 py-2 text-xs font-bold text-white shadow-xs transition hover:bg-teal-700 focus-visible:ring-2 focus-visible:ring-teal-600 focus-visible:ring-offset-2 focus-visible:outline-hidden disabled:cursor-not-allowed disabled:opacity-40"
+            className="inline-flex h-10 items-center justify-center rounded-md bg-primary px-5 text-sm font-semibold text-primary-foreground shadow-sm transition hover:bg-primary/90 focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 focus-visible:ring-offset-background focus-visible:outline-hidden disabled:cursor-not-allowed disabled:opacity-40"
           >
             {mutation.isPending ? "Recording…" : "I Agree"}
           </button>

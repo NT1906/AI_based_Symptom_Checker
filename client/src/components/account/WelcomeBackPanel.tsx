@@ -1,6 +1,6 @@
 /**
  * @file Home-page panel for logged-in users: greeting and recent assessments.
- * Owner: Nisarg · Task: S2-NIS-15, S2-NIS-16 · Issues: #312, #313 · Requirements: FR-02
+ * Owner: Nisarg · Task: S2-NIS-15, S2-NIS-16, S2-NIS-20 · Issues: #312, #313, #321 · Requirements: FR-02
  *
  * Responsibilities:
  * - Greet the logged-in user and show their last few saved assessments.
@@ -8,7 +8,10 @@
  * - Render nothing for guests, so the guest home page is unchanged.
  */
 import { useQuery } from "@tanstack/react-query";
+import { ChevronRight, History, UserRound } from "lucide-react";
 import { Link } from "react-router-dom";
+import { Button } from "@/components/ui/button";
+import { Skeleton } from "@/components/ui/skeleton";
 import { getAssessmentHistory } from "../../services/historyApi";
 import { RiskBadge } from "../risk/RiskBadge";
 import { useAuthStore } from "../../stores/authStore";
@@ -67,63 +70,65 @@ export function WelcomeBackPanel(): React.JSX.Element | null {
   return (
     <section
       aria-labelledby="welcome-back-heading"
-      className="mx-auto mt-8 max-w-3xl rounded-2xl border border-teal-100 bg-white p-5 text-left shadow-sm sm:p-6"
+      className="mx-auto max-w-3xl rounded-xl border border-border bg-card p-5 text-left text-card-foreground shadow-sm sm:p-6"
     >
       <div className="flex flex-wrap items-start justify-between gap-3">
         <div>
-          <h2 id="welcome-back-heading" className="text-lg font-bold text-slate-900">
+          <h2 id="welcome-back-heading" className="text-lg font-semibold tracking-tight">
             Welcome back, {name}
           </h2>
-          <p className="text-xs text-slate-500">
+          <p className="text-sm text-muted-foreground">
             Assessments you complete while logged in are saved to your history.
           </p>
         </div>
         <div className="flex gap-2">
-          <Link
-            to="/history"
-            className="inline-flex min-h-[40px] items-center rounded-lg bg-teal-700 px-3.5 text-xs font-semibold text-white transition hover:bg-teal-800"
-          >
-            View all history
-          </Link>
-          <Link
-            to="/profile"
-            className="inline-flex min-h-[40px] items-center rounded-lg border border-slate-300 px-3.5 text-xs font-semibold text-slate-700 transition hover:bg-slate-50"
-          >
-            My profile
-          </Link>
+          <Button asChild size="lg" className="h-9 px-3.5">
+            <Link to="/history">
+              <History className="size-4" aria-hidden="true" />
+              View all history
+            </Link>
+          </Button>
+          <Button asChild variant="outline" size="lg" className="h-9 px-3.5">
+            <Link to="/profile">
+              <UserRound className="size-4" aria-hidden="true" />
+              My profile
+            </Link>
+          </Button>
         </div>
       </div>
 
-      <h3 className="mt-5 text-xs font-bold uppercase tracking-wider text-slate-500">
+      <h3 className="mt-6 text-xs font-medium uppercase tracking-wider text-muted-foreground">
         Recent assessments
       </h3>
       {recent.isPending && (
-        <p role="status" className="mt-2 text-sm text-slate-500">
-          Loading your recent assessments...
-        </p>
+        <div role="status" className="mt-3 space-y-2">
+          <span className="sr-only">Loading your recent assessments...</span>
+          <Skeleton className="h-11 w-full" />
+          <Skeleton className="h-11 w-full" />
+        </div>
       )}
       {recent.isError && (
-        <p role="alert" className="mt-2 text-sm text-rose-700">
+        <p role="alert" className="mt-2 text-sm text-destructive">
           Could not load your recent assessments.
         </p>
       )}
       {recent.isSuccess && recent.data.items.length === 0 && (
-        <p className="mt-2 text-sm text-slate-600">
+        <p className="mt-2 text-sm text-muted-foreground">
           No saved assessments yet. Start a symptom check above and it will appear here.
         </p>
       )}
       {recent.isSuccess && recent.data.items.length > 0 && (
-        <ul className="mt-2 divide-y divide-slate-100">
+        <ul className="mt-2 divide-y divide-border">
           {recent.data.items.map((item) => (
             <li key={item.id}>
               <Link
                 to={`/history/${encodeURIComponent(item.id)}`}
-                className="flex items-center justify-between gap-3 py-2.5 text-sm transition hover:text-teal-800"
+                className="group -mx-2 flex items-center justify-between gap-3 rounded-md px-2 py-2.5 text-sm transition hover:bg-accent/60"
               >
                 <span className="min-w-0">
-                  <span className="block text-slate-700">{formatDate(item.createdAt)}</span>
+                  <span className="block font-medium">{formatDate(item.createdAt)}</span>
                   {item.topCondition && (
-                    <span className="block truncate text-xs text-slate-500">
+                    <span className="block truncate text-xs text-muted-foreground">
                       Top possible condition: {item.topCondition}
                     </span>
                   )}
@@ -131,10 +136,14 @@ export function WelcomeBackPanel(): React.JSX.Element | null {
                 {item.riskLevel ? (
                   <RiskBadge level={item.riskLevel} className="shrink-0" />
                 ) : (
-                  <span className="shrink-0 rounded-full bg-slate-100 px-2.5 py-0.5 text-xs font-semibold text-slate-700">
+                  <span className="shrink-0 rounded-full bg-muted px-2.5 py-0.5 text-xs font-medium text-muted-foreground">
                     {stateLabel(item.state)}
                   </span>
                 )}
+                <ChevronRight
+                  className="size-4 shrink-0 text-muted-foreground transition group-hover:translate-x-0.5"
+                  aria-hidden="true"
+                />
               </Link>
             </li>
           ))}
