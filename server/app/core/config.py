@@ -30,9 +30,11 @@ class Settings(BaseSettings):
         auth_cookie_name: HttpOnly cookie key storing the session JWT.
         refresh_cookie_name: HttpOnly cookie key storing the refresh JWT.
         csrf_cookie_name: Cookie key storing the readable CSRF token.
-        ai_provider: Active LLM provider ('mock', 'openai', 'gemini').
+        ai_provider: Active LLM provider ('mock', 'openai', 'groq', 'gemini').
         ai_model: Model name for LLM requests.
         openai_api_key: Optional API key for OpenAI.
+        groq_api_key: Optional API key for Groq (AI_PROVIDER=groq).
+        groq_model: Groq model name; must support strict JSON-schema outputs.
         cv_provider: Active CV provider ('mock', 'onnx').
         cv_model_repo: Hugging Face repository for CV ONNX model.
         cv_model_revision: Pinned revision or commit SHA for CV model.
@@ -60,6 +62,8 @@ class Settings(BaseSettings):
     ai_provider: str = "mock"
     ai_model: str = "gpt-4o-mini"
     openai_api_key: str | None = None
+    groq_api_key: str | None = None
+    groq_model: str = "openai/gpt-oss-120b"
     cv_provider: str = "mock"
     cv_model_repo: str = "NT1906/skin-cv"
     cv_model_revision: str = "main"
