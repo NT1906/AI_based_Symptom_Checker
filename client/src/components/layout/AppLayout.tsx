@@ -10,6 +10,7 @@
 
 import React from "react";
 import { WifiOff } from "lucide-react";
+import { cn } from "@/lib/utils";
 import { PageTransition } from "./PageTransition";
 import { SiteFooter } from "./SiteFooter";
 import { SiteHeader } from "./SiteHeader";
@@ -34,6 +35,8 @@ export interface AppLayoutProps {
   showStartOver?: boolean;
   /** Whether starting over opens a confirmation modal dialog. Defaults to true (FR-25). */
   requireConfirmation?: boolean;
+  /** Narrow, centred column for reading and form pages (title aligns with content). */
+  narrow?: boolean;
 }
 
 export { MANDATORY_DISCLAIMER_TEXT } from "./disclaimer";
@@ -56,6 +59,7 @@ export function AppLayout({
   onStartOver,
   showStartOver = true,
   requireConfirmation = true,
+  narrow = false,
 }: AppLayoutProps): React.ReactElement {
   return (
     <div className="relative flex min-h-screen flex-col bg-background text-foreground antialiased selection:bg-primary/15">
@@ -99,7 +103,7 @@ export function AppLayout({
         tabIndex={-1}
         className="mx-auto flex w-full max-w-6xl flex-1 flex-col px-4 py-8 focus:outline-none sm:px-6 sm:py-10"
       >
-        <div className="mb-6 space-y-1 sm:mb-8">
+        <div className={cn("mb-6 space-y-1 sm:mb-8", narrow && "mx-auto w-full max-w-3xl")}>
           <h1 className="text-2xl font-semibold tracking-tight text-foreground sm:text-3xl">
             {title}
           </h1>

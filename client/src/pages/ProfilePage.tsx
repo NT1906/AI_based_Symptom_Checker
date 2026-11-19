@@ -1,6 +1,6 @@
 /**
  * @file Profile page with optional health context fields and privacy explanations.
- * Owner: Dimple · Task: S2-DIM-1, S2-NIS-18 (#315 account settings) · Requirements: FR-02
+ * Owner: Dimple · Task: S2-DIM-1, S2-NIS-18 (#315 account settings), S2-NIS-21 (#322 redesign) · Requirements: FR-02
  *
  * Every field is strictly optional. Explanatory "Why we ask" microcopy
  * helps users understand why each datum improves triage accuracy without
@@ -13,7 +13,13 @@
 
 import { useCallback, useEffect, useState } from "react";
 import { Link } from "react-router-dom";
+import { AlertCircle, ArrowLeft, CheckCircle2, Loader2 } from "lucide-react";
 
+import { Button } from "@/components/ui/button";
+import { Skeleton } from "@/components/ui/skeleton";
+import { cn } from "@/lib/utils";
+import { AccountSettings } from "../components/account/AccountSettings";
+import { AppLayout } from "../components/layout/AppLayout";
 import {
   type AgeBand,
   type BiologicalSex,
@@ -23,12 +29,6 @@ import {
   saveProfile,
 } from "../services/profileApi";
 import { useProfileStore } from "../stores/profileStore";
-import {
-  ACCESSIBILITY_TOKENS,
-  COLOR_TOKENS,
-  SHADOW_TOKENS,
-} from "../theme/tokens";
-import { AccountSettings } from "../components/account/AccountSettings";
 
 /* ------------------------------------------------------------------ */
 /*  Constants                                                          */
@@ -51,9 +51,22 @@ const BIOLOGICAL_SEX_LABELS: Record<BiologicalSex, string> = {
   prefer_not_to_say: "Prefer not to say",
 };
 
-/** Mandatory medical-safety disclaimer (AI_RULES.md §2, rule 8). */
-const DISCLAIMER_TEXT =
-  "This is not a medical diagnosis. Always consult a qualified healthcare professional.";
+// The DR-01 disclaimer is shown by the shared site footer (AppLayout).
+
+/** Shared classes for the native selects (kept native for accessibility). */
+const SELECT_CLASS =
+  "h-11 w-full rounded-lg border border-input bg-background px-3 text-sm text-foreground shadow-xs transition focus-visible:border-ring focus-visible:outline-none focus-visible:ring-3 focus-visible:ring-ring/40";
+
+/**
+ * One titled section of the health-context card.
+ *
+ * @param props - Section content.
+ * @param props.children - Fields.
+ * @returns The section.
+ */
+function Section({ children }: { children: React.ReactNode }): React.JSX.Element {
+  return <div className="space-y-3 py-6 first:pt-0 last:pb-0">{children}</div>;
+}
 
 /* ------------------------------------------------------------------ */
 /*  Component                                                          */
@@ -124,114 +137,63 @@ export default function ProfilePage(): React.JSX.Element {
     }
   }, [store]);
 
-  /* ---------- Shared styles ---------- */
-  const cardStyle: React.CSSProperties = {
-    background: COLOR_TOKENS.neutral.surface,
-    border: `1px solid ${COLOR_TOKENS.neutral.border}`,
-    borderRadius: "0.75rem",
-    padding: "1.5rem",
-    boxShadow: SHADOW_TOKENS.sm,
-  };
-
-  const labelStyle: React.CSSProperties = {
-    display: "block",
-    fontWeight: 600,
-    color: COLOR_TOKENS.neutral.textPrimary,
-    marginBottom: "0.25rem",
-  };
-
-  const hintStyle: React.CSSProperties = {
-    fontSize: "0.875rem",
-    color: COLOR_TOKENS.neutral.textSecondary,
-    marginBottom: "0.75rem",
-    lineHeight: "1.25rem",
-  };
-
-  const selectStyle: React.CSSProperties = {
-    width: "100%",
-    padding: "0.625rem 0.75rem",
-    border: `1px solid ${COLOR_TOKENS.neutral.borderStrong}`,
-    borderRadius: "0.5rem",
-    fontSize: "1rem",
-    color: COLOR_TOKENS.neutral.textPrimary,
-    background: COLOR_TOKENS.neutral.surface,
-    outline: "none",
-  };
-
   /* ---------- Render ---------- */
+  const isSaving = store.status === "loading";
+
   return (
-    <main
-      style={{
-        minHeight: "100vh",
-        background: COLOR_TOKENS.neutral.background,
-        padding: "2rem 1rem",
-      }}
+    <AppLayout
+      title="Your Profile"
+      subtitle="Optional health context and account settings"
+      showStartOver={false}
+      narrow
     >
-      <div
-        style={{
-          maxWidth: "640px",
-          margin: "0 auto",
-          display: "flex",
-          flexDirection: "column",
-          gap: "1.5rem",
-        }}
-      >
-        {/* ---------- Header ---------- */}
-        <header>
+      <div className="mx-auto w-full max-w-3xl space-y-8">
+        <div className="space-y-2">
           <Link
             to="/"
-            style={{
-              color: COLOR_TOKENS.brand.primary,
-              fontSize: "0.875rem",
-              textDecoration: "none",
-            }}
             aria-label="Back to home"
+            className="inline-flex items-center gap-1.5 text-sm text-muted-foreground transition-colors hover:text-foreground"
           >
-            ← Back to Home
+            <ArrowLeft className="size-4" aria-hidden="true" />
+            Back to Home
           </Link>
-          <h1
-            style={{
-              fontSize: "1.875rem",
-              fontWeight: 700,
-              color: COLOR_TOKENS.neutral.textPrimary,
-              marginTop: "0.75rem",
-            }}
-          >
-            Your Profile
-          </h1>
-          <p style={hintStyle}>
-            All fields are <strong>optional</strong>. Sharing health context
-            helps our triage system provide more relevant information, but is
-            never required.
+          <p className="text-sm text-muted-foreground">
+            All fields are <strong className="text-foreground">optional</strong>. Sharing health
+            context helps our triage system provide more relevant information, but is never
+            required.
           </p>
-        </header>
+        </div>
 
-        {/* ---------- Loading skeleton ---------- */}
-        {!isLoaded && (
-          <div
-            role="status"
-            aria-label="Loading profile"
-            style={{
-              ...cardStyle,
-              textAlign: "center",
-              color: COLOR_TOKENS.neutral.textMuted,
-            }}
-          >
-            Loading your profile…
-          </div>
-        )}
+        <section
+          aria-labelledby="health-context-heading"
+          className="rounded-xl border border-border bg-card p-6 text-card-foreground shadow-xs sm:p-8"
+        >
+          <h2 id="health-context-heading" className="text-lg font-semibold tracking-tight">
+            Health context
+          </h2>
+          <p className="mt-1 text-sm text-muted-foreground">
+            Used only to interpret your symptoms. It never changes the warning-sign checks.
+          </p>
 
-        {isLoaded && (
-          <>
-            {/* ---------- Age Band ---------- */}
-            <fieldset style={{ ...cardStyle, border: "none" }}>
-              <div style={cardStyle}>
-                <label htmlFor="age-band" style={labelStyle}>
+          {!isLoaded && (
+            <div role="status" aria-label="Loading profile" className="mt-6 space-y-3">
+              <span className="sr-only">Loading your profile…</span>
+              <Skeleton className="h-11 w-full" />
+              <Skeleton className="h-11 w-full" />
+              <Skeleton className="h-24 w-full" />
+            </div>
+          )}
+
+          {isLoaded && (
+            <div className="mt-6 divide-y divide-border">
+              {/* ---------- Age Band ---------- */}
+              <Section>
+                <label htmlFor="age-band" className="block text-sm font-medium">
                   Age Range
                 </label>
-                <p id="age-band-hint" style={hintStyle}>
-                  <strong>Why we ask:</strong> Certain conditions are more
-                  common in specific age groups. This helps prioritise relevant
+                <p id="age-band-hint" className="text-sm text-muted-foreground">
+                  <strong className="font-medium text-foreground">Why we ask:</strong> Certain
+                  conditions are more common in specific age groups. This helps prioritise relevant
                   information. Your exact age is never collected.
                 </p>
                 <select
@@ -239,42 +201,27 @@ export default function ProfilePage(): React.JSX.Element {
                   aria-describedby="age-band-hint"
                   value={store.ageBand ?? ""}
                   onChange={(e) =>
-                    store.setAgeBand(
-                      (e.target.value || undefined) as
-                        | AgeBand
-                        | undefined,
-                    )
+                    store.setAgeBand((e.target.value || undefined) as AgeBand | undefined)
                   }
-                  style={selectStyle}
-                  onFocus={(e) => {
-                    e.currentTarget.style.boxShadow =
-                      `0 0 0 ${ACCESSIBILITY_TOKENS.focusOffset} ${COLOR_TOKENS.brand.primary}`;
-                  }}
-                  onBlur={(e) => {
-                    e.currentTarget.style.boxShadow = "none";
-                  }}
+                  className={SELECT_CLASS}
                 >
                   <option value="">— Select (optional) —</option>
-                  {(Object.entries(AGE_BAND_LABELS) as [AgeBand, string][]).map(
-                    ([value, label]) => (
-                      <option key={value} value={value}>
-                        {label}
-                      </option>
-                    ),
-                  )}
+                  {(Object.entries(AGE_BAND_LABELS) as [AgeBand, string][]).map(([value, label]) => (
+                    <option key={value} value={value}>
+                      {label}
+                    </option>
+                  ))}
                 </select>
-              </div>
-            </fieldset>
+              </Section>
 
-            {/* ---------- Biological Sex ---------- */}
-            <fieldset style={{ ...cardStyle, border: "none" }}>
-              <div style={cardStyle}>
-                <label htmlFor="biological-sex" style={labelStyle}>
+              {/* ---------- Biological Sex ---------- */}
+              <Section>
+                <label htmlFor="biological-sex" className="block text-sm font-medium">
                   Biological Sex
                 </label>
-                <p id="biological-sex-hint" style={hintStyle}>
-                  <strong>Why we ask:</strong> Some symptoms present differently
-                  based on biological sex. This is used only for clinical
+                <p id="biological-sex-hint" className="text-sm text-muted-foreground">
+                  <strong className="font-medium text-foreground">Why we ask:</strong> Some symptoms
+                  present differently based on biological sex. This is used only for clinical
                   context and does not represent your gender identity.
                 </p>
                 <select
@@ -283,210 +230,115 @@ export default function ProfilePage(): React.JSX.Element {
                   value={store.biologicalSex ?? ""}
                   onChange={(e) =>
                     store.setBiologicalSex(
-                      (e.target.value || undefined) as
-                        | BiologicalSex
-                        | undefined,
+                      (e.target.value || undefined) as BiologicalSex | undefined,
                     )
                   }
-                  style={selectStyle}
-                  onFocus={(e) => {
-                    e.currentTarget.style.boxShadow =
-                      `0 0 0 ${ACCESSIBILITY_TOKENS.focusOffset} ${COLOR_TOKENS.brand.primary}`;
-                  }}
-                  onBlur={(e) => {
-                    e.currentTarget.style.boxShadow = "none";
-                  }}
+                  className={SELECT_CLASS}
                 >
                   <option value="">— Select (optional) —</option>
-                  {(
-                    Object.entries(BIOLOGICAL_SEX_LABELS) as [
-                      BiologicalSex,
-                      string,
-                    ][]
-                  ).map(([value, label]) => (
-                    <option key={value} value={value}>
-                      {label}
-                    </option>
-                  ))}
+                  {(Object.entries(BIOLOGICAL_SEX_LABELS) as [BiologicalSex, string][]).map(
+                    ([value, label]) => (
+                      <option key={value} value={value}>
+                        {label}
+                      </option>
+                    ),
+                  )}
                 </select>
-              </div>
-            </fieldset>
+              </Section>
 
-            {/* ---------- Chronic Conditions ---------- */}
-            <fieldset style={{ ...cardStyle, border: "none" }}>
-              <div style={cardStyle}>
-                <legend style={labelStyle}>Pre-existing Conditions</legend>
-                <p id="conditions-hint" style={hintStyle}>
-                  <strong>Why we ask:</strong> Pre-existing conditions can
-                  influence symptom interpretation. Select any that apply, or
-                  leave blank if you prefer not to share.
+              {/* ---------- Chronic Conditions ---------- */}
+              <Section>
+                <p className="text-sm font-medium">Pre-existing Conditions</p>
+                <p id="conditions-hint" className="text-sm text-muted-foreground">
+                  <strong className="font-medium text-foreground">Why we ask:</strong> Pre-existing
+                  conditions can influence symptom interpretation. Select any that apply, or leave
+                  blank if you prefer not to share.
                 </p>
                 <div
                   role="group"
                   aria-describedby="conditions-hint"
                   aria-label="Pre-existing conditions"
-                  style={{
-                    display: "grid",
-                    gridTemplateColumns:
-                      "repeat(auto-fill, minmax(180px, 1fr))",
-                    gap: "0.5rem",
-                  }}
+                  className="grid grid-cols-1 gap-2 sm:grid-cols-2"
                 >
                   {CHRONIC_CONDITION_OPTIONS.map((condition) => {
-                    const isChecked =
-                      store.chronicConditions.includes(condition);
+                    const isChecked = store.chronicConditions.includes(condition);
                     return (
                       <label
                         key={condition}
-                        style={{
-                          display: "flex",
-                          alignItems: "center",
-                          gap: "0.5rem",
-                          padding: "0.5rem 0.75rem",
-                          borderRadius: "0.5rem",
-                          cursor: "pointer",
-                          border: `1px solid ${isChecked ? COLOR_TOKENS.brand.primary : COLOR_TOKENS.neutral.border}`,
-                          background: isChecked
-                            ? COLOR_TOKENS.brand.subtle
-                            : COLOR_TOKENS.neutral.surface,
-                          transition: "all 0.15s ease",
-                          minHeight: ACCESSIBILITY_TOKENS.minTouchTarget,
-                        }}
+                        className={cn(
+                          "flex min-h-11 cursor-pointer items-center gap-3 rounded-lg border px-3 py-2 text-sm transition",
+                          isChecked
+                            ? "border-primary/40 bg-primary/10"
+                            : "border-border hover:bg-accent/50",
+                        )}
                       >
                         <input
                           type="checkbox"
                           checked={isChecked}
                           onChange={() => store.toggleCondition(condition)}
-                          style={{
-                            accentColor: COLOR_TOKENS.brand.primary,
-                            width: "1.125rem",
-                            height: "1.125rem",
-                          }}
+                          className="size-4 shrink-0 accent-primary"
                         />
-                        <span
-                          style={{
-                            fontSize: "0.9375rem",
-                            color: COLOR_TOKENS.neutral.textPrimary,
-                          }}
-                        >
-                          {condition}
-                        </span>
+                        <span>{condition}</span>
                       </label>
                     );
                   })}
                 </div>
-              </div>
-            </fieldset>
-
-            {/* ---------- Status feedback ---------- */}
-            {store.status === "success" && (
-              <div
-                role="status"
-                aria-live="polite"
-                style={{
-                  padding: "0.75rem 1rem",
-                  borderRadius: "0.5rem",
-                  background: "#ecfdf5",
-                  color: "#065f46",
-                  fontWeight: 500,
-                  border: "1px solid #a7f3d0",
-                }}
-              >
-                ✓ Profile saved successfully.
-              </div>
-            )}
-
-            {store.status === "error" && store.errorMessage && (
-              <div
-                role="alert"
-                style={{
-                  padding: "0.75rem 1rem",
-                  borderRadius: "0.5rem",
-                  background: "#fff1f2",
-                  color: "#9f1239",
-                  fontWeight: 500,
-                  border: "1px solid #fecdd3",
-                }}
-              >
-                {store.errorMessage}
-              </div>
-            )}
-
-            {/* ---------- Actions ---------- */}
-            <div
-              style={{
-                display: "flex",
-                gap: "0.75rem",
-                justifyContent: "flex-end",
-              }}
-            >
-              <button
-                type="button"
-                onClick={() => store.reset()}
-                disabled={store.status === "loading"}
-                style={{
-                  padding: "0.625rem 1.25rem",
-                  borderRadius: "0.5rem",
-                  border: `1px solid ${COLOR_TOKENS.neutral.borderStrong}`,
-                  background: COLOR_TOKENS.neutral.surface,
-                  color: COLOR_TOKENS.neutral.textSecondary,
-                  cursor:
-                    store.status === "loading" ? "not-allowed" : "pointer",
-                  fontWeight: 500,
-                  minHeight: ACCESSIBILITY_TOKENS.minTouchTarget,
-                }}
-              >
-                Clear All
-              </button>
-              <button
-                type="button"
-                onClick={() => void handleSave()}
-                disabled={store.status === "loading"}
-                aria-busy={store.status === "loading"}
-                style={{
-                  padding: "0.625rem 1.5rem",
-                  borderRadius: "0.5rem",
-                  border: "none",
-                  background:
-                    store.status === "loading"
-                      ? COLOR_TOKENS.neutral.borderStrong
-                      : COLOR_TOKENS.brand.primary,
-                  color: "#ffffff",
-                  cursor:
-                    store.status === "loading" ? "not-allowed" : "pointer",
-                  fontWeight: 600,
-                  minHeight: ACCESSIBILITY_TOKENS.minTouchTarget,
-                }}
-                onFocus={(e) => {
-                  e.currentTarget.style.boxShadow =
-                    `0 0 0 ${ACCESSIBILITY_TOKENS.focusOffset} ${COLOR_TOKENS.brand.primary}`;
-                }}
-                onBlur={(e) => {
-                  e.currentTarget.style.boxShadow = "none";
-                }}
-              >
-                {store.status === "loading" ? "Saving…" : "Save Profile"}
-              </button>
+              </Section>
             </div>
+          )}
 
-            {/* ---------- Disclaimer ---------- */}
-            <p
-              style={{
-                fontSize: "0.8125rem",
-                color: COLOR_TOKENS.neutral.textMuted,
-                textAlign: "center",
-                borderTop: `1px solid ${COLOR_TOKENS.neutral.border}`,
-                paddingTop: "1rem",
-              }}
-            >
-              {DISCLAIMER_TEXT}
-            </p>
-          </>
-        )}
+          {isLoaded && (
+            <>
+              {/* ---------- Status feedback ---------- */}
+              {store.status === "success" && (
+                <div
+                  role="status"
+                  aria-live="polite"
+                  className="mt-6 flex items-center gap-2 rounded-lg border border-success/30 bg-success/10 px-3 py-2.5 text-sm"
+                >
+                  <CheckCircle2 className="size-4 text-success" aria-hidden="true" />
+                  Profile saved successfully.
+                </div>
+              )}
+              {store.status === "error" && store.errorMessage && (
+                <div
+                  role="alert"
+                  className="mt-6 flex items-center gap-2 rounded-lg border border-destructive/30 bg-destructive/10 px-3 py-2.5 text-sm text-destructive"
+                >
+                  <AlertCircle className="size-4" aria-hidden="true" />
+                  {store.errorMessage}
+                </div>
+              )}
+
+              {/* ---------- Actions ---------- */}
+              <div className="mt-6 flex flex-col-reverse gap-2 border-t border-border pt-6 sm:flex-row sm:justify-end">
+                <Button
+                  type="button"
+                  variant="outline"
+                  onClick={() => store.reset()}
+                  disabled={isSaving}
+                  className="h-10 px-4"
+                >
+                  Clear All
+                </Button>
+                <Button
+                  type="button"
+                  onClick={() => void handleSave()}
+                  disabled={isSaving}
+                  aria-busy={isSaving}
+                  className="h-10 px-5"
+                >
+                  {isSaving && <Loader2 className="size-4 animate-spin" aria-hidden="true" />}
+                  {isSaving ? "Saving…" : "Save Profile"}
+                </Button>
+              </div>
+            </>
+          )}
+        </section>
 
         {/* ---------- Account settings (logged-in only, S2-NIS-18) ---------- */}
         <AccountSettings />
       </div>
-    </main>
+    </AppLayout>
   );
 }

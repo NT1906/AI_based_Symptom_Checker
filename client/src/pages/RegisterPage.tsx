@@ -1,21 +1,27 @@
-
 /**
  * @file Optional account registration page.
- * Owner: Rutva · Task: S2-RUT-1 · Issue: #180
+ * Owner: Rutva · Task: S2-RUT-1 · Issue: #180 · Redesign: Nisarg · S2-NIS-21 (#322)
  *
- * Registration does not automatically create an authenticated session.
- * Users can continue using the symptom checker as guests.
+ * Registration is optional. Users can always use the symptom checker as guests.
  */
 
 import { useState, type FormEvent } from "react";
 import { Link, useNavigate } from "react-router-dom";
+import { AlertCircle, CheckCircle2, Loader2 } from "lucide-react";
+import { Button } from "@/components/ui/button";
+import { Input } from "@/components/ui/input";
+import { Label } from "@/components/ui/label";
+import { cn } from "@/lib/utils";
+import { AuthLayout } from "../components/auth/AuthLayout";
+import { PasswordInput } from "../components/auth/PasswordInput";
 import { useAuthStore } from "../stores/authStore";
-import {
-  ACCESSIBILITY_TOKENS,
-  COLOR_TOKENS,
-  SHADOW_TOKENS,
-  TYPOGRAPHY_TOKENS,
-} from "../theme/tokens";
+
+/** Colour of each filled strength bar, by strength label. */
+const STRENGTH_COLOUR: Record<string, string> = {
+  Weak: "bg-danger",
+  Moderate: "bg-warning",
+  Strong: "bg-success",
+};
 
 /** Renders the optional account registration form. */
 export default function RegisterPage(): React.JSX.Element {
@@ -25,8 +31,6 @@ export default function RegisterPage(): React.JSX.Element {
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [confirmPassword, setConfirmPassword] = useState("");
-  const [showPassword, setShowPassword] = useState(false);
-  const [showConfirmPassword, setShowConfirmPassword] = useState(false);
   const [validationError, setValidationError] = useState("");
   const [success, setSuccess] = useState(false);
 
@@ -90,446 +94,120 @@ export default function RegisterPage(): React.JSX.Element {
     }
   }
 
-  const inputStyle: React.CSSProperties = {
-    width: "100%",
-    boxSizing: "border-box",
-    padding: "0.85rem 1rem",
-    border: `1px solid ${COLOR_TOKENS.neutral.borderStrong}`,
-    borderRadius: "0.65rem",
-    fontSize: "1rem",
-    color: COLOR_TOKENS.neutral.textPrimary,
-    background: COLOR_TOKENS.neutral.surface,
-    outlineColor: COLOR_TOKENS.brand.primary,
-    minHeight: ACCESSIBILITY_TOKENS.minTouchTarget,
-  };
-
-  const labelStyle: React.CSSProperties = {
-    display: "block",
-    marginBottom: "0.5rem",
-    fontWeight: 600,
-    color: COLOR_TOKENS.neutral.textPrimary,
-  };
-
-  /** Renders an accessible password visibility control. */
-  function passwordToggle(
-    visible: boolean,
-    onToggle: () => void,
-    label: string,
-  ): React.JSX.Element {
-    return (
-      <button
-        type="button"
-        onClick={onToggle}
-        aria-label={visible ? `Hide ${label}` : `Show ${label}`}
-        aria-pressed={visible}
-        style={{
-          position: "absolute",
-          right: "0.75rem",
-          top: "50%",
-          transform: "translateY(-50%)",
-          border: "none",
-          background: "transparent",
-          color: COLOR_TOKENS.brand.primary,
-          cursor: "pointer",
-          fontWeight: 600,
-          minHeight: ACCESSIBILITY_TOKENS.minTouchTarget,
-        }}
-      >
-        {visible ? "Hide" : "Show"}
-      </button>
-    );
-  }
+  const shownError = validationError || (status === "error" ? errorMessage : "");
 
   return (
-    <main
-      style={{
-        minHeight: "100vh",
-        display: "grid",
-        gridTemplateColumns: "repeat(auto-fit, minmax(min(100%, 420px), 1fr))",
-        background: COLOR_TOKENS.neutral.background,
-        fontFamily: TYPOGRAPHY_TOKENS.fontFamily,
-      }}
-    >
-      {/* Brand panel */}
-      <section
-        style={{
-          background:
-            "linear-gradient(145deg, #115e59 0%, #0f766e 55%, #14b8a6 100%)",
-          color: "#ffffff",
-          padding: "clamp(2rem, 6vw, 5rem)",
-          display: "flex",
-          flexDirection: "column",
-          justifyContent: "center",
-          minHeight: "260px",
-        }}
-      >
-        <div style={{ maxWidth: "480px", margin: "0 auto" }}>
-          <div
-            aria-hidden="true"
-            style={{ fontSize: "2rem", marginBottom: "2rem" }}
-          >
-            ✚
+    <AuthLayout title="Create your account" description="Enter your details to get started.">
+      {success ? (
+        <div role="status" aria-live="polite" className="space-y-5">
+          <div className="flex items-start gap-3 rounded-lg border border-success/30 bg-success/10 p-4 text-sm">
+            <CheckCircle2 className="mt-0.5 size-5 shrink-0 text-success" aria-hidden="true" />
+            <div>
+              <strong className="font-medium">Account created successfully!</strong>
+              <p className="mt-0.5 text-muted-foreground">
+                Your account is ready. Please sign in to continue.
+              </p>
+            </div>
+          </div>
+          <Button type="button" onClick={() => navigate("/login")} className="h-11 w-full">
+            Go to Login
+          </Button>
+        </div>
+      ) : (
+        <form onSubmit={(event) => void handleSubmit(event)} noValidate className="space-y-5">
+          <div className="space-y-2">
+            <Label htmlFor="register-email">Email address</Label>
+            <Input
+              id="register-email"
+              name="email"
+              type="email"
+              autoComplete="email"
+              placeholder="you@example.com"
+              value={email}
+              onChange={(event) => setEmail(event.target.value)}
+              disabled={isLoading}
+              required
+              className="h-11"
+            />
           </div>
 
-          <p
-            style={{
-              fontSize: "0.85rem",
-              fontWeight: 700,
-              letterSpacing: "0.16em",
-              textTransform: "uppercase",
-              opacity: 0.85,
-            }}
-          >
-            AI-Based Symptom Checker
-          </p>
-
-          <h1
-            style={{
-              fontSize: "clamp(2rem, 4vw, 3.2rem)",
-              lineHeight: 1.15,
-              margin: "1rem 0",
-            }}
-          >
-            Take a step towards informed health decisions.
-          </h1>
-
-          <p style={{ lineHeight: 1.8, opacity: 0.9 }}>
-            Create an account to access your personal account experience.
-            Sharing an account is optional, never a requirement for using
-            the symptom checker.
-          </p>
-
-          <div
-            style={{
-              marginTop: "2.5rem",
-              padding: "1rem",
-              border: "1px solid rgba(255,255,255,0.3)",
-              borderRadius: "1rem",
-              background: "rgba(255,255,255,0.1)",
-              lineHeight: 1.7,
-            }}
-          >
-            <strong>Your choice matters.</strong>
-            <p style={{ marginBottom: 0 }}>
-              You can always use the symptom checker without registering.
+          <div className="space-y-2">
+            <Label htmlFor="register-password">Password</Label>
+            <PasswordInput
+              id="register-password"
+              name="password"
+              autoComplete="new-password"
+              placeholder="Create a password"
+              value={password}
+              onChange={(event) => setPassword(event.target.value)}
+              disabled={isLoading}
+              minLength={8}
+              maxLength={128}
+              required
+              aria-describedby="register-password-hint"
+            />
+            {password.length > 0 && (
+              <div aria-live="polite" className="flex items-center gap-3 pt-1">
+                <div className="flex flex-1 gap-1" aria-hidden="true">
+                  {[1, 2, 3, 4, 5].map((level) => (
+                    <span
+                      key={level}
+                      className={cn(
+                        "h-1.5 flex-1 rounded-full bg-muted transition-colors",
+                        level <= passwordStrength && STRENGTH_COLOUR[strengthLabel],
+                      )}
+                    />
+                  ))}
+                </div>
+                <span className="text-xs text-muted-foreground">
+                  Password strength: {strengthLabel}
+                </span>
+              </div>
+            )}
+            <p id="register-password-hint" className="text-xs text-muted-foreground">
+              Use between 8 and 128 characters.
             </p>
           </div>
-        </div>
-      </section>
 
-      {/* Registration form */}
-      <section
-        style={{
-          padding: "clamp(1.5rem, 5vw, 4rem)",
-          display: "flex",
-          alignItems: "center",
-          justifyContent: "center",
-        }}
-      >
-        <div
-          style={{
-            width: "100%",
-            maxWidth: "440px",
-            background: COLOR_TOKENS.neutral.surface,
-            padding: "clamp(1.5rem, 4vw, 2.5rem)",
-            borderRadius: "1.25rem",
-            boxShadow: SHADOW_TOKENS.lg,
-            border: `1px solid ${COLOR_TOKENS.neutral.border}`,
-          }}
-        >
-          <Link
-            to="/"
-            style={{
-              color: COLOR_TOKENS.brand.primary,
-              textDecoration: "none",
-              fontSize: "0.9rem",
-            }}
-          >
-            ← Back to Home
-          </Link>
+          <div className="space-y-2">
+            <Label htmlFor="register-confirm-password">Confirm password</Label>
+            <PasswordInput
+              id="register-confirm-password"
+              name="confirmPassword"
+              autoComplete="new-password"
+              placeholder="Enter your password again"
+              value={confirmPassword}
+              onChange={(event) => setConfirmPassword(event.target.value)}
+              disabled={isLoading}
+              required
+              toggleLabel="confirm password"
+            />
+          </div>
 
-          <h2
-            style={{
-              fontSize: "2rem",
-              margin: "2rem 0 0.5rem",
-              color: COLOR_TOKENS.neutral.textPrimary,
-            }}
-          >
-            Create your account
-          </h2>
-
-          <p
-            style={{
-              color: COLOR_TOKENS.neutral.textSecondary,
-              marginBottom: "2rem",
-            }}
-          >
-            Enter your details to get started.
-          </p>
-
-          {success ? (
-            <div role="status" aria-live="polite">
-              <div
-                style={{
-                  padding: "1rem",
-                  borderRadius: "0.65rem",
-                  background: "#ecfdf5",
-                  border: "1px solid #a7f3d0",
-                  color: "#065f46",
-                  lineHeight: 1.7,
-                }}
-              >
-                <strong>Account created successfully!</strong>
-                <p style={{ marginBottom: 0 }}>
-                  Your account is ready. Please sign in to continue.
-                </p>
-              </div>
-
-              <button
-                type="button"
-                onClick={() => navigate("/login")}
-                style={{
-                  width: "100%",
-                  marginTop: "1.25rem",
-                  padding: "0.9rem",
-                  minHeight: ACCESSIBILITY_TOKENS.minTouchTarget,
-                  border: "none",
-                  borderRadius: "0.65rem",
-                  background: COLOR_TOKENS.brand.primary,
-                  color: "#ffffff",
-                  fontSize: "1rem",
-                  fontWeight: 700,
-                  cursor: "pointer",
-                }}
-              >
-                Go to Login
-              </button>
+          {shownError && (
+            <div
+              role="alert"
+              aria-live="polite"
+              className="flex items-start gap-2 rounded-lg border border-destructive/30 bg-destructive/10 px-3 py-2.5 text-sm text-destructive"
+            >
+              <AlertCircle className="mt-0.5 size-4 shrink-0" aria-hidden="true" />
+              {shownError}
             </div>
-          ) : (
-            <form onSubmit={(event) => void handleSubmit(event)} noValidate>
-              <div style={{ marginBottom: "1.25rem" }}>
-                <label htmlFor="register-email" style={labelStyle}>
-                  Email address
-                </label>
-                <input
-                  id="register-email"
-                  name="email"
-                  type="email"
-                  autoComplete="email"
-                  placeholder="you@example.com"
-                  value={email}
-                  onChange={(event) => setEmail(event.target.value)}
-                  style={inputStyle}
-                  disabled={isLoading}
-                  required
-                />
-              </div>
-
-              <div style={{ marginBottom: "1.25rem" }}>
-                <label htmlFor="register-password" style={labelStyle}>
-                  Password
-                </label>
-
-                <div style={{ position: "relative" }}>
-                  <input
-                    id="register-password"
-                    name="password"
-                    type={showPassword ? "text" : "password"}
-                    autoComplete="new-password"
-                    placeholder="Create a password"
-                    value={password}
-                    onChange={(event) => setPassword(event.target.value)}
-                    style={{ ...inputStyle, paddingRight: "5rem" }}
-                    disabled={isLoading}
-                    minLength={8}
-                    maxLength={128}
-                    required
-                  />
-                  {passwordToggle(
-                    showPassword,
-                    () => setShowPassword((visible) => !visible),
-                    "password",
-                  )}
-                </div>
-
-                {password.length > 0 && (
-                  <div
-                    style={{ marginTop: "0.6rem" }}
-                    aria-live="polite"
-                  >
-                    <div
-                      style={{
-                        display: "flex",
-                        gap: "4px",
-                        marginBottom: "0.35rem",
-                      }}
-                    >
-                      {[1, 2, 3, 4, 5].map((level) => (
-                        <span
-                          key={level}
-                          style={{
-                            flex: 1,
-                            height: "5px",
-                            borderRadius: "5px",
-                            background:
-                              level <= passwordStrength
-                                ? passwordStrength <= 2
-                                  ? "#e11d48"
-                                  : passwordStrength <= 4
-                                    ? "#d97706"
-                                    : "#059669"
-                                : COLOR_TOKENS.neutral.border,
-                          }}
-                        />
-                      ))}
-                    </div>
-                    <span
-                      style={{
-                        fontSize: "0.8rem",
-                        color: COLOR_TOKENS.neutral.textSecondary,
-                      }}
-                    >
-                      Password strength: {strengthLabel}
-                    </span>
-                  </div>
-                )}
-
-                <p
-                  style={{
-                    margin: "0.5rem 0 0",
-                    fontSize: "0.8rem",
-                    color: COLOR_TOKENS.neutral.textMuted,
-                  }}
-                >
-                  Use between 8 and 128 characters.
-                </p>
-              </div>
-
-              <div style={{ marginBottom: "1.25rem" }}>
-                <label htmlFor="register-confirm-password" style={labelStyle}>
-                  Confirm password
-                </label>
-
-                <div style={{ position: "relative" }}>
-                  <input
-                    id="register-confirm-password"
-                    name="confirmPassword"
-                    type={showConfirmPassword ? "text" : "password"}
-                    autoComplete="new-password"
-                    placeholder="Enter your password again"
-                    value={confirmPassword}
-                    onChange={(event) =>
-                      setConfirmPassword(event.target.value)
-                    }
-                    style={{ ...inputStyle, paddingRight: "5rem" }}
-                    disabled={isLoading}
-                    required
-                  />
-                  {passwordToggle(
-                    showConfirmPassword,
-                    () =>
-                      setShowConfirmPassword((visible) => !visible),
-                    "confirm password",
-                  )}
-                </div>
-              </div>
-
-              {(validationError ||
-                (status === "error" && errorMessage)) && (
-                <div
-                  role="alert"
-                  aria-live="polite"
-                  style={{
-                    padding: "0.85rem",
-                    borderRadius: "0.6rem",
-                    background: "#fff1f2",
-                    border: "1px solid #fecdd3",
-                    color: "#9f1239",
-                    marginBottom: "1rem",
-                    fontSize: "0.9rem",
-                  }}
-                >
-                  {validationError || errorMessage}
-                </div>
-              )}
-
-              <button
-                type="submit"
-                disabled={isLoading}
-                aria-busy={isLoading}
-                style={{
-                  width: "100%",
-                  padding: "0.9rem",
-                  minHeight: ACCESSIBILITY_TOKENS.minTouchTarget,
-                  border: "none",
-                  borderRadius: "0.65rem",
-                  background: isLoading
-                    ? COLOR_TOKENS.neutral.borderStrong
-                    : COLOR_TOKENS.brand.primary,
-                  color: "#ffffff",
-                  fontSize: "1rem",
-                  fontWeight: 700,
-                  cursor: isLoading ? "not-allowed" : "pointer",
-                  boxShadow: SHADOW_TOKENS.md,
-                }}
-              >
-                {isLoading ? "Creating account..." : "Create Account"}
-              </button>
-            </form>
           )}
 
-          <p
-            style={{
-              textAlign: "center",
-              marginTop: "1.5rem",
-              color: COLOR_TOKENS.neutral.textSecondary,
-            }}
-          >
-            Already have an account?{" "}
-            <Link
-              to="/login"
-              style={{
-                color: COLOR_TOKENS.brand.primary,
-                fontWeight: 700,
-              }}
-            >
-              Sign in
-            </Link>
-          </p>
+          <Button type="submit" disabled={isLoading} aria-busy={isLoading} className="h-11 w-full">
+            {isLoading && <Loader2 className="size-4 animate-spin" aria-hidden="true" />}
+            {isLoading ? "Creating account..." : "Create Account"}
+          </Button>
+        </form>
+      )}
 
-          <Link
-            to="/"
-            style={{
-              display: "block",
-              textAlign: "center",
-              marginTop: "1rem",
-              padding: "0.85rem",
-              border: `1px solid ${COLOR_TOKENS.neutral.borderStrong}`,
-              borderRadius: "0.65rem",
-              color: COLOR_TOKENS.neutral.textPrimary,
-              textDecoration: "none",
-              fontWeight: 600,
-              minHeight: ACCESSIBILITY_TOKENS.minTouchTarget,
-              boxSizing: "border-box",
-            }}
-          >
-            Continue as Guest →
-          </Link>
-
-          <p
-            style={{
-              marginTop: "1.75rem",
-              textAlign: "center",
-              fontSize: "0.78rem",
-              lineHeight: 1.6,
-              color: COLOR_TOKENS.neutral.textMuted,
-            }}
-          >
-            This tool provides informational guidance, not a medical diagnosis.
-            Always consult a qualified healthcare professional.
-          </p>
-        </div>
-      </section>
-    </main>
+      <p className="mt-6 text-center text-sm text-muted-foreground">
+        Already have an account?{" "}
+        <Link to="/login" className="font-medium text-primary underline-offset-4 hover:underline">
+          Sign in
+        </Link>
+      </p>
+    </AuthLayout>
   );
 }
