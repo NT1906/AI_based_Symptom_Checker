@@ -23,7 +23,7 @@ describe("RiskBadge", () => {
     expect(badge).toBeInTheDocument();
     expect(badge).toHaveAttribute("aria-label", "Risk level: Self-Care");
     expect(badge).toHaveTextContent("Self-Care");
-    expect(badge).toHaveTextContent("🏠");
+    expect(badge.querySelector("svg")).not.toBeNull(); // lucide icon (S2-NIS-22)
   });
 
   it("renders CONSULT_DOCTOR tier badge with accessible status and icon", () => {
@@ -33,7 +33,7 @@ describe("RiskBadge", () => {
     expect(badge).toBeInTheDocument();
     expect(badge).toHaveAttribute("aria-label", "Risk level: Consult a Doctor");
     expect(badge).toHaveTextContent("Consult a Doctor");
-    expect(badge).toHaveTextContent("🩺");
+    expect(badge.querySelector("svg")).not.toBeNull(); // lucide icon (S2-NIS-22)
   });
 
   it("renders URGENT tier badge with accessible status and icon", () => {
@@ -43,7 +43,7 @@ describe("RiskBadge", () => {
     expect(badge).toBeInTheDocument();
     expect(badge).toHaveAttribute("aria-label", "Risk level: Urgent Care Needed");
     expect(badge).toHaveTextContent("Urgent Care Needed");
-    expect(badge).toHaveTextContent("🚨");
+    expect(badge.querySelector("svg")).not.toBeNull(); // lucide icon (S2-NIS-22)
   });
 
   it("applies custom CSS class names to the badge container", () => {

@@ -5,8 +5,10 @@
  * Likely, Possible, Less likely; never raw scores or percentages), and DR-01 (informational framing).
  *
  * Owner: Mann (Frontend + Deployment · Testing) · Task: S1-MAN-2 · Requirements: FR-22, FR-23, DR-01
+ * Restyle (design tokens, lucide icons, dark mode): Nisarg · S2-NIS-22 (#323)
  */
 
+import { ArrowRight, ChevronDown, ChevronRight, Stethoscope } from "lucide-react";
 import React, { useState } from "react";
 import type { ConditionListProps, ConfidenceTier } from "./types";
 
@@ -38,13 +40,13 @@ export function getConfidenceLabel(confidence: ConfidenceTier): string {
 export function getConfidenceBadgeClass(confidence: ConfidenceTier): string {
   switch (confidence) {
     case "LIKELY":
-      return "bg-teal-100 text-teal-800 border-teal-300 dark:bg-teal-950 dark:text-teal-200 dark:border-teal-800";
+      return "bg-primary/15 text-primary-strong border-primary/40";
     case "POSSIBLE":
-      return "bg-amber-100 text-amber-800 border-amber-300 dark:bg-amber-950 dark:text-amber-200 dark:border-amber-800";
+      return "bg-warning/15 text-warning-strong border-warning/40";
     case "LESS_LIKELY":
-      return "bg-slate-100 text-slate-700 border-slate-300 dark:bg-slate-800 dark:text-slate-300 dark:border-slate-700";
+      return "bg-muted text-muted-foreground border-input";
     default:
-      return "bg-slate-100 text-slate-700 border-slate-300 dark:bg-slate-800 dark:text-slate-300 dark:border-slate-700";
+      return "bg-muted text-muted-foreground border-input";
   }
 }
 
@@ -74,14 +76,14 @@ export function ConditionList({
   return (
     <section
       aria-label="Possible Conditions"
-      className="w-full max-w-2xl mx-auto bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-2xl shadow-sm overflow-hidden"
+      className="w-full max-w-2xl mx-auto bg-card border border-border rounded-xl shadow-sm overflow-hidden"
     >
       {/* Header Container */}
-      <div className="p-6 bg-slate-50/80 dark:bg-slate-950/40 border-b border-slate-200 dark:border-slate-800">
-        <h2 className="text-xl font-bold text-slate-900 dark:text-slate-100 flex items-center gap-2">
-          <span aria-hidden="true">🩺</span> {title}
+      <div className="p-6 bg-muted/60 border-b border-border">
+        <h2 className="text-xl font-bold text-foreground flex items-center gap-2">
+          <Stethoscope className="size-4 shrink-0" aria-hidden="true" /> {title}
         </h2>
-        <p className="text-sm text-slate-600 dark:text-slate-300 mt-1">
+        <p className="text-sm text-muted-foreground mt-1">
           These are informational considerations based on your reported symptoms. Always consult a
           qualified healthcare professional for evaluation.
         </p>
@@ -90,9 +92,9 @@ export function ConditionList({
       {/* Conditions Content */}
       <div className="p-6">
         {conditions.length === 0 ? (
-          <div className="text-center py-8 text-slate-500 dark:text-slate-400">
+          <div className="text-center py-8 text-muted-foreground">
             <p className="text-sm font-medium">{emptyMessage}</p>
-            <p className="text-xs mt-1 text-slate-400 dark:text-slate-500">
+            <p className="text-xs mt-1 text-muted-foreground">
               A general physician can help evaluate non-specific or evolving symptoms.
             </p>
           </div>
@@ -108,15 +110,15 @@ export function ConditionList({
               return (
                 <li
                   key={key}
-                  className="p-4 rounded-xl border border-slate-200 dark:border-slate-800 bg-slate-50/60 dark:bg-slate-800/40 hover:border-teal-200 dark:hover:border-teal-900/60 transition-colors"
+                  className="p-4 rounded-xl border border-border bg-muted/60 hover:border-primary/25 transition-colors"
                 >
                   {/* Top Bar: Rank, Name, Confidence Badge */}
                   <div className="flex items-start justify-between gap-3">
                     <div className="flex items-center gap-2 flex-wrap">
-                      <span className="text-xs font-bold text-slate-400 dark:text-slate-500">
+                      <span className="text-xs font-bold text-muted-foreground">
                         #{displayRank}
                       </span>
-                      <h3 className="font-semibold text-slate-900 dark:text-slate-100 text-base">
+                      <h3 className="font-semibold text-foreground text-base">
                         {item.name}
                       </h3>
                     </div>
@@ -131,8 +133,8 @@ export function ConditionList({
 
                   {/* "Why" Explanation Line (FR-22, FR-24) */}
                   {item.why && (
-                    <div className="mt-2.5 flex items-start gap-1.5 text-xs text-slate-700 dark:text-slate-300 leading-relaxed bg-white/70 dark:bg-slate-900/50 p-2.5 rounded-lg border border-slate-200/60 dark:border-slate-700/60">
-                      <span className="font-semibold text-teal-800 dark:text-teal-300 shrink-0">
+                    <div className="mt-2.5 flex items-start gap-1.5 text-xs text-muted-foreground leading-relaxed bg-card/70 p-2.5 rounded-lg border border-border">
+                      <span className="font-semibold text-primary-strong shrink-0">
                         Why:
                       </span>
                       <span>{item.why}</span>
@@ -141,8 +143,8 @@ export function ConditionList({
 
                   {/* Recommended Specialty */}
                   {item.specialty && (
-                    <div className="mt-2 text-xs text-slate-600 dark:text-slate-400 flex items-center gap-1.5">
-                      <span className="font-medium text-slate-700 dark:text-slate-300">
+                    <div className="mt-2 text-xs text-muted-foreground flex items-center gap-1.5">
+                      <span className="font-medium text-muted-foreground">
                         Recommended Specialty:
                       </span>
                       <span>{item.specialty}</span>
@@ -151,24 +153,29 @@ export function ConditionList({
 
                   {/* Optional Metadata Toggle (ICD-10, Description) */}
                   {(item.icd10Code || item.description) && (
-                    <div className="mt-3 pt-2.5 border-t border-slate-200/70 dark:border-slate-700/70">
+                    <div className="mt-3 pt-2.5 border-t border-border">
                       <button
                         type="button"
                         onClick={() => toggleDetails(key)}
-                        className="text-xs font-medium text-teal-700 dark:text-teal-400 hover:text-teal-800 dark:hover:text-teal-300 hover:underline flex items-center gap-1 focus:outline-none focus:ring-1 focus:ring-teal-600 rounded"
+                        className="text-xs font-medium text-primary hover:text-primary-strong hover:underline flex items-center gap-1 focus:outline-none focus:ring-1 focus:ring-ring rounded"
                         aria-expanded={isExpanded}
                       >
-                        <span>{isExpanded ? "▾ Hide details" : "▸ Show details"}</span>
+                        {isExpanded ? (
+                        <ChevronDown className="size-3.5" aria-hidden="true" />
+                      ) : (
+                        <ChevronRight className="size-3.5" aria-hidden="true" />
+                      )}
+                      <span>{isExpanded ? "Hide details" : "Show details"}</span>
                       </button>
 
                       {isExpanded && (
-                        <div className="mt-2 space-y-1.5 text-xs text-slate-600 dark:text-slate-400 bg-slate-100/60 dark:bg-slate-900/40 p-2.5 rounded-lg">
+                        <div className="mt-2 space-y-1.5 text-xs text-muted-foreground bg-muted/60 p-2.5 rounded-lg">
                           {item.icd10Code && (
                             <div>
-                              <span className="font-medium text-slate-700 dark:text-slate-300">
+                              <span className="font-medium text-muted-foreground">
                                 ICD-10 Code:
                               </span>{" "}
-                              <code className="text-[11px] bg-slate-200/60 dark:bg-slate-800 px-1 py-0.5 rounded text-slate-800 dark:text-slate-200">
+                              <code className="text-[11px] bg-muted/60 px-1 py-0.5 rounded text-foreground">
                                 {item.icd10Code}
                               </code>
                             </div>
@@ -187,9 +194,9 @@ export function ConditionList({
                       <button
                         type="button"
                         onClick={() => onSelectCondition(item)}
-                        className="text-xs font-semibold text-teal-700 dark:text-teal-400 hover:text-teal-800 hover:underline"
+                        className="text-xs font-semibold text-primary hover:text-primary-strong hover:underline"
                       >
-                        Select for follow-up →
+                        Select for follow-up <ArrowRight className="inline size-3.5 align-[-2px]" aria-hidden="true" />
                       </button>
                     </div>
                   )}
@@ -201,7 +208,7 @@ export function ConditionList({
       </div>
 
       {/* Persistent Informational Footer Note (DR-01) */}
-      <footer className="px-6 py-3 bg-slate-100/80 dark:bg-slate-950/60 border-t border-slate-200 dark:border-slate-800 text-[11px] text-slate-500 dark:text-slate-400 text-center leading-relaxed">
+      <footer className="px-6 py-3 bg-muted/80 border-t border-border text-[11px] text-muted-foreground text-center leading-relaxed">
         Conditions are ranked suggestions for informational discussion with a licensed healthcare
         provider, not clinical diagnoses.
       </footer>

@@ -55,8 +55,8 @@ describe("SymptomConfirmationCard", () => {
     // Verify badges and duration
     expect(screen.getByText("MODERATE")).toBeInTheDocument();
     expect(screen.getByText("MILD")).toBeInTheDocument();
-    expect(screen.getByText(/⏳ Duration: 2 days/i)).toBeInTheDocument();
-    expect(screen.getByText(/📍 Location: Temples/i)).toBeInTheDocument();
+    expect(screen.getByText(/Duration: 2 days/i)).toBeInTheDocument();
+    expect(screen.getByText(/Location: Temples/i)).toBeInTheDocument();
 
     // Click confirm button
     const confirmButton = screen.getByRole("button", {
@@ -209,7 +209,7 @@ describe("SymptomConfirmationCard", () => {
       />,
     );
 
-    const backButton = screen.getByRole("button", { name: /← Back to Chat/i });
+    const backButton = screen.getByRole("button", { name: /Back to Chat/i });
     fireEvent.click(backButton);
     expect(handleCancel).toHaveBeenCalledTimes(1);
   });

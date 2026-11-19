@@ -1,8 +1,10 @@
 /**
  * @file Contributing-factor explanation panel explaining why conditions were suggested.
  * Owner: Mann (Frontend + Deployment · Testing) · Task: S2-MAN-3 · Requirements: FR-24
+ * Restyle (design tokens, lucide icons, dark mode): Nisarg · S2-NIS-22 (#323)
  */
 
+import { ChevronDown, ChevronUp, Search } from "lucide-react";
 import { useState } from "react";
 import type { ConditionItem } from "./types";
 
@@ -46,23 +48,23 @@ export function WhyThisResultPanel({
   return (
     <section
       aria-labelledby="why-result-heading"
-      className={`rounded-2xl border border-slate-200 bg-white p-5 shadow-xs sm:p-6 dark:border-slate-800 dark:bg-slate-900 ${className}`}
+      className={`rounded-xl border border-border bg-card p-5 shadow-xs sm:p-6 ${className}`}
     >
       {/* Header and Toggle Button */}
       <div className="flex items-center justify-between gap-4">
         <div className="space-y-1">
           <div className="flex items-center gap-2">
             <span className="text-xl" aria-hidden="true">
-              🔍
+              <Search className="size-5" aria-hidden="true" />
             </span>
             <h2
               id="why-result-heading"
-              className="text-lg font-bold tracking-tight text-slate-900 sm:text-xl dark:text-slate-100"
+              className="text-lg font-bold tracking-tight text-foreground sm:text-xl"
             >
               {title}
             </h2>
           </div>
-          <p className="text-xs text-slate-600 sm:text-sm dark:text-slate-400">
+          <p className="text-xs text-muted-foreground sm:text-sm">
             Contributing factors and symptom patterns that influenced these suggestions.
           </p>
         </div>
@@ -72,20 +74,24 @@ export function WhyThisResultPanel({
           onClick={() => setIsExpanded((prev) => !prev)}
           aria-expanded={isExpanded}
           aria-controls="why-result-content"
-          className="inline-flex items-center gap-1.5 rounded-lg border border-slate-300 bg-white px-3 py-1.5 text-xs font-semibold text-slate-700 transition hover:bg-slate-50 focus:outline-none focus:ring-2 focus:ring-teal-500 dark:border-slate-700 dark:bg-slate-800 dark:text-slate-200"
+          className="inline-flex items-center gap-1.5 rounded-lg border border-input bg-card px-3 py-1.5 text-xs font-semibold text-muted-foreground transition hover:bg-muted/60 focus:outline-none focus:ring-2 focus:ring-ring"
         >
           <span>{isExpanded ? "Collapse" : "Expand"}</span>
-          <span aria-hidden="true">{isExpanded ? "▲" : "▼"}</span>
+          {isExpanded ? (
+                <ChevronUp className="size-3.5" aria-hidden="true" />
+              ) : (
+                <ChevronDown className="size-3.5" aria-hidden="true" />
+              )}
         </button>
       </div>
 
       {/* Expandable Explanation Details */}
       {isExpanded && (
-        <div id="why-result-content" className="mt-5 space-y-4 border-t border-slate-100 pt-4 dark:border-slate-800">
+        <div id="why-result-content" className="mt-5 space-y-4 border-t border-border pt-4">
           {/* Summary of Reported Inputs */}
           {reportedSymptoms.length > 0 && (
-            <div className="rounded-xl bg-slate-50 p-3.5 text-xs text-slate-700 dark:bg-slate-800/60 dark:text-slate-300">
-              <span className="font-semibold text-slate-900 dark:text-slate-100">
+            <div className="rounded-xl bg-muted/60 p-3.5 text-xs text-muted-foreground">
+              <span className="font-semibold text-foreground">
                 Symptoms evaluated from your input:{" "}
               </span>
               <span>{reportedSymptoms.join(", ")}</span>
@@ -97,20 +103,20 @@ export function WhyThisResultPanel({
             {conditions.map((condition) => (
               <div
                 key={condition.id || condition.name}
-                className="rounded-xl border border-slate-100 bg-slate-50/50 p-4 transition dark:border-slate-800 dark:bg-slate-800/30"
+                className="rounded-xl border border-border bg-muted/60 p-4 transition"
               >
                 <div className="flex flex-wrap items-center justify-between gap-2">
-                  <h3 className="text-sm font-bold text-slate-900 dark:text-slate-100">
+                  <h3 className="text-sm font-bold text-foreground">
                     {condition.name}
                   </h3>
-                  <span className="rounded-full bg-slate-200/80 px-2 py-0.5 text-[11px] font-medium text-slate-700 dark:bg-slate-700 dark:text-slate-300">
+                  <span className="rounded-full bg-muted/80 px-2 py-0.5 text-[11px] font-medium text-muted-foreground">
                     {condition.confidence.replace("_", " ")}
                   </span>
                 </div>
 
                 {/* Plain-Language Why Rationale (FR-24) */}
-                <p className="mt-2 text-xs leading-relaxed text-slate-700 dark:text-slate-300">
-                  <strong className="font-semibold text-slate-900 dark:text-slate-100">
+                <p className="mt-2 text-xs leading-relaxed text-muted-foreground">
+                  <strong className="font-semibold text-foreground">
                     Why suggested:{" "}
                   </strong>
                   {condition.why ||
@@ -118,7 +124,7 @@ export function WhyThisResultPanel({
                 </p>
 
                 {condition.specialty && (
-                  <p className="mt-1 text-[11px] text-teal-700 dark:text-teal-400">
+                  <p className="mt-1 text-[11px] text-primary">
                     Relevant specialty: {condition.specialty}
                   </p>
                 )}
@@ -127,7 +133,7 @@ export function WhyThisResultPanel({
           </div>
 
           {/* Safety Disclaimer */}
-          <p className="text-[11px] text-slate-400 dark:text-slate-500">
+          <p className="text-[11px] text-muted-foreground">
             These explanations describe statistical pattern similarity and do not constitute a medical diagnosis.
           </p>
         </div>

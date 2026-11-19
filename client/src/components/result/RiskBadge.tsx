@@ -5,8 +5,10 @@
  * DR-02 (red-flag emergency classification), and NFR-06 (WCAG 2.1 AA accessible indicators).
  *
  * Owner: Mann (Frontend + Deployment · Testing) · Task: S1-MAN-3 · Requirements: FR-06, FR-15, DR-02, NFR-06
+ * Restyle (design tokens, lucide icons, dark mode): Nisarg · S2-NIS-22 (#323)
  */
 
+import { House, Siren, Stethoscope, type LucideIcon } from "lucide-react";
 import React from "react";
 import type { RiskLevel } from "./types";
 
@@ -22,8 +24,8 @@ export interface RiskBadgeProps {
 export interface RiskConfig {
   /** User-friendly label for the risk tier. */
   label: string;
-  /** Accessible visual emoji or icon representing the tier. */
-  icon: string;
+  /** Icon representing the tier (decorative; the label carries the meaning). */
+  icon: LucideIcon;
   /** Tailwind styling classes ensuring WCAG 2.1 AA contrast. */
   className: string;
   /** Detailed description for the tier. */
@@ -34,20 +36,20 @@ export interface RiskConfig {
 export const RISK_CONFIG: Record<RiskLevel, RiskConfig> = {
   SELF_CARE: {
     label: "Self-Care",
-    icon: "🏠",
-    className: "bg-emerald-50 text-emerald-800 border-emerald-300 ring-emerald-500/10 dark:bg-emerald-950 dark:text-emerald-200 dark:border-emerald-800",
+    icon: House,
+    className: "bg-success/10 text-success-strong border-success/40 ring-success/40",
     description: "Recommended for self-management at home. Follow general self-care guidance and monitor your condition.",
   },
   CONSULT_DOCTOR: {
     label: "Consult a Doctor",
-    icon: "🩺",
-    className: "bg-amber-50 text-amber-800 border-amber-300 ring-amber-500/10 dark:bg-amber-950 dark:text-amber-200 dark:border-amber-800",
+    icon: Stethoscope,
+    className: "bg-warning/10 text-warning-strong border-warning/40 ring-warning/40",
     description: "Medical consultation recommended within 24–48 hours. This is not an emergency, but requires clinical evaluation.",
   },
   URGENT: {
     label: "Urgent Care Needed",
-    icon: "🚨",
-    className: "bg-rose-50 text-rose-800 border-rose-300 ring-rose-500/10 dark:bg-rose-950 dark:text-rose-200 dark:border-rose-800",
+    icon: Siren,
+    className: "bg-danger/10 text-danger-strong border-danger/40 ring-danger/40",
     description: "Immediate emergency medical care required. Call emergency services (112) or go to the nearest emergency room.",
   },
 };
@@ -77,12 +79,12 @@ export function RiskBadge({ level, className = "" }: RiskBadgeProps): React.Reac
       role="status"
       aria-label={`Risk level: ${config.label}`}
       className={[
-        "inline-flex items-center gap-1.5 rounded-full border px-3 py-1 text-xs font-bold tracking-tight shadow-xs ring-1",
+        "inline-flex items-center gap-1.5 rounded-full border px-3 py-1 text-xs font-semibold tracking-tight shadow-xs ring-1",
         config.className,
         className,
       ].join(" ")}
     >
-      <span aria-hidden="true">{config.icon}</span>
+      <config.icon className="size-3.5" aria-hidden="true" />
       <span>{config.label}</span>
     </span>
   );
