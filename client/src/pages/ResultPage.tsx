@@ -12,10 +12,11 @@
  * - FR-08: External map search link for recommended medical specialty (no doctor data stored).
  * - NFR-06: WCAG 2.1 AA accessible landmarks, contrast, and focus states.
  *
- * Owner: Mann (Frontend + Deployment · Testing) · Task: S1-MAN-3, S2-NIS-13 · Requirements: DR-01, DR-02, FR-06, FR-15, FR-22, FR-23, FR-24, FR-08, NFR-06
+ * Owner: Mann (Frontend + Deployment Â· Testing) Â· Task: S1-MAN-3, S2-NIS-13 Â· Requirements: DR-01, DR-02, FR-06, FR-15, FR-22, FR-23, FR-24, FR-08, NFR-06
  */
 
 import React from "react";
+import { UrgentCareAlert } from "../components/risk/UrgentCareAlert";
 import { AppLayout } from "../components/layout/AppLayout";
 import { ConditionList } from "../components/result/ConditionList";
 import { DoctorReferral } from "../components/result/DoctorReferral";
@@ -115,6 +116,7 @@ export function ResultPage({
   const riskLevel: RiskLevel = result.riskLevel || "CONSULT_DOCTOR";
   const riskConfig = getRiskConfig(riskLevel);
   const isUrgent = riskLevel === "URGENT";
+  const [urgentAlertDismissed, setUrgentAlertDismissed] = React.useState(false);
 
   const conditions = result.conditions || [];
   const guidance = result.guidance;
@@ -134,6 +136,9 @@ export function ResultPage({
       showStartOver={Boolean(onStartNewAssessment)}
       onStartOver={handleStartOver}
     >
+      {isUrgent && !urgentAlertDismissed && (
+        <UrgentCareAlert onDismiss={() => setUrgentAlertDismissed(true)} />
+      )}
       <div className="space-y-8 pb-12">
         {/* 1. Triage Risk Level Banner */}
         <section
@@ -180,7 +185,7 @@ export function ResultPage({
               <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
                 <div className="space-y-1">
                   <p className="text-sm font-bold uppercase tracking-wide text-rose-700 dark:text-rose-300">
-                    ⚠️ Immediate Action Required
+                    âš ï¸ Immediate Action Required
                   </p>
                   <p className="text-xs leading-relaxed text-slate-700 sm:text-sm dark:text-slate-200">
                     Your reported symptoms indicate a potential high-risk condition.
@@ -194,7 +199,7 @@ export function ResultPage({
                   aria-label={`Call emergency number ${emergencyNumber} now`}
                 >
                   <span aria-hidden="true" className="text-lg">
-                    📞
+                    ðŸ“ž
                   </span>
                   <span>Call {emergencyNumber} Now</span>
                 </a>
@@ -256,7 +261,7 @@ export function ResultPage({
               {guidance.selfCareAdvice && guidance.selfCareAdvice.length > 0 && (
                 <div className="space-y-2.5">
                   <h3 className="flex items-center gap-1.5 text-sm font-bold text-slate-900 dark:text-slate-100">
-                    <span aria-hidden="true">💡</span>
+                    <span aria-hidden="true">ðŸ’¡</span>
                     <span>{guidance.stepsHeading ?? "General Self-Care Steps"}</span>
                   </h3>
                   <ul className="space-y-2 text-xs leading-relaxed text-slate-700 sm:text-sm dark:text-slate-300">
@@ -277,7 +282,7 @@ export function ResultPage({
               {guidance.warningSigns && guidance.warningSigns.length > 0 && (
                 <div className="space-y-2.5 rounded-xl border border-amber-200 bg-amber-50/50 p-3.5 sm:p-4 dark:border-amber-900/50 dark:bg-amber-950/20">
                   <h3 className="flex items-center gap-1.5 text-sm font-bold text-amber-900 dark:text-amber-200">
-                    <span aria-hidden="true">⚠️</span>
+                    <span aria-hidden="true">âš ï¸</span>
                     <span>When to Seek Emergency Care</span>
                   </h3>
                   <ul className="space-y-1.5 text-xs leading-relaxed text-amber-950 sm:text-sm dark:text-amber-200/90">
@@ -372,7 +377,7 @@ export function ResultPage({
               onClick={handleStartOver}
               className="inline-flex min-h-[44px] items-center justify-center gap-2 rounded-xl border border-slate-300 bg-white px-6 py-3 text-sm font-semibold text-slate-800 shadow-xs transition hover:bg-slate-50 focus:outline-none focus:ring-4 focus:ring-slate-300 dark:border-slate-700 dark:bg-slate-800 dark:text-slate-200 dark:hover:bg-slate-700"
             >
-              <span aria-hidden="true">🔄</span>
+              <span aria-hidden="true">ðŸ”„</span>
               <span>Start New Assessment</span>
             </button>
           </div>

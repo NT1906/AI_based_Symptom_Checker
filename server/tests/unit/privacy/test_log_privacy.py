@@ -1,6 +1,6 @@
 """Prevent personal values in authentication and error logging.
 
-Owner: Harsh · Task: S2-HAR-7 · Issue: #210 · Requirements: NFR-10
+Owner: Harsh Â· Task: S2-HAR-7 Â· Issue: #210 Â· Requirements: NFR-10
 """
 
 import ast
@@ -36,29 +36,50 @@ def test_auth_and_errors_omit_personal_values(
         "password": "FictionalPrivatePass123!",
     }
     original_handlers = logging.getLogger().handlers[:]
+
     try:
         Base.metadata.create_all(engine)
+
         with TestClient(app) as client:
             registration = client.post("/api/v1/auth/register", json=credentials)
             assert registration.status_code == 201
+
             client.post("/api/v1/auth/register", json=credentials)
+
             assert (
                 client.post("/api/v1/auth/login", json=credentials).status_code == 200
             )
+
             client.post(
                 "/api/v1/auth/login",
-                json={**credentials, "password": "IncorrectPrivatePass123!"},
+                json={
+                    **credentials,
+                    "password": "IncorrectPrivatePass123!",
+                },
             )
-            # httpx logs full URLs independently, so suppress that test-client
-            # transport while checking the application sink for raw paths.
-            transport_logger = logging.getLogger("httpx2")
-            previous_disabled = transport_logger.disabled
-            transport_logger.disabled = True
+
+            # HTTPX may log full request URLs independently of the
+            # application logger. Suppress both logger names used by
+            # local and CI environments while checking the app log sink.
+            transport_loggers = [
+                logging.getLogger("httpx"),
+                logging.getLogger("httpx2"),
+            ]
+            previous_disabled = [logger.disabled for logger in transport_loggers]
+
             try:
+                for logger in transport_loggers:
+                    logger.disabled = True
+
                 assert client.get("/fixtures/fictional-private-path").status_code == 422
             finally:
-                transport_logger.disabled = previous_disabled
+                for logger, was_disabled in zip(
+                    transport_loggers, previous_disabled, strict=True
+                ):
+                    logger.disabled = was_disabled
+
         output = capsys.readouterr().out
+
         for marker in (
             *credentials.values(),
             registration.json()["id"],
@@ -66,10 +87,12 @@ def test_auth_and_errors_omit_personal_values(
             "fictional-private-error",
         ):
             assert marker not in output
+
         assert "auth_login_successful" in output
         assert "request_validation_failed" not in output
         assert "app_error_occurred" in output
         assert "/fixtures/{value}" in output
+
     finally:
         logging.getLogger().handlers[:] = original_handlers
         engine.dispose()
@@ -78,6 +101,7 @@ def test_auth_and_errors_omit_personal_values(
 def test_log_calls_exclude_direct_identifiers_and_symptom_values() -> None:
     """Catch regressions that reintroduce removed personal logging fields."""
     root = Path(__file__).resolve().parents[3] / "app"
+
     prohibited = {
         "email",
         "user_id",
@@ -88,6 +112,7 @@ def test_log_calls_exclude_direct_identifiers_and_symptom_values() -> None:
         "provided_user_id",
         "jti",
     }
+
     for filename in (
         "api/v1/auth.py",
         "services/auth/service.py",
@@ -103,7 +128,9 @@ def test_log_calls_exclude_direct_identifiers_and_symptom_values() -> None:
                 and node.func.value.id == "logger"
             ):
                 continue
+
             assert prohibited.isdisjoint(keyword.arg for keyword in node.keywords)
+
             assert all(
                 ast.unparse(keyword.value) != "str(exc)" for keyword in node.keywords
             )
