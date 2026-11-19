@@ -1,14 +1,15 @@
 """AI Gateway factory for provider instantiation and failover wiring.
 
 Responsibilities:
-    - Select and instantiate the appropriate AI provider (mock, openai, gemini).
-    - Wire OpenAiProvider -> GeminiProvider automatic failover with shared
-      LatencyBudget when GEMINI_API_KEY is available alongside OpenAI.
+    - Select and instantiate the appropriate AI provider
+      (mock, openai, groq, gemini).
+    - Wire OpenAiProvider/GroqProvider -> GeminiProvider automatic failover with
+      shared LatencyBudget when GEMINI_API_KEY is available alongside them.
     - Default safely to MockAiProvider in development and test environments.
     - Wrap the outermost provider in PrivacyAiGateway so outbound PII scrubbing
       runs once before any external LLM provider is invoked.
 
-Owner: Nishith · Tasks: S1-NIT-3, S2-NIT-2, S2-NIT-5
+Owner: Nishith · Tasks: S1-NIT-3, S2-NIT-2, S2-NIT-5, S2-NIS-14 (Groq)
 Requirements: NFR-01, NFR-04, NFR-05, DR-06, idea "out of scope", FR-18
 """
 
@@ -20,6 +21,7 @@ from app.core.config import get_settings
 from app.services.ai.fallback_gateway import FallbackAiGateway
 from app.services.ai.gateway import AiError, AiGateway
 from app.services.ai.gemini_provider import DEFAULT_GEMINI_MODEL, GeminiProvider
+from app.services.ai.groq_provider import GroqProvider
 from app.services.ai.latency_budget import resolve_latency_budget_seconds
 from app.services.ai.mock_provider import MockAiProvider
 from app.services.ai.openai_provider import OpenAiProvider
@@ -59,12 +61,34 @@ def _is_fallback_enabled() -> bool:
     return raw not in {"0", "false", "no", "off"}
 
 
+def _with_optional_gemini_fallback(
+    primary: AiGateway,
+    budget_seconds: float,
+) -> AiGateway:
+    """Wrap primary in Gemini failover when a key is set, then in PII scrubbing."""
+    gemini_key = _resolve_gemini_api_key()
+    if gemini_key and _is_fallback_enabled():
+        gemini_model = os.getenv("GEMINI_MODEL") or DEFAULT_GEMINI_MODEL
+        fallback = GeminiProvider(
+            api_key=gemini_key,
+            model=gemini_model,
+            latency_budget_seconds=budget_seconds,
+        )
+        gateway: AiGateway = FallbackAiGateway(
+            primary=primary,
+            fallback=fallback,
+            latency_budget_seconds=budget_seconds,
+        )
+        return cast(AiGateway, PrivacyAiGateway(gateway))
+    return cast(AiGateway, PrivacyAiGateway(primary))
+
+
 @lru_cache(maxsize=4)
 def get_ai_gateway(provider: str | None = None) -> AiGateway:
     """Retrieve an initialized AiGateway instance based on environment configuration.
 
     Args:
-        provider: Explicit provider name ('mock', 'openai', 'gemini').
+        provider: Explicit provider name ('mock', 'openai', 'groq', 'gemini').
             If None, reads from AI_PROVIDER environment variable, defaulting to 'mock'.
 
     Returns:
@@ -92,23 +116,20 @@ def get_ai_gateway(provider: str | None = None) -> AiGateway:
             model=settings.ai_model,
             latency_budget_seconds=budget_seconds,
         )
+        return _with_optional_gemini_fallback(primary, budget_seconds)
 
-        gemini_key = _resolve_gemini_api_key()
-        if gemini_key and _is_fallback_enabled():
-            gemini_model = os.getenv("GEMINI_MODEL") or DEFAULT_GEMINI_MODEL
-            fallback = GeminiProvider(
-                api_key=gemini_key,
-                model=gemini_model,
-                latency_budget_seconds=budget_seconds,
-            )
-            gateway: AiGateway = FallbackAiGateway(
-                primary=primary,
-                fallback=fallback,
-                latency_budget_seconds=budget_seconds,
-            )
-            return cast(AiGateway, PrivacyAiGateway(gateway))
-
-        return cast(AiGateway, PrivacyAiGateway(primary))
+    if resolved_provider == "groq":
+        settings = get_settings()
+        groq_key = settings.groq_api_key or os.getenv("GROQ_API_KEY")
+        if not groq_key:
+            raise AiError("GROQ_API_KEY is not configured.")
+        budget_seconds = resolve_latency_budget_seconds()
+        groq = GroqProvider(
+            api_key=groq_key,
+            model=settings.groq_model,
+            latency_budget_seconds=budget_seconds,
+        )
+        return _with_optional_gemini_fallback(groq, budget_seconds)
 
     if resolved_provider == "gemini":
         gemini_key = _resolve_gemini_api_key()
@@ -129,5 +150,5 @@ def get_ai_gateway(provider: str | None = None) -> AiGateway:
 
     raise AiError(
         f"Unsupported AI provider '{resolved_provider}'. "
-        "Supported: 'mock', 'openai', 'gemini'."
+        "Supported: 'mock', 'openai', 'groq', 'gemini'."
     )
