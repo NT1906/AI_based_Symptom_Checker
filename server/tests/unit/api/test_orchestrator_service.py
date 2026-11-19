@@ -7,6 +7,7 @@ Covers:
       result carries the disclaimer and no raw scores.
     - Clarifying questions work (regression: the symptom state sent to the
       privacy gateway must be JSON, or every question crashed with a 500).
+    - The CV model being unavailable never stops a text assessment (S2-NIS-14).
     - Edge and failure cases: result before analysis (409), repeated analysis,
       a message after confirmation (409, not 500), unknown IDs (404).
 
@@ -20,18 +21,36 @@ from uuid import UUID, uuid4
 
 import pytest
 from app.api.deps import get_ai_gateway_dep, get_assessment_service, get_session_factory
-from app.api.orchestrator_service import build_orchestrator_service
+from app.api.orchestrator_service import (
+    UnavailableImageAnalyzer,
+    build_orchestrator_service,
+)
+from app.services.image.analyzer import ImageAnalysisError
+from app.services.image.mock_analyzer import MockImageAnalyzer
 from app.core.config import Settings
 from app.models.base import Base
 from app.models.consent import Consent
 from app.services.privacy.consent import CURRENT_POLICY_VERSION
 from fastapi import FastAPI, status
 from httpx import ASGITransport, AsyncClient
-from sqlalchemy import create_engine
+from sqlalchemy import Engine, create_engine
 from sqlalchemy.orm import sessionmaker
 
 CONSENT_ID = UUID("00000000-0000-4000-8000-0000000000c1")
 BASE = "/api/v1/assessments"
+
+
+def _install_service(app: FastAPI, settings: Settings, tmp_path: Path) -> Engine:
+    """Serve the app from a fresh orchestrator service and a consent DB."""
+    engine = create_engine(f"sqlite:///{tmp_path / 'e2e.db'}")
+    Base.metadata.create_all(engine)
+    sessions = sessionmaker(bind=engine, expire_on_commit=False)
+    with sessions.begin() as session:
+        session.add(Consent(id=CONSENT_ID, policy_version=CURRENT_POLICY_VERSION))
+    service = build_orchestrator_service(settings, get_ai_gateway_dep(settings), None)
+    app.dependency_overrides[get_assessment_service] = lambda: service
+    app.dependency_overrides[get_session_factory] = lambda: sessions
+    return engine
 
 
 @pytest.fixture
@@ -39,16 +58,7 @@ def real_service(
     app: FastAPI, test_settings: Settings, tmp_path: Path
 ) -> Iterator[None]:
     """Serve the test app from a fresh orchestrator service and a consent DB."""
-    engine = create_engine(f"sqlite:///{tmp_path / 'e2e.db'}")
-    Base.metadata.create_all(engine)
-    sessions = sessionmaker(bind=engine, expire_on_commit=False)
-    with sessions.begin() as session:
-        session.add(Consent(id=CONSENT_ID, policy_version=CURRENT_POLICY_VERSION))
-    service = build_orchestrator_service(
-        test_settings, get_ai_gateway_dep(test_settings), None
-    )
-    app.dependency_overrides[get_assessment_service] = lambda: service
-    app.dependency_overrides[get_session_factory] = lambda: sessions
+    engine = _install_service(app, test_settings, tmp_path)
     yield
     app.dependency_overrides.pop(get_session_factory, None)
     engine.dispose()
@@ -189,3 +199,50 @@ async def test_analysing_an_unknown_assessment_is_not_found(http: AsyncClient) -
     resp = await http.post(f"{BASE}/{uuid4()}/analyze")
 
     assert resp.status_code == status.HTTP_404_NOT_FOUND
+
+
+# --- S2-NIS-14: the optional photo step must never stop a text assessment ---
+
+
+@pytest.mark.anyio
+async def test_text_assessment_completes_when_the_cv_model_is_missing(
+    app: FastAPI, test_settings: Settings, tmp_path: Path
+) -> None:
+    """``CV_PROVIDER=onnx`` before the model exists (as on Render) runs text-only."""
+    settings = test_settings.model_copy(update={"cv_provider": "onnx"})
+    engine = _install_service(app, settings, tmp_path)
+    try:
+        transport = ASGITransport(app=app)
+        async with AsyncClient(transport=transport, base_url="http://t") as client:
+            result = await _assess(
+                client, "I have a sore throat and fever since 2 days"
+            )
+    finally:
+        app.dependency_overrides.pop(get_session_factory, None)
+        engine.dispose()
+
+    assert result["riskLevel"] == "SELF_CARE"
+
+
+@pytest.mark.parametrize(
+    ("provider", "expected"),
+    [
+        ("mock", MockImageAnalyzer),
+        ("onnx", UnavailableImageAnalyzer),
+        ("nope", UnavailableImageAnalyzer),
+    ],
+)
+def test_unavailable_provider_gets_a_text_only_stand_in(
+    test_settings: Settings, provider: str, expected: type
+) -> None:
+    from app.api import orchestrator_service
+
+    analyzer = orchestrator_service._image_analyzer_or_unavailable(provider)
+
+    assert isinstance(analyzer, expected)
+
+
+@pytest.mark.anyio
+async def test_stand_in_never_invents_a_finding() -> None:
+    with pytest.raises(ImageAnalysisError):
+        await UnavailableImageAnalyzer("onnx").analyze(b"\xff\xd8 fake jpeg")

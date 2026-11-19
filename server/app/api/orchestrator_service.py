@@ -9,6 +9,9 @@ Responsibilities:
     - Run "analyze" as confirm-then-result, and keep the finished result so
       ``GET /result`` returns the same answer every time (DR-02).
     - Map "no such assessment" and "wrong state" to 404 and 409.
+    - Start text-only when the configured image analyzer is unavailable (for
+      example ``CV_PROVIDER=onnx`` before the CV model exists), so text
+      assessments never fail because of the optional photo step (S2-NIS-14).
 
 Owner: Nisarg (integration), Darshil (persistence)
 Task: S2-NIS-13, S2-DAR-11 · Requirements: FR-01, FR-03, FR-06, FR-20, DR-02
@@ -37,7 +40,9 @@ from app.schemas.result import AssessmentResult
 from app.schemas.symptom import SymptomRead, SymptomUpdate
 from app.services.ai.gateway import AiGateway
 from app.services.assessment.orchestrator import AssessmentOrchestrator
+from app.services.image.analyzer import ImageAnalysisError, ImageAnalyzer
 from app.services.image.factory import build_image_analyzer
+from app.services.image.schemas import ImageAnalysis
 from app.services.prediction.condition_model_config import (
     ConditionModelSettings,
     build_condition_model,
@@ -246,6 +251,49 @@ class OrchestratorAssessmentService:
         return result
 
 
+class UnavailableImageAnalyzer:
+    """``ImageAnalyzer`` for a provider that could not be loaded.
+
+    Every call raises ``ImageAnalysisError``, which the orchestrator treats as
+    "carry on with text only". Unlike the mock analyzer it never invents a
+    finding, so a missing model can never add a symptom or change the risk.
+    """
+
+    def __init__(self, provider: str) -> None:
+        """Create the stand-in.
+
+        Args:
+            provider: The configured ``CV_PROVIDER`` that failed to load.
+        """
+        self._provider = provider
+
+    async def analyze(self, image: bytes) -> ImageAnalysis:
+        """Always report that photo analysis is unavailable.
+
+        Raises:
+            ImageAnalysisError: Always.
+        """
+        raise ImageAnalysisError(details={"provider": self._provider})
+
+
+def _image_analyzer_or_unavailable(provider: str) -> ImageAnalyzer:
+    """The configured image analyzer, or a text-only stand-in if it cannot load.
+
+    Args:
+        provider: ``CV_PROVIDER`` value.
+
+    Returns:
+        The analyzer, or ``UnavailableImageAnalyzer`` when the factory refuses.
+    """
+    try:
+        return build_image_analyzer(provider)
+    except ImageAnalysisError:
+        # Why: the photo step is optional (FR-16); a missing CV model must not
+        # stop every text assessment from starting.
+        logger.warning("image_analysis_disabled", provider=provider)
+        return UnavailableImageAnalyzer(provider)
+
+
 def build_orchestrator_service(
     settings: Settings,
     ai_gateway: AiGateway,
@@ -269,7 +317,7 @@ def build_orchestrator_service(
     orchestrator = AssessmentOrchestrator(
         ai_gateway=ai_gateway,
         condition_model=build_condition_model(ConditionModelSettings()),
-        image_analyzer=build_image_analyzer(settings.cv_provider),
+        image_analyzer=_image_analyzer_or_unavailable(settings.cv_provider),
         resolver=build_symptom_resolver(RetrievalSettings(), engine),
     )
     logger.info("assessment_service_ready", cv_provider=settings.cv_provider)
