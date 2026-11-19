@@ -4,7 +4,7 @@ Covers happy paths, edge cases, metric accuracy, per-field metrics, duration and
 severity extraction, category breakdowns, protocol compliance, CLI behavior,
 and full integration with the 100-case v2 benchmark dataset.
 
-Owner: Kavya (AI/ML, Database) · Tasks: S1-KAV-2, S2-KAV-2 · Requirements: NFR-07
+Owner: Kavya (AI/ML, Database) · Tasks: S1-KAV-2, S2-KAV-2, S2-KAV-5 · Requirements: NFR-07
 """
 
 from __future__ import annotations
@@ -13,6 +13,7 @@ import importlib.util
 import json
 import sys
 from pathlib import Path
+from typing import Any
 
 import pytest
 
@@ -66,7 +67,7 @@ class _MockFixedExtractor:
         self.duration = duration
         self.severity = severity
 
-    def extract(self, text: str) -> ExtractionResult:
+    def extract(self, text: str) -> Any:
         return ExtractionResult(
             symptoms=[
                 ExtractedSymptom(id=s_id, severity=self.severity)
