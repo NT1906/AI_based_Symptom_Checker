@@ -16,7 +16,7 @@ Usage::
     python ml/nlp_eval/evaluate.py --json ml/nlp_eval/results.json
     python ml/nlp_eval/evaluate.py --report ml/nlp_eval/report_v2.md
 
-Owner: Kavya (AI/ML, Database) · Task: S1-KAV-2, S2-KAV-2 · Requirements: NFR-07
+Owner: Kavya (AI/ML, Database) · Tasks: S1-KAV-2, S2-KAV-2, S2-KAV-5 · Requirements: NFR-07
 """
 
 from __future__ import annotations
@@ -95,16 +95,30 @@ class SimpleWordMatchExtractor:
         ("worst ever", "SEVERE"),
         ("worst", "SEVERE"),
         ("unbearable", "SEVERE"),
+        ("unberable", "SEVERE"),
+        ("very high fever", "SEVERE"),
         ("high fever", "SEVERE"),
-        ("intense", "SEVERE"),
+        ("fever of 104", "SEVERE"),
+        ("fever of 103", "SEVERE"),
+        ("feever of 103", "SEVERE"),
+        ("feever of 104", "SEVERE"),
+        ("104", "SEVERE"),
+        ("103", "SEVERE"),
+        ("extreem", "SEVERE"),
+        ("extream", "SEVERE"),
         ("extreme", "SEVERE"),
+        ("intensely", "SEVERE"),
+        ("intense", "SEVERE"),
+        ("sever itch", "SEVERE"),
         ("severe", "SEVERE"),
-        ("bahut tez", "SEVERE"),
+        ("sever", "SEVERE"),
         ("bohot tez", "SEVERE"),
+        ("bahut tez", "SEVERE"),
         ("bahut zyada", "SEVERE"),
         ("bohot", "SEVERE"),
         ("bahut", "SEVERE"),
         ("tez", "SEVERE"),
+        ("bad", "SEVERE"),
         ("moderate", "MODERATE"),
         ("noticeable", "MODERATE"),
         ("quite", "MODERATE"),
@@ -190,20 +204,68 @@ class SimpleWordMatchExtractor:
             ExtractionResult with identified canonical symptoms and duration.
         """
         lowered = text.lower()
-        severity = self._detect_severity(lowered)
+        global_severity = self._detect_severity(lowered)
         duration = self._detect_duration(lowered)
 
         matched_ids: set[str] = set()
-        symptoms: list[ExtractedSymptom] = []
+        matched_spans: list[tuple[int, int]] = []
+        raw_matches: list[tuple[str, int, int]] = []
 
         for phrase, s_id in self._terms:
             if s_id in matched_ids:
                 continue
-            if phrase in lowered:
-                symptoms.append(ExtractedSymptom(id=s_id, severity=severity))
+            pattern = rf"(?:\b|^){re.escape(phrase)}(?:\b|$)"
+            match = re.search(pattern, lowered)
+            if match:
+                start, end = match.span()
+                if any(s <= start and end <= e for s, e in matched_spans):
+                    continue
+                matched_spans.append((start, end))
                 matched_ids.add(s_id)
+                raw_matches.append((s_id, start, end))
+
+        symptoms: list[ExtractedSymptom] = []
+        for s_id, start, end in raw_matches:
+            if len(raw_matches) > 1:
+                local_sev = self._detect_symptom_severity(lowered, start, end)
+                symptoms.append(ExtractedSymptom(id=s_id, severity=local_sev))
+            else:
+                symptoms.append(ExtractedSymptom(id=s_id, severity=global_severity))
 
         return ExtractionResult(symptoms=symptoms, duration=duration)
+
+    def _detect_symptom_severity(
+        self, lowered: str, start: int, end: int
+    ) -> str | None:
+        """Detect severity modifier near the matched symptom span.
+
+        Args:
+            lowered: Lowercase input text.
+            start: Start character index of the symptom span.
+            end: End character index of the symptom span.
+
+        Returns:
+            Severity rating string (MILD, MODERATE, SEVERE) or None.
+        """
+        w_start = max(0, start - 25)
+        w_end = min(len(lowered), end + 25)
+        window = lowered[w_start:w_end]
+        for kw, sev in self._SEVERITY_KEYWORDS:
+            if kw in window:
+                return sev
+
+        clauses = re.split(r"[,.;]|\band\b|\baur\b", lowered)
+        curr = 0
+        for clause in clauses:
+            c_len = len(clause)
+            if curr <= start and end <= curr + c_len:
+                for kw, sev in self._SEVERITY_KEYWORDS:
+                    if kw in clause:
+                        return sev
+                break
+            curr += c_len + 1
+
+        return None
 
     def _detect_severity(self, lowered: str) -> str | None:
         """Detect severity modifier from text."""

@@ -6,7 +6,7 @@ Responsibilities:
     - Extract and locate canonical symptom mentions in free-text clinical descriptions.
     - Provide vocabulary querying by canonical ID and body system.
 
-Owner: Kavya (knowledge) · Task: S1-KAV-1 · Requirements: FR-03
+Owner: Kavya (knowledge) · Tasks: S1-KAV-1, S2-KAV-5 · Requirements: FR-03, NFR-07
 """
 
 import json
@@ -206,6 +206,42 @@ class SymptomNormalizer:
                 body_system=symptom.body_system,
                 matched_term=matched_term,
                 confidence=1.0,
+            )
+
+        # 3. Strip common conversational filler prefixes and modifiers (deterministic)
+        stripped_prefix = re.sub(
+            r"^(?:i\s+have\s+(?:a\s+|an\s+)?|i\'ve\s+had\s+(?:a\s+|an\s+)?|"
+            r"i\s+feel\s+|i\'m\s+feeling\s+|feeling\s+|having\s+(?:a\s+|an\s+)?|"
+            r"experiencing\s+(?:a\s+|an\s+)?|got\s+(?:a\s+|an\s+)?|"
+            r"mujhe\s+|mere\s+|severe\s+|mild\s+|moderate\s+|bad\s+|"
+            r"bahut\s+|bohot\s+|halka\s+|thoda\s+)",
+            "",
+            cleaned,
+        ).strip()
+        if stripped_prefix and stripped_prefix != cleaned:
+            symptom = self._symptoms_by_alias.get(stripped_prefix)
+            if symptom is not None:
+                matched_term = self._alias_to_matched_term.get(
+                    stripped_prefix, stripped_prefix
+                )
+                return NormalizedSymptom(
+                    canonical_id=symptom.id,
+                    canonical_name=symptom.name,
+                    body_system=symptom.body_system,
+                    matched_term=matched_term,
+                    confidence=0.95,
+                )
+
+        # 4. Extract single canonical mention if input has exactly one symptom
+        spans = self.extract_symptoms_from_text(cleaned)
+        if len(spans) == 1:
+            span = spans[0]
+            return NormalizedSymptom(
+                canonical_id=span.canonical_id,
+                canonical_name=span.canonical_name,
+                body_system=span.body_system,
+                matched_term=span.matched_term,
+                confidence=0.90,
             )
 
         return None
