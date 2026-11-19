@@ -7,7 +7,7 @@ Covers:
     - Vocabulary query interfaces, body systems, and boundary validation.
     - Parity with the canonical vocabulary dataset in ml/datasets/symptoms/.
 
-Owner: Kavya (knowledge) · Task: S1-KAV-1 · Requirements: FR-03
+Owner: Kavya (knowledge) · Tasks: S1-KAV-1, S2-KAV-5 · Requirements: FR-03, NFR-07
 """
 
 import json
@@ -375,3 +375,50 @@ class TestVocabularyParity:
                 "server/app/services/knowledge/data/symptoms.json "
                 "out of sync with ml/datasets/symptoms/"
             )
+
+
+# ---------------------------------------------------------------------------
+# 7. S2-KAV-5 Regression Tests (Conversational Prefixes and Expanded Vocabulary)
+# ---------------------------------------------------------------------------
+
+
+class TestNormalizerRegressionV2:
+    """Verifies enhanced normalization heuristics and expanded v2 vocabulary."""
+
+    @pytest.mark.parametrize(
+        ("input_query", "expected_canonical_id"),
+        [
+            ("having a severe headache", "headache"),
+            ("i have high fever", "fever"),
+            ("feeling dizzy", "dizziness"),
+            ("i feel sick", "nausea"),
+            ("experiencing chest pain", "chest_pain"),
+            ("got a really bad headache", "headache"),
+            ("mujhe bukhar hai", "fever"),
+            ("mere gale me dard hai", "sore_throat"),
+            ("halka bukhar", "fever"),
+            ("burns when i pee", "burning_urination"),
+            ("throat hurts", "sore_throat"),
+            ("whistling sound when i exhale", "wheezing"),
+            ("worst headache of my life", "sudden_severe_headache"),
+        ],
+    )
+    def test_normalizes_conversational_and_expanded_phrases(
+        self,
+        normalizer: SymptomNormalizer,
+        input_query: str,
+        expected_canonical_id: str,
+    ) -> None:
+        """Expanded lay terms and prefixes should resolve deterministically."""
+        result = normalizer.normalize(input_query)
+        assert result is not None
+        assert result.canonical_id == expected_canonical_id
+
+    def test_vocabulary_v2_has_over_one_thousand_lay_terms(
+        self, normalizer: SymptomNormalizer
+    ) -> None:
+        """The v2 vocabulary must contain over 1,000 curated lay terms for NFR-07."""
+        all_symptoms = normalizer.list_all()
+        assert len(all_symptoms) == 100
+        total_lay = sum(len(s.lay_terms) for s in all_symptoms)
+        assert total_lay >= 1000, f"Expected >= 1000 lay terms, found {total_lay}"
