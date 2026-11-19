@@ -8,6 +8,7 @@ export default defineConfig({
   plugins: [react(), tailwindcss()],
   resolve: {
     alias: {
+      "@": fileURLToPath(new URL("./src", import.meta.url)),
       "virtual:pwa-register/react": fileURLToPath(
         new URL("./src/test/mocks/pwaRegister.ts", import.meta.url),
       ),

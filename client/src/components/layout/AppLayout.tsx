@@ -5,11 +5,15 @@
  * FR-25 (always-visible "Start new assessment" button with confirm dialog),
  * and NFR-06 (accessible landmarks, high-contrast typography, and responsive layout).
  *
- * Owner: Mann (Frontend + Deployment · Testing) · Tasks: S0-MAN-1, S1-MAN-4, S2-NIS-15 (#312) · Requirements: DR-01, FR-25, NFR-06
+ * Owner: Mann (Frontend + Deployment · Testing) · Tasks: S0-MAN-1, S1-MAN-4, S2-NIS-15 (#312), S2-NIS-19 (#320 redesign) · Requirements: DR-01, FR-25, NFR-06
  */
 
 import React from "react";
+import { Activity, Info, Phone, WifiOff } from "lucide-react";
+import { ThemeToggle } from "@/components/theme/ThemeToggle";
 import { AccountMenu } from "../account/AccountMenu";
+import { PageTransition } from "./PageTransition";
+import { RouterLink } from "./RouterLink";
 import { StartNewAssessmentButton } from "./StartNewAssessmentButton";
 
 /** Props for the AppLayout component. */
@@ -58,24 +62,24 @@ export function AppLayout({
   requireConfirmation = true,
 }: AppLayoutProps): React.ReactElement {
   return (
-    <div className="flex min-h-screen flex-col bg-slate-50 text-slate-900 antialiased selection:bg-teal-100 selection:text-teal-900">
-      {/* Accessibility: Skip to main content link for keyboard navigation */}
+    <div className="relative flex min-h-screen flex-col bg-background text-foreground antialiased selection:bg-primary/15">
+      {/* Accessibility: skip to main content for keyboard users */}
       <a
         href="#main-content"
-        className="sr-only focus:not-sr-only focus:fixed focus:left-4 focus:top-4 focus:z-50 focus:rounded-lg focus:bg-teal-800 focus:px-4 focus:py-2 focus:text-white focus:shadow-lg focus:outline-none focus:ring-2 focus:ring-white"
+        className="sr-only focus:not-sr-only focus:fixed focus:left-4 focus:top-4 focus:z-50 focus:rounded-md focus:bg-primary focus:px-4 focus:py-2 focus:text-primary-foreground focus:shadow-lg focus:outline-none"
       >
         Skip to main content
       </a>
 
-      {/* Offline Status Warning Banner (FR-07, NFR-06) */}
+      {/* Offline status banner (FR-07, NFR-06) */}
       {isOffline && (
         <div
           role="status"
           aria-live="polite"
-          className="border-b border-amber-300 bg-amber-50 px-4 py-2 text-center text-xs font-semibold text-amber-900 sm:text-sm"
+          className="border-b border-warning/40 bg-warning/15 px-4 py-2 text-center text-xs font-medium text-foreground sm:text-sm"
         >
-          <span className="inline-flex items-center gap-1.5">
-            <span aria-hidden="true">⚠️</span>
+          <span className="inline-flex items-center gap-2">
+            <WifiOff className="size-4" aria-hidden="true" />
             <span>
               You are currently offline. Basic emergency information remains
               accessible, but active assessment features may be limited.
@@ -84,43 +88,34 @@ export function AppLayout({
         </div>
       )}
 
-      {/* Primary Header Navigation Landmark */}
+      {/* Top navigation */}
       <header
         role="banner"
-        className="sticky top-0 z-40 border-b border-slate-200/80 bg-white/95 backdrop-blur-sm shadow-xs transition-colors"
+        className="sticky top-0 z-40 border-b border-border/70 bg-background/80 backdrop-blur-md supports-[backdrop-filter]:bg-background/70"
       >
-        <div className="mx-auto flex max-w-5xl items-center justify-between px-4 py-3 sm:px-6">
-          {/* Brand Logo & Landmark Title */}
-          <div className="flex items-center gap-3">
-            <div
-              className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl bg-teal-700 text-white shadow-xs"
+        <div className="mx-auto flex h-16 max-w-6xl items-center justify-between gap-3 px-4 sm:px-6">
+          <RouterLink
+            to="/"
+            className="group flex min-w-0 items-center gap-2.5 rounded-md focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
+            aria-label="Symptom Checker home"
+          >
+            <span
+              className="flex size-9 shrink-0 items-center justify-center rounded-lg bg-primary text-primary-foreground shadow-sm transition-transform group-hover:scale-105"
               aria-hidden="true"
             >
-              <svg
-                className="h-6 w-6"
-                fill="none"
-                stroke="currentColor"
-                viewBox="0 0 24 24"
-                strokeWidth={2.5}
-                strokeLinecap="round"
-                strokeLinejoin="round"
-              >
-                <path d="M12 6v12M6 12h12" />
-              </svg>
-            </div>
-            <div>
-              <span className="block text-xs font-semibold tracking-wider text-teal-800 uppercase">
-                Informational Triage Aid
+              <Activity className="size-5" strokeWidth={2.25} />
+            </span>
+            <span className="hidden min-w-0 leading-tight sm:block">
+              <span className="block truncate text-sm font-semibold tracking-tight">
+                Symptom Checker
               </span>
-              <h1 className="text-lg font-bold tracking-tight text-slate-900 sm:text-xl">
-                {title}
-              </h1>
-              {subtitle && <p className="text-xs text-slate-500">{subtitle}</p>}
-            </div>
-          </div>
+              <span className="block truncate text-xs text-muted-foreground">
+                Informational triage aid
+              </span>
+            </span>
+          </RouterLink>
 
-          {/* Header Action Controls */}
-          <div className="flex items-center gap-2 sm:gap-3">
+          <div className="flex items-center gap-1.5 sm:gap-2">
             {/* Always-visible Start New Assessment button with confirm dialog (FR-25) */}
             {showStartOver && (
               <StartNewAssessmentButton
@@ -133,76 +128,74 @@ export function AppLayout({
 
             {headerActions}
 
+            <ThemeToggle />
             <AccountMenu />
 
-            {/* Emergency Hotline Quick Dial Button */}
+            {/* Emergency quick dial */}
             <a
               href={`tel:${emergencyNumber}`}
-              className="inline-flex min-h-[44px] items-center gap-1.5 rounded-lg bg-rose-600 px-3 py-2 text-xs font-bold text-white shadow-xs transition hover:bg-rose-700 focus:outline-none focus:ring-2 focus:ring-rose-600 focus:ring-offset-2 sm:px-3.5"
+              className="inline-flex h-10 items-center gap-1.5 rounded-md bg-danger px-3 text-sm font-semibold text-danger-foreground shadow-sm transition hover:bg-danger/90 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-danger focus-visible:ring-offset-2 focus-visible:ring-offset-background"
               aria-label={`Call emergency services at ${emergencyNumber}`}
             >
-              <span aria-hidden="true">🚨</span>
-              <span>Call {emergencyNumber}</span>
+              <Phone className="size-4" aria-hidden="true" />
+              <span>
+                <span className="hidden sm:inline">Call </span>
+                {emergencyNumber}
+              </span>
             </a>
           </div>
         </div>
       </header>
 
-      {/* Primary Content Landmark */}
+      {/* Primary content */}
       <main
         id="main-content"
         role="main"
         tabIndex={-1}
-        className="mx-auto flex w-full max-w-5xl flex-1 flex-col px-4 py-6 sm:px-6 sm:py-8 focus:outline-none"
+        className="mx-auto flex w-full max-w-6xl flex-1 flex-col px-4 py-8 focus:outline-none sm:px-6 sm:py-10"
       >
-        {children}
+        <div className="mb-6 space-y-1 sm:mb-8">
+          <h1 className="text-2xl font-semibold tracking-tight text-foreground sm:text-3xl">
+            {title}
+          </h1>
+          {subtitle && <p className="text-sm text-muted-foreground">{subtitle}</p>}
+        </div>
+        <PageTransition className="flex flex-1 flex-col">{children}</PageTransition>
       </main>
 
-      {/* Persistent Medical Disclaimer Footer (Mandated by DR-01) */}
+      {/* Persistent medical disclaimer footer (DR-01) */}
       <footer
         role="contentinfo"
         aria-label="Medical safety disclaimer and informational notices"
-        className="mt-auto border-t border-slate-200 bg-white py-6"
+        className="mt-auto border-t border-border/70 bg-muted/40"
       >
-        <div className="mx-auto max-w-5xl px-4 sm:px-6">
-          <div className="rounded-xl border border-teal-100 bg-teal-50/50 p-4 shadow-xs sm:p-5">
-            <div className="flex flex-col gap-3 sm:flex-row sm:items-start sm:gap-4">
-              <div
-                className="flex h-7 w-7 shrink-0 items-center justify-center rounded-full bg-teal-700 text-white"
-                aria-hidden="true"
-              >
-                <span className="text-sm font-bold">i</span>
-              </div>
-              <div className="space-y-1.5 text-xs text-slate-600 sm:text-sm">
-                <p className="font-semibold text-slate-900">
-                  Important Informational Use Notice (DR-01)
-                </p>
-                <p className="leading-relaxed text-slate-700">{MANDATORY_DISCLAIMER_TEXT}</p>
-                <div className="flex flex-wrap items-center gap-x-4 gap-y-1 pt-1 text-xs text-slate-500">
-                  <span>
-                    Emergency Contact:{" "}
-                    <a
-                      href={`tel:${emergencyNumber}`}
-                      className="font-semibold text-rose-700 underline hover:text-rose-900 focus:outline-none focus:ring-2 focus:ring-rose-600"
-                    >
-                      {emergencyNumber}
-                    </a>
-                  </span>
-                  <span>•</span>
-                  <span>Data is processed in-memory and not shared with third parties.</span>
-                  <span>•</span>
-                  <span>WCAG 2.1 AA Compliant</span>
-                </div>
-              </div>
+        <div className="mx-auto max-w-6xl space-y-5 px-4 py-8 sm:px-6">
+          <div className="flex gap-3 rounded-xl border border-border bg-card p-4 text-card-foreground shadow-xs sm:p-5">
+            <Info className="mt-0.5 size-5 shrink-0 text-primary" aria-hidden="true" />
+            <div className="space-y-1.5 text-sm">
+              <p className="font-medium">Important: informational use only</p>
+              <p className="leading-relaxed text-muted-foreground">{MANDATORY_DISCLAIMER_TEXT}</p>
+              <p className="text-xs text-muted-foreground">
+                Emergency contact:{" "}
+                <a
+                  href={`tel:${emergencyNumber}`}
+                  className="font-semibold text-danger underline-offset-4 hover:underline"
+                >
+                  {emergencyNumber}
+                </a>
+              </p>
             </div>
           </div>
 
-          <div className="mt-4 flex flex-col items-center justify-between gap-2 border-t border-slate-100 pt-4 text-xs text-slate-500 sm:flex-row">
+          <div className="flex flex-col items-center justify-between gap-3 text-xs text-muted-foreground sm:flex-row">
             <p>© 2026 AI-Based Symptom Checker · Group 14</p>
-            <nav aria-label="Footer links" className="flex items-center gap-4">
-              <span className="hover:text-slate-800">Privacy &amp; Data Policy</span>
-              <span>•</span>
-              <span className="hover:text-slate-800">Terms of Informational Use</span>
+            <nav aria-label="Footer links" className="flex items-center gap-5">
+              <RouterLink to="/privacy" className="transition-colors hover:text-foreground">
+                Privacy &amp; data
+              </RouterLink>
+              <RouterLink to="/history" className="transition-colors hover:text-foreground">
+                History
+              </RouterLink>
             </nav>
           </div>
         </div>
