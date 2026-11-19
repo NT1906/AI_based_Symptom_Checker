@@ -11,7 +11,9 @@ Responsibilities:
 Owner: Vivek (api) · Task: S2-VIV-3 · Requirements: FR-02, idea § 10
 """
 
-from fastapi import APIRouter, Response, status
+from typing import Annotated
+
+from fastapi import APIRouter, Body, Response, status
 
 from app.api.deps import CurrentUserDep, ProfileServiceDep
 from app.core.errors import ErrorResponse
@@ -34,10 +36,34 @@ router = APIRouter(prefix="/profile", tags=["profile"])
         status.HTTP_200_OK: {
             "model": ProfileResponse,
             "description": "User profile successfully retrieved.",
+            "content": {
+                "application/json": {
+                    "example": {
+                        "id": "00000000-0000-4000-8000-0000000000p1",
+                        "profileId": "00000000-0000-4000-8000-0000000000p1",
+                        "userId": "00000000-0000-4000-8000-0000000000a1",
+                        "ageBand": "adult",
+                        "biologicalSex": "female",
+                        "chronicConditions": ["Asthma"],
+                        "createdAt": "2026-11-18T12:00:00Z",
+                        "updatedAt": "2026-11-18T12:00:00Z",
+                    }
+                }
+            },
         },
         status.HTTP_401_UNAUTHORIZED: {
             "model": ErrorResponse,
             "description": "Authentication credentials missing or invalid.",
+            "content": {
+                "application/json": {
+                    "example": {
+                        "code": "UNAUTHORIZED",
+                        "message": "Authentication required",
+                        "details": None,
+                        "requestId": "req_1234567890abcdef",
+                    }
+                }
+            },
         },
     },
 )
@@ -65,19 +91,70 @@ async def get_profile(
         status.HTTP_200_OK: {
             "model": ProfileResponse,
             "description": "Profile successfully saved or updated.",
+            "content": {
+                "application/json": {
+                    "example": {
+                        "id": "00000000-0000-4000-8000-0000000000p1",
+                        "profileId": "00000000-0000-4000-8000-0000000000p1",
+                        "userId": "00000000-0000-4000-8000-0000000000a1",
+                        "ageBand": "adult",
+                        "biologicalSex": "female",
+                        "chronicConditions": ["Asthma", "Hypertension"],
+                        "createdAt": "2026-11-18T12:00:00Z",
+                        "updatedAt": "2026-11-18T12:05:00Z",
+                    }
+                }
+            },
         },
         status.HTTP_401_UNAUTHORIZED: {
             "model": ErrorResponse,
             "description": "Authentication credentials missing or invalid.",
+            "content": {
+                "application/json": {
+                    "example": {
+                        "code": "UNAUTHORIZED",
+                        "message": "Authentication required",
+                        "details": None,
+                        "requestId": "req_1234567890abcdef",
+                    }
+                }
+            },
         },
         status.HTTP_422_UNPROCESSABLE_ENTITY: {
             "model": ErrorResponse,
             "description": "Invalid age band or biological sex provided.",
+            "content": {
+                "application/json": {
+                    "example": {
+                        "code": "VALIDATION_ERROR",
+                        "message": "Invalid age band or biological sex value.",
+                        "details": None,
+                        "requestId": "req_1234567890abcdef",
+                    }
+                }
+            },
         },
     },
 )
 async def save_profile(
-    payload: ProfileUpdate,
+    payload: Annotated[
+        ProfileUpdate,
+        Body(
+            openapi_examples={
+                "full_profile": {
+                    "summary": "Full clinical profile",
+                    "description": (
+                        "Profile with age band, biological sex, and chronic conditions."
+                    ),
+                    "value": {
+                        "ageBand": "adult",
+                        "biologicalSex": "female",
+                        "chronicConditions": ["Asthma", "Hypertension"],
+                    },
+                }
+            },
+        ),
+    ],
     current_user: CurrentUserDep,
     profile_service: ProfileServiceDep,
     response: Response,
@@ -100,19 +177,66 @@ async def save_profile(
         status.HTTP_200_OK: {
             "model": ProfileResponse,
             "description": "Profile successfully updated.",
+            "content": {
+                "application/json": {
+                    "example": {
+                        "id": "00000000-0000-4000-8000-0000000000p1",
+                        "profileId": "00000000-0000-4000-8000-0000000000p1",
+                        "userId": "00000000-0000-4000-8000-0000000000a1",
+                        "ageBand": "senior",
+                        "biologicalSex": "female",
+                        "chronicConditions": ["Asthma"],
+                        "createdAt": "2026-11-18T12:00:00Z",
+                        "updatedAt": "2026-11-18T12:10:00Z",
+                    }
+                }
+            },
         },
         status.HTTP_401_UNAUTHORIZED: {
             "model": ErrorResponse,
             "description": "Authentication credentials missing or invalid.",
+            "content": {
+                "application/json": {
+                    "example": {
+                        "code": "UNAUTHORIZED",
+                        "message": "Authentication required",
+                        "details": None,
+                        "requestId": "req_1234567890abcdef",
+                    }
+                }
+            },
         },
         status.HTTP_422_UNPROCESSABLE_ENTITY: {
             "model": ErrorResponse,
             "description": "Invalid age band or biological sex provided.",
+            "content": {
+                "application/json": {
+                    "example": {
+                        "code": "VALIDATION_ERROR",
+                        "message": "Invalid age band value.",
+                        "details": None,
+                        "requestId": "req_1234567890abcdef",
+                    }
+                }
+            },
         },
     },
 )
 async def patch_profile(
-    payload: ProfileUpdate,
+    payload: Annotated[
+        ProfileUpdate,
+        Body(
+            openapi_examples={
+                "partial_update": {
+                    "summary": "Partial profile update",
+                    "description": "Updates only the coarse age band.",
+                    "value": {
+                        "ageBand": "senior",
+                    },
+                }
+            },
+        ),
+    ],
     current_user: CurrentUserDep,
     profile_service: ProfileServiceDep,
     response: Response,
@@ -155,6 +279,16 @@ async def patch_profile(
         status.HTTP_401_UNAUTHORIZED: {
             "model": ErrorResponse,
             "description": "Authentication credentials missing or invalid.",
+            "content": {
+                "application/json": {
+                    "example": {
+                        "code": "UNAUTHORIZED",
+                        "message": "Authentication required",
+                        "details": None,
+                        "requestId": "req_1234567890abcdef",
+                    }
+                }
+            },
         },
     },
 )
