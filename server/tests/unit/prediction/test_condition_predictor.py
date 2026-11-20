@@ -8,12 +8,12 @@ Covers:
     - Edge and failure cases: unknown IDs, no matches, empty input.
 
 Owner: Nisarg (prediction) · Task: S1-NIS-1 · Requirements: FR-05, FR-22, FR-23
+Empty input returns no predictions: Nisarg · S2-NIS-28 (#348)
 """
 
 import random
 
 import pytest
-from app.core.errors import ValidationError
 from app.schemas.enums import ConfidenceLabel, RiskLevel
 from app.services.prediction.condition_catalog import ConditionCatalog
 from app.services.prediction.condition_predictor import (
@@ -213,9 +213,10 @@ def test_only_unknown_symptoms_return_no_predictions(
     assert model.predict(["made_up_symptom"]) == []
 
 
-def test_empty_input_raises_validation_error(model: BaselineConditionModel) -> None:
-    with pytest.raises(ValidationError, match="At least one confirmed symptom"):
-        model.predict([])
+def test_empty_input_returns_no_predictions(model: BaselineConditionModel) -> None:
+    # Why: the orchestrator drops unknown symptoms; when all were unknown it
+    # passes an empty list, which must mean "nothing matched", not an error (#348).
+    assert model.predict([]) == []
 
 
 def test_baseline_satisfies_condition_model_protocol(

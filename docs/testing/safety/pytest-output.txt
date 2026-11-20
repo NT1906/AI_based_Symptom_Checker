@@ -23,7 +23,7 @@ tests/integration/test_prediction_result_api.py::test_tc_saf_a_13_conditions_are
 tests/integration/test_prediction_result_api.py::test_tc_saf_a_14_single_symptom_lower_boundary[asyncio] PASSED [ 70%]
 tests/integration/test_prediction_result_api.py::test_tc_saf_a_15_many_symptoms_upper_boundary[asyncio] PASSED [ 75%]
 tests/integration/test_prediction_result_api.py::test_tc_saf_a_16_unknown_symptoms_mixed_with_known_fall_back_safely[asyncio] PASSED [ 80%]
-tests/integration/test_prediction_result_api.py::test_tc_saf_a_17_only_unknown_symptoms_fall_back_to_general_physician[asyncio] XFAIL [ 85%]
+tests/integration/test_prediction_result_api.py::test_tc_saf_a_17_only_unknown_symptoms_fall_back_to_general_physician[asyncio] PASSED [ 85%]
 tests/integration/test_prediction_result_api.py::test_tc_saf_a_18_same_symptoms_give_the_same_result[asyncio] PASSED [ 90%]
 tests/integration/test_prediction_result_api.py::test_tc_saf_a_19_referral_has_specialty_and_no_personal_data[asyncio] PASSED [ 95%]
 tests/integration/test_prediction_result_api.py::test_tc_saf_a_20_guidance_matches_the_risk_tier[asyncio] PASSED [100%]
@@ -43,11 +43,5 @@ app/api/v1/history.py:227
   server/app/api/v1/history.py:227: StarletteDeprecationWarning: 'HTTP_422_UNPROCESSABLE_ENTITY' is deprecated. Use 'HTTP_422_UNPROCESSABLE_CONTENT' instead.
     router = create_history_router(get_history_user_id, get_history_service)
 
-tests/integration/test_prediction_result_api.py::test_tc_saf_a_17_only_unknown_symptoms_fall_back_to_general_physician[asyncio]
-  server/app/services/prediction/condition_predictor.py:103: StarletteDeprecationWarning: 'HTTP_422_UNPROCESSABLE_ENTITY' is deprecated. Use 'HTTP_422_UNPROCESSABLE_CONTENT' instead.
-    raise ValidationError("At least one confirmed symptom is required.")
-
 -- Docs: https://docs.pytest.org/en/stable/how-to/capture-warnings.html
-=========================== short test summary info ============================
-XFAIL tests/integration/test_prediction_result_api.py::test_tc_saf_a_17_only_unknown_symptoms_fall_back_to_general_physician[asyncio] - Defect #348: only unknown symptoms -> 422 and stuck in ANALYZING
-================== 19 passed, 1 xfailed, 9 warnings in 3.50s ===================
+======================== 20 passed, 8 warnings in 3.91s ========================

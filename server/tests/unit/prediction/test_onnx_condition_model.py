@@ -15,6 +15,7 @@ Covers:
       fallback when v2 cannot load. End to end with the risk engine.
 
 Owner: Nisarg (prediction) · Task: S2-NIS-3 · Requirements: FR-05, FR-23, NFR-07
+Empty input returns no predictions: Nisarg · S2-NIS-28 (#348)
 """
 
 import json
@@ -24,7 +25,6 @@ from uuid import uuid4
 
 import numpy as np
 import pytest
-from app.core.errors import ValidationError
 from app.schemas.enums import ConfidenceLabel
 from app.services.prediction import condition_model_config as config
 from app.services.prediction.condition_catalog import ConditionDataError, get_catalog
@@ -153,9 +153,8 @@ def test_unknown_and_duplicate_ids_are_ignored(model: OnnxConditionModel) -> Non
     assert model.predict(["not_a_symptom"]) == []
 
 
-def test_empty_input_is_rejected(model: OnnxConditionModel) -> None:
-    with pytest.raises(ValidationError, match="At least one confirmed symptom"):
-        model.predict([])
+def test_empty_input_returns_no_predictions(model: OnnxConditionModel) -> None:
+    assert model.predict([]) == []
 
 
 @pytest.mark.parametrize(

@@ -21,7 +21,7 @@ predictions = model.predict(["fever", "pain_behind_eyes", "joint_pain"])
 
 - **Input:** canonical symptom IDs, already normalized by the knowledge service (`app.services.knowledge`). Unknown IDs are ignored and duplicates count once.
 - **Output:** up to 3 `ConditionPrediction`s, best first. The list is empty when nothing matches.
-- **Empty input:** raises `ValidationError` (422).
+- **Empty input:** returns `[]`, the same as input where no ID is known. This happens when every symptom the user confirmed is unknown and the orchestrator drops them all; the risk engine then gives `CONSULT_DOCTOR` by the no-match rule (#348).
 - **`ConditionModel`** is the protocol the orchestrator depends on. The scikit-learn/ONNX model from S2-NIS-3 implements the same protocol.
 
 ## How the baseline scores
@@ -191,7 +191,7 @@ It runs the full pipeline (predictor → risk engine → composer with the real 
 | Each reference case (self-care, consult, red flag, assumed severity, mental health, unclear photo, many symptoms, no match) gives identical output, with the symptoms in a new order each run | 8 × 1000 |
 | 1000 seeded, varied inputs (1–6 symptoms, any severity, any uncertainty) give the same output in reverse order | 1000 × 2 |
 | The same 1000 inputs give the same SHA-256 digest in fresh processes with other `PYTHONHASHSEED` values, so set or dict order can never leak into a result | 2 processes |
-| A repeated symptom changes nothing; an empty input fails the same way every time | 1 + 1000 |
+| A repeated symptom changes nothing; an empty input gives the same no-match result every time | 1 + 1000 |
 
 The varied inputs reach every outcome: red flag, condition (self-care and consult), uncertainty and no match.
 The whole file runs in about 3 seconds, so it runs in CI on every PR.

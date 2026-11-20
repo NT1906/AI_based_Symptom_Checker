@@ -46,7 +46,7 @@ pytest server/tests/integration/test_accounts_profile_history_deletion_api.py -v
 # From the server/ directory:
 pytest tests/integration/test_safety_api.py tests/integration/test_prediction_result_api.py -v
 ```
-* **Coverage:** 20 automated tests: safety decision table and boundaries (11) and condition prediction / result content (9). 19 pass; TC-SAF-A-17 is a known defect ([#348](https://github.com/NT1906/AI_based_Symptom_Checker/issues/348)) kept as a strict `xfail`.
+* **Coverage:** 20 automated tests: safety decision table and boundaries (11) and condition prediction / result content (9). All 20 pass. TC-SAF-A-17 found defect [#348](https://github.com/NT1906/AI_based_Symptom_Checker/issues/348) on the first run; it is fixed and the test passes.
 * **Manual (`S2-NIS-24`):** 12 browser test cases on the result page (TC-SAF-M-01 to 12), all passed.
 * **Test Report & Traceability:** [`docs/testing/safety/test-cases.md`](safety/test-cases.md)
 
@@ -64,14 +64,14 @@ Numbers are taken from each area's `test-cases.md` metrics table.
 | Assessment flow | Darshil | 17 | 14 | 31 | 31 | 0 | 100 % | FR-03, FR-04, FR-16, FR-19, FR-20, FR-21, FR-25, NFR-05, DR-01, DR-02 | [assessment-flow/](assessment-flow/test-cases.md) · 32 PNG |
 | Accounts, profile, history & deletion | Kavya | 18 | manual: [#335](https://github.com/NT1906/AI_based_Symptom_Checker/issues/335) in progress | 18 | 18 | 0 | 100 % | FR-01, FR-02, NFR-03, NFR-04, DR-02, DR-06 | [accounts-profile-history-deletion/](accounts-profile-history-deletion/test-cases.md) · 19 PNG |
 | Security | Nishith | 16 | manual: [#337](https://github.com/NT1906/AI_based_Symptom_Checker/issues/337) in progress | 16 | 16 | 0 | 100 % | NFR-03, NFR-05, NFR-10, DR-01, DR-02, DR-05 | [security-api/](security-api/test-cases.md) · 17 PNG |
-| Safety & condition-prediction result | Nisarg | 20 | 12 | 32 | 31 | 1 ([#348](https://github.com/NT1906/AI_based_Symptom_Checker/issues/348)) | 96.9 % | DR-01, DR-02, FR-05, FR-06, FR-07, FR-08, FR-22, FR-23, NFR-07 | [safety/](safety/test-cases.md) · 36 PNG |
-| **Total** | 4 testers | **71** | **26** | **97** | **96** | **1** | **99.0 %** | 24 requirement IDs (see below) | **104 PNG** + 4 pytest logs |
+| Safety & condition-prediction result | Nisarg | 20 | 12 | 32 | 32 | 0 (1 found and fixed: [#348](https://github.com/NT1906/AI_based_Symptom_Checker/issues/348)) | 100 % | DR-01, DR-02, FR-05, FR-06, FR-07, FR-08, FR-22, FR-23, NFR-07 | [safety/](safety/test-cases.md) · 36 PNG |
+| **Total** | 4 testers | **71** | **26** | **97** | **97** | **0** | **100 %** | 24 requirement IDs (see below) | **104 PNG** + 4 pytest logs |
 
 When Kavya's and Nishith's manual suites (#335, #337) merge, their authors add their manual counts to this table, as each area has done so far.
 
 **Requirements covered (all areas):** FR-01, FR-02, FR-03, FR-04, FR-05, FR-06, FR-07, FR-08, FR-16, FR-19, FR-20, FR-21, FR-22, FR-23, FR-25, NFR-03, NFR-04, NFR-05, NFR-07, NFR-10, DR-01, DR-02, DR-05, DR-06 and idea §7 / §9 / §10 rules.
 
-**Defects found:** 1, [#348](https://github.com/NT1906/AI_based_Symptom_Checker/issues/348): analysis fails (422) and the assessment stays in `ANALYZING` when none of the confirmed symptoms is known to the model (found by TC-SAF-A-17; open).
+**Defects found:** 1, [#348](https://github.com/NT1906/AI_based_Symptom_Checker/issues/348): analysis fails (422) and the assessment stays in `ANALYZING` when none of the confirmed symptoms is known to the model (found by TC-SAF-A-17; **fixed** in S2-NIS-28 and re-tested).
 
 ### Testing methods used
 

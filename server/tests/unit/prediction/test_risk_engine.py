@@ -15,6 +15,7 @@ Covers:
 
 Owner: Nisarg (prediction) · Task: S1-NIS-2, S2-NIS-1 · Requirements: FR-06, FR-15,
 DR-02, NFR-07
+No symptoms give the no-match decision: Nisarg · S2-NIS-28 (#348)
 """
 
 import itertools
@@ -22,7 +23,6 @@ import random
 from dataclasses import dataclass
 
 import pytest
-from app.core.errors import ValidationError
 from app.schemas.enums import ConfidenceLabel, RiskLevel, Severity
 from app.services.prediction.condition_catalog import get_catalog
 from app.services.prediction.condition_predictor import BaselineConditionModel
@@ -286,9 +286,14 @@ def test_same_input_gives_same_decision_in_any_order() -> None:
         assert assess_risk(shuffled, predictions) == expected
 
 
-def test_empty_symptoms_raise_validation_error() -> None:
-    with pytest.raises(ValidationError, match="At least one confirmed symptom"):
-        assess_risk([], predictions=[])
+def test_no_symptoms_give_the_no_match_decision() -> None:
+    # Why: every confirmed symptom was unknown (#348); not knowing is never
+    # "probably nothing", so this is CONSULT_DOCTOR, not an error (idea §7).
+    decision = assess_risk([], predictions=[])
+
+    assert decision.level is RiskLevel.CONSULT_DOCTOR
+    assert decision.rule is RiskRule.NO_CONDITION_MATCH
+    assert decision.red_flags == ()
 
 
 # --- uncertainty escalation (S2-NIS-1) ------------------------------------------

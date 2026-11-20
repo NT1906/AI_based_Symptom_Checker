@@ -17,13 +17,13 @@ A condition must explain at least one reported symptom to be ranked, and can
 only be "Likely" when a hallmark (weight 3) symptom is among them.
 
 Owner: Nisarg (prediction) · Task: S1-NIS-1 · Requirements: FR-05, FR-22, FR-23
+Empty input returns no predictions: Nisarg · S2-NIS-28 (#348)
 """
 
 from collections.abc import Collection
 from dataclasses import dataclass
 from typing import Protocol
 
-from app.core.errors import ValidationError
 from app.core.logging import get_logger
 from app.schemas.enums import ConfidenceLabel
 from app.services.prediction.condition_catalog import ConditionCatalog, get_catalog
@@ -88,10 +88,9 @@ class BaselineConditionModel:
 
         Returns:
             Up to ``TOP_K`` predictions, best first, each with a confidence
-            label. Empty when no reported symptom matches any condition.
-
-        Raises:
-            ValidationError: If ``symptom_ids`` is empty.
+            label. Empty when no reported symptom matches any condition,
+            including when ``symptom_ids`` is empty (e.g. every symptom the
+            user confirmed was unknown and dropped before this call, #348).
 
         Example:
             >>> model = BaselineConditionModel()
@@ -99,8 +98,6 @@ class BaselineConditionModel:
             >>> top.condition_id
             'dengue'
         """
-        if not symptom_ids:
-            raise ValidationError("At least one confirmed symptom is required.")
         reported = frozenset(symptom_ids) & self._catalog.symptom_ids
         matches = [
             match

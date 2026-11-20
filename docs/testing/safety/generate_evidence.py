@@ -6,7 +6,6 @@ Responsibilities:
     - While the tests run, record every assessment each test sent through the
       API (input symptoms and the actual result), using this file as a pytest
       plugin. Nothing is typed in by hand: every card shows captured data.
-    - Re-run TC-SAF-A-17 with ``--runxfail`` so its card shows the real failure.
     - Draw ``screenshots/terminal-run.png`` and one ``TC-SAF-A-xx.png`` card
       per test case.
 
@@ -14,6 +13,7 @@ Usage (from the repository root, with the server virtualenv):
     server/.venv/bin/python docs/testing/safety/generate_evidence.py
 
 Owner: Nisarg · Task: S2-NIS-23 · Issue: #330
+TC-SAF-A-17 passes after the #348 fix: Nisarg · S2-NIS-28 (#348)
 Requirements: DR-01, DR-02, FR-05, FR-06, FR-08, FR-22, FR-23
 """
 
@@ -37,11 +37,6 @@ TEST_FILES = [
     "tests/integration/test_safety_api.py",
     "tests/integration/test_prediction_result_api.py",
 ]
-XFAIL_NODE = (
-    "tests/integration/test_prediction_result_api.py::"
-    "test_tc_saf_a_17_only_unknown_symptoms_fall_back_to_general_physician"
-)
-
 # ---------------------------------------------------------------------------
 # pytest plugin part: records each run_assessment() call per test case
 # ---------------------------------------------------------------------------
@@ -226,7 +221,7 @@ def draw_card(case: dict[str, str], outcome: dict[str, Any], runs: list[dict]) -
     bold = _font(13, bold=True)
     width = 1300
 
-    status = {"passed": "PASS", "xfailed": "FAIL (expected, defect #348)"}.get(
+    status = {"passed": "PASS", "xfailed": "FAIL (expected)"}.get(
         outcome["outcome"], outcome["outcome"].upper()
     )
     status_colour = GREEN if status == "PASS" else RED
@@ -342,9 +337,9 @@ CASES: list[dict[str, Any]] = [
      "expected": "unknown symptoms ignored; CONSULT_DOCTOR, General physician"},
     {"id": "TC-SAF-A-17", "title": "Only unknown symptoms -> General physician",
      "req": "FR-05, FR-06, idea §7", "technique": "BVA / Error guessing",
-     "expected": "CONSULT_DOCTOR with a General physician referral",
-     "extra": "Defect #348: analyze returns 422 and the assessment stays in "
-     "ANALYZING (edit and re-analyze then return 409). Test is xfail(strict)."},
+     "expected": "CONSULT_DOCTOR with a General physician referral; state COMPLETED",
+     "extra": "Found defect #348 (before the fix: analyze 422, stuck in ANALYZING;"
+     " see TC-SAF-A-17-failure.png). Fixed in S2-NIS-28; passes now."},
     {"id": "TC-SAF-A-18", "title": "Repeatability: same input 3x = same output",
      "req": "FR-05, FR-06", "technique": "Repeatability (deterministic model)",
      "expected": "identical tier, conditions, guidance, referral in all 3 runs",
@@ -403,23 +398,6 @@ def main() -> int:
                 continue
             keep.append(line)
     draw_terminal(keep, "terminal-run.png", "Terminal: S2-NIS-23 safety API tests")
-
-    # The defect's real failure, for TC-SAF-A-17.
-    defect = subprocess.run(
-        [sys.executable, "-m", "pytest", XFAIL_NODE, "--runxfail", "-q",
-         "--tb=line", "-p", "no:cacheprovider", "-W", "ignore"],
-        cwd=SERVER, env=env, capture_output=True, text=True, check=False,
-    )
-    defect_lines = [
-        ln for ln in _clean_output(defect.stdout).splitlines()
-        if ln and not ln.startswith(("{", "20"))
-    ]
-    draw_terminal(
-        ["$ cd server && python -m pytest " + XFAIL_NODE + " --runxfail -q --tb=line",
-         *defect_lines[-8:]],
-        "TC-SAF-A-17-failure.png",
-        "Terminal: TC-SAF-A-17 with --runxfail (defect #348)",
-    )
 
     for case in CASES:
         outcome = recorded["outcomes"].get(case["id"])

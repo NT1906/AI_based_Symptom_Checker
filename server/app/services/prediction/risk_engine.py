@@ -19,11 +19,11 @@ Pure and deterministic: no LLM, randomness, clock or I/O influences the level
 
 Owner: Nisarg (prediction) · Task: S1-NIS-2, S2-NIS-1 · Requirements: FR-06, FR-15,
 DR-02, NFR-07
+No symptoms gives the no-match decision: Nisarg · S2-NIS-28 (#348)
 """
 
 from collections.abc import Collection, Sequence
 
-from app.core.errors import ValidationError
 from app.core.logging import get_logger
 from app.schemas.enums import ConfidenceLabel, RiskLevel, Severity
 from app.services.prediction.condition_catalog import ConditionCatalog, get_catalog
@@ -109,17 +109,15 @@ def assess_risk(
 
     Returns:
         The risk level plus the rule, red flags and conditions behind it.
-
-    Raises:
-        ValidationError: If ``symptoms`` is empty.
+        With no symptoms (every confirmed symptom was unknown, #348) no red
+        flag or condition can fire, so the no-match rule gives
+        ``CONSULT_DOCTOR``: not knowing is never "probably nothing" (idea §7).
 
     Example:
         >>> chest = ReportedSymptom(id="chest_pain", severity=Severity.SEVERE)
         >>> assess_risk([chest], predictions=[]).level
         <RiskLevel.URGENT: 'URGENT'>
     """
-    if not symptoms:
-        raise ValidationError("At least one confirmed symptom is required.")
     red_flags = find_red_flags(symptoms, catalog)
     if red_flags:
         decision = RiskDecision(

@@ -18,6 +18,7 @@ Only the mock AI provider is used; no real Groq/OpenAI key is ever read.
 
 Owner: Nisarg · Task: S2-NIS-23 · Issue: #330
 Requirements: FR-05, FR-06, FR-08, FR-22, FR-23, DR-01, DR-02
+TC-SAF-A-17 un-marked as xfail after the fix: Nisarg · S2-NIS-28 (#348)
 """
 
 from typing import Any
@@ -26,6 +27,7 @@ import pytest
 from httpx import AsyncClient
 
 from app.core.config import Settings
+from app.schemas.result import DEFAULT_DISCLAIMER
 from tests.integration.safety_support import (
     BASE_URL,
     CONSENT_ID,
@@ -184,25 +186,26 @@ async def test_tc_saf_a_16_unknown_symptoms_mixed_with_known_fall_back_safely(
 
 
 @pytest.mark.anyio
-@pytest.mark.xfail(
-    strict=True,
-    reason="Defect #348: only unknown symptoms -> 422 and stuck in ANALYZING",
-)
 async def test_tc_saf_a_17_only_unknown_symptoms_fall_back_to_general_physician(
     safety_client: AsyncClient,
 ) -> None:
     """TC-SAF-A-17: only symptoms the model does not know -> safe fallback.
 
     Expected: the result completes as CONSULT_DOCTOR with a General physician
-    referral (not knowing is never "probably nothing", idea §7).
-    Actual: POST /analyze returns 422 "At least one confirmed symptom is
-    required." and the assessment stays in ANALYZING, so it can be neither
-    edited nor analysed again. Marked xfail (strict) until #348 is fixed.
+    referral (not knowing is never "probably nothing", idea §7), and the
+    assessment ends COMPLETED instead of staying in ANALYZING.
+    Found defect #348 (422 and stuck in ANALYZING); passes since the fix.
     """
     run = await run_assessment(safety_client, [("glorbitis of the zibble", "MILD")])
     assert run.analyze_status == 200, run.result
+    assert run.result_status == 200, run.result
     assert run.result["riskLevel"] == "CONSULT_DOCTOR"
     assert run.result["referral"]["specialty"] == GENERAL_PHYSICIAN
+    assert run.result["conditions"] == []
+    assert run.result["disclaimer"] == DEFAULT_DISCLAIMER
+
+    state = await safety_client.get(f"{BASE_URL}/{run.assessment_id}/state")
+    assert state.json()["state"] == "COMPLETED"
 
 
 # ===========================================================================
