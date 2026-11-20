@@ -2,6 +2,7 @@
  * @file Vitest test setup.
  * Owner: Rutva · Task: S0-RUT-1 · Requirements: NFR-08, NFR-09
  * IntersectionObserver stand-in: Nisarg · Task: S2-NIS-20 (#321)
+ * window.scrollTo stand-in: Nisarg · Task: S2-NIS-25 (#338)
  */
 import "@testing-library/jest-dom/vitest";
 import { afterAll, afterEach, beforeAll } from "vitest";
@@ -38,4 +39,10 @@ if (typeof window !== "undefined" && !("IntersectionObserver" in window)) {
     writable: true,
     value: VisibleIntersectionObserver,
   });
+}
+
+// jsdom does not implement window.scrollTo and logs "Not implemented" when it is
+// called. Pages reset scroll on navigation, so give tests a silent no-op.
+if (typeof window !== "undefined") {
+  Object.defineProperty(window, "scrollTo", { writable: true, value: () => undefined });
 }

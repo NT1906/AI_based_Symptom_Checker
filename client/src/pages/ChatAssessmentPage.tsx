@@ -2,6 +2,7 @@
  * @file The assessment flow on /chat: conversation, symptom confirmation, result.
  * Owner: Nisarg (integration) · Task: S2-NIS-13 · Issue: #280 · Requirements: FR-01, FR-03, FR-06, FR-16, DR-01, DR-02
  * Restyle (design tokens, lucide icons, dark mode): Nisarg · S2-NIS-22 (#323)
+ * Result opens scrolled to the top: Nisarg · S2-NIS-25 (#338)
  *
  * Connects the existing components to the assessment API:
  * 1. create the assessment with the user's consent ID;
@@ -112,6 +113,12 @@ export function ChatAssessmentPage({
   useEffect(() => {
     if (!assessmentId && phase === "starting") void start();
   }, [assessmentId, phase, start]);
+
+  // The result replaces the chat on the same route, so the browser keeps the
+  // chat's scroll position. Open the result (and a fresh start) at the top.
+  useEffect(() => {
+    if (phase === "result" || phase === "starting") window.scrollTo(0, 0);
+  }, [phase]);
 
   const openConfirmation = useCallback(
     async (id: string) => {
