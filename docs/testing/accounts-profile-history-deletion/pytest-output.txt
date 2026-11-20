@@ -1,0 +1,47 @@
+============================= test session starts =============================
+platform win32 -- Python 3.13.15, pytest-9.1.1, pluggy-1.6.0 -- C:\Users\KAVY\AppData\Local\Programs\Python\Python313\python.exe
+cachedir: .pytest_cache
+rootdir: D:\Z IDE\AI_based_Symptom_Checker\server
+configfile: pyproject.toml
+plugins: anyio-4.14.2, langsmith-0.11.0, asyncio-1.4.1.post1, cov-7.1.0
+asyncio: mode=Mode.AUTO, debug=False, asyncio_default_fixture_loop_scope=None, asyncio_default_test_loop_scope=function
+collecting ... collected 36 items
+
+tests/integration/test_accounts_profile_history_deletion_api.py::test_tc_acc_a_01_user_registration_success_and_conflict[asyncio] PASSED [  2%]
+tests/integration/test_accounts_profile_history_deletion_api.py::test_tc_acc_a_02_user_login_success_and_invalid_credentials[asyncio] PASSED [  5%]
+tests/integration/test_accounts_profile_history_deletion_api.py::test_tc_acc_a_03_token_refresh_rotates_tokens[asyncio] PASSED [  8%]
+tests/integration/test_accounts_profile_history_deletion_api.py::test_tc_acc_a_04_current_user_profile_me[asyncio] PASSED [ 11%]
+tests/integration/test_accounts_profile_history_deletion_api.py::test_tc_acc_a_05_change_password_lifecycle[asyncio] PASSED [ 13%]
+tests/integration/test_accounts_profile_history_deletion_api.py::test_tc_acc_a_06_user_logout_clears_session[asyncio] PASSED [ 16%]
+tests/integration/test_accounts_profile_history_deletion_api.py::test_tc_acc_a_07_profile_get_default_empty_and_no_store[asyncio] PASSED [ 19%]
+tests/integration/test_accounts_profile_history_deletion_api.py::test_tc_acc_a_08_profile_create_update_and_deduplication[asyncio] PASSED [ 22%]
+tests/integration/test_accounts_profile_history_deletion_api.py::test_tc_acc_a_09_profile_patch_partial_update[asyncio] PASSED [ 25%]
+tests/integration/test_accounts_profile_history_deletion_api.py::test_tc_acc_a_10_profile_validation_rejects_invalid[asyncio] PASSED [ 27%]
+tests/integration/test_accounts_profile_history_deletion_api.py::test_tc_acc_a_11_profile_delete_resets_context[asyncio] PASSED [ 30%]
+tests/integration/test_accounts_profile_history_deletion_api.py::test_tc_acc_a_12_history_list_paginated[asyncio] PASSED [ 33%]
+tests/integration/test_accounts_profile_history_deletion_api.py::test_tc_acc_a_13_history_pagination_bounds_and_unauthenticated[asyncio] PASSED [ 36%]
+tests/integration/test_accounts_profile_history_deletion_api.py::test_tc_acc_a_14_history_detail_includes_result_payload[asyncio] PASSED [ 38%]
+tests/integration/test_accounts_profile_history_deletion_api.py::test_tc_acc_a_15_history_detail_idor_denied_404[asyncio] PASSED [ 41%]
+tests/integration/test_accounts_profile_history_deletion_api.py::test_tc_acc_a_16_privacy_export_portable_json[asyncio] PASSED [ 44%]
+tests/integration/test_accounts_profile_history_deletion_api.py::test_tc_acc_a_17_privacy_account_deletion_cascading_and_anonymization[asyncio] PASSED [ 47%]
+tests/integration/test_accounts_profile_history_deletion_api.py::test_tc_acc_a_18_post_deletion_login_rejected[asyncio] PASSED [ 50%]
+tests/integration/test_accounts_profile_history_deletion_api.py::test_tc_acc_a_01_user_registration_success_and_conflict[trio] PASSED [ 52%]
+tests/integration/test_accounts_profile_history_deletion_api.py::test_tc_acc_a_02_user_login_success_and_invalid_credentials[trio] PASSED [ 55%]
+tests/integration/test_accounts_profile_history_deletion_api.py::test_tc_acc_a_03_token_refresh_rotates_tokens[trio] PASSED [ 58%]
+tests/integration/test_accounts_profile_history_deletion_api.py::test_tc_acc_a_04_current_user_profile_me[trio] PASSED [ 61%]
+tests/integration/test_accounts_profile_history_deletion_api.py::test_tc_acc_a_05_change_password_lifecycle[trio] PASSED [ 63%]
+tests/integration/test_accounts_profile_history_deletion_api.py::test_tc_acc_a_06_user_logout_clears_session[trio] PASSED [ 66%]
+tests/integration/test_accounts_profile_history_deletion_api.py::test_tc_acc_a_07_profile_get_default_empty_and_no_store[trio] PASSED [ 69%]
+tests/integration/test_accounts_profile_history_deletion_api.py::test_tc_acc_a_08_profile_create_update_and_deduplication[trio] PASSED [ 72%]
+tests/integration/test_accounts_profile_history_deletion_api.py::test_tc_acc_a_09_profile_patch_partial_update[trio] PASSED [ 75%]
+tests/integration/test_accounts_profile_history_deletion_api.py::test_tc_acc_a_10_profile_validation_rejects_invalid[trio] PASSED [ 77%]
+tests/integration/test_accounts_profile_history_deletion_api.py::test_tc_acc_a_11_profile_delete_resets_context[trio] PASSED [ 80%]
+tests/integration/test_accounts_profile_history_deletion_api.py::test_tc_acc_a_12_history_list_paginated[trio] PASSED [ 83%]
+tests/integration/test_accounts_profile_history_deletion_api.py::test_tc_acc_a_13_history_pagination_bounds_and_unauthenticated[trio] PASSED [ 86%]
+tests/integration/test_accounts_profile_history_deletion_api.py::test_tc_acc_a_14_history_detail_includes_result_payload[trio] PASSED [ 88%]
+tests/integration/test_accounts_profile_history_deletion_api.py::test_tc_acc_a_15_history_detail_idor_denied_404[trio] PASSED [ 91%]
+tests/integration/test_accounts_profile_history_deletion_api.py::test_tc_acc_a_16_privacy_export_portable_json[trio] PASSED [ 94%]
+tests/integration/test_accounts_profile_history_deletion_api.py::test_tc_acc_a_17_privacy_account_deletion_cascading_and_anonymization[trio] PASSED [ 97%]
+tests/integration/test_accounts_profile_history_deletion_api.py::test_tc_acc_a_18_post_deletion_login_rejected[trio] PASSED [100%]
+
+====================== 36 passed, 24 warnings in 22.71s =======================
