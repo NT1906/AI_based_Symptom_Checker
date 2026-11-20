@@ -3,7 +3,7 @@
   "rewrites": [
     {
       "source": "/api/(.*)",
-      "destination": "STAGING_API_ORIGIN/api/$1"
+      "destination": "https://medbuddy-api-xuds.onrender.com/api/$1"
     },
     {
       "source": "/(.*)",
