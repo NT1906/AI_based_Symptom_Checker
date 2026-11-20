@@ -10,12 +10,12 @@
 | Metric | Value |
 |---|---|
 | Total test cases (TC) | **32** (20 automated API + 12 manual browser) |
-| Passed | **31** |
-| Failed | **1** (TC-SAF-A-17 → [#348](https://github.com/NT1906/AI_based_Symptom_Checker/issues/348)) |
+| Passed | **32** (after the #348 fix; 31 on the first run) |
+| Failed | **0** (1 on the first run: TC-SAF-A-17 → [#348](https://github.com/NT1906/AI_based_Symptom_Checker/issues/348), fixed and re-tested) |
 | Blocked / not run | 0 |
-| Pass rate (%) | **96.9 %** (31 / 32) |
+| Pass rate (%) | **100 %** (32 / 32) after the fix; 96.9 % on the first run |
 | Requirements covered | DR-01, DR-02, FR-05, FR-06, FR-07, FR-08, FR-22, FR-23, NFR-07 |
-| Defects found | **1**: [#348](https://github.com/NT1906/AI_based_Symptom_Checker/issues/348) |
+| Defects found | **1**: [#348](https://github.com/NT1906/AI_based_Symptom_Checker/issues/348) (fixed) |
 
 The manual part is [below](#manual-browser-test-cases-tc-saf-m-s2-nis-24-331).
 
@@ -31,15 +31,15 @@ The risk engine, condition model, specialty mapper and result composer are the r
 | Metric | Value |
 |---|---|
 | Total test cases (TC) | **20** (automated API) |
-| Passed | **19** |
-| Failed | **1** (TC-SAF-A-17, defect [#348](https://github.com/NT1906/AI_based_Symptom_Checker/issues/348); kept as `xfail(strict=True)` so CI stays green and the test turns red once the bug is fixed) |
+| Passed | **20** (after the #348 fix; 19 on the first run) |
+| Failed | **0** (TC-SAF-A-17 failed on the first run and found defect [#348](https://github.com/NT1906/AI_based_Symptom_Checker/issues/348); it was kept as `xfail(strict=True)` until the fix, and now passes) |
 | Blocked / not run | 0 |
-| Pass rate (%) | **95 %** (19 / 20) |
+| Pass rate (%) | **100 %** (20 / 20) after the fix; 95 % (19 / 20) on the first run |
 | Acceptance criteria (AC) met | 7 / 7 (CI and PR policy green on [#349](https://github.com/NT1906/AI_based_Symptom_Checker/pull/349)) |
 | Requirements covered | DR-01, DR-02, FR-05, FR-06, FR-07, FR-08, FR-22, FR-23 |
-| Defects found | **1**: [#348](https://github.com/NT1906/AI_based_Symptom_Checker/issues/348) analysis fails (422) and the assessment is stuck in `ANALYZING` when no confirmed symptom is known |
+| Defects found | **1**: [#348](https://github.com/NT1906/AI_based_Symptom_Checker/issues/348) analysis fails (422) and the assessment is stuck in `ANALYZING` when no confirmed symptom is known (fixed in S2-NIS-28) |
 | API runs per test session | 44 complete assessments (create → result), 264 HTTP requests |
-| Execution time | 4.0 s for the 20 tests; full server suite 38 s (1872 passed, 1 skipped, 1 xfailed) |
+| Execution time | 3.9 s for the 20 tests; full server suite 37 s (1873 passed, 1 skipped) after the fix |
 | Environment | macOS 26.0.1 (Apple silicon), Python 3.12.12, pytest 9.1.1, httpx `ASGITransport`, SQLite (temporary), branch `nisarg/330-safety-prediction-api-tests` from `develop` @ `1e71b1d`, 2026-11-20, tester Nisarg |
 
 Techniques used: **decision table** (red-flag rules × expected risk tier), **boundary value analysis** (severity threshold; 1 and 12 symptoms; unknown symptoms), **equivalence partitioning** (confidence labels; one run per risk tier), **error guessing** (unstated severity, unknown symptoms, personal data in the result) and **repeatability** (same input three times).
@@ -97,7 +97,7 @@ Compared field by field: risk tier, every condition (name, rank, label, why, spe
 | TC-SAF-A-14 | FR-05 | One symptom (lower boundary) | BVA | as TC-01 | as TC-01 | headache (mild) | complete result; rank 1 condition; why names the symptom | SELF_CARE; 1 Tension-type headache [Likely]; why "Because you reported headache." | Pass | `screenshots/TC-SAF-A-14.png` |
 | TC-SAF-A-15 | FR-05, FR-23 | Twelve symptoms (upper boundary) | BVA | as TC-01 | as TC-01 | fever, cough, headache, fatigue, sore throat, runny nose, body ache, sneezing, nausea, diarrhea, rash, itchy skin | at most 3 conditions; why line shortened | 3 conditions (Common cold, Influenza, COVID-19); why "… and 4 other symptoms." | Pass | `screenshots/TC-SAF-A-15.png` |
 | TC-SAF-A-16 | FR-05, FR-07 | Unknown symptoms next to a known one | Error guessing | as TC-01 | as TC-01 | "glorbitis of the zibble", "tingling in my left little toe", fatigue | unknown ones ignored; safe CONSULT_DOCTOR with General physician | CONSULT_DOCTOR, General physician; why lines mention only "tiredness or weakness" | Pass | `screenshots/TC-SAF-A-16.png` |
-| TC-SAF-A-17 | FR-05, FR-06, idea §7 | Only symptoms the model does not know | BVA / Error guessing | as TC-01 | as TC-01 | "glorbitis of the zibble" (mild) | CONSULT_DOCTOR with a General physician referral ("not knowing is never probably nothing") | `POST /analyze` → **422** "At least one confirmed symptom is required."; the assessment stays in `ANALYZING`, so edit and re-analyze both return 409 | **Fail** → [#348](https://github.com/NT1906/AI_based_Symptom_Checker/issues/348) | `screenshots/TC-SAF-A-17.png`, `screenshots/TC-SAF-A-17-failure.png` |
+| TC-SAF-A-17 | FR-05, FR-06, idea §7 | Only symptoms the model does not know | BVA / Error guessing | as TC-01 | as TC-01 | "glorbitis of the zibble" (mild) | CONSULT_DOCTOR with a General physician referral ("not knowing is never probably nothing") | First run: `POST /analyze` → **422** "At least one confirmed symptom is required." and the assessment stayed in `ANALYZING` (defect [#348](https://github.com/NT1906/AI_based_Symptom_Checker/issues/348)). Re-test after the fix (S2-NIS-28): CONSULT_DOCTOR, General physician, `conditions: []`, reason "Your symptoms did not clearly match a common condition…", state COMPLETED | Pass (after fix; failed on first run → [#348](https://github.com/NT1906/AI_based_Symptom_Checker/issues/348)) | `screenshots/TC-SAF-A-17.png`, `screenshots/TC-SAF-A-17-failure.png` |
 | TC-SAF-A-18 | FR-05, FR-06 | Same input three times gives the same output | Repeatability | as TC-01 | Run each of 3 inputs 3 times; compare | cold; dengue; chest pain + breathlessness | identical tier, conditions, guidance, referral, limitations | all 9 runs identical within each input (table above) | Pass | `screenshots/TC-SAF-A-18.png` |
 | TC-SAF-A-19 | FR-08, DR-04 | Referral gives a map-search specialty; no personal or doctor data | Error guessing | Signed-in test user (`safety_tester@example.com`, test account) | 1. Run as the signed-in user 2. Check referral and result keys 3. Search the body for the email, user ID, consent ID and doctor details | fever, pain behind the eyes, joint pain | specialty "General physician" → the app searches "General physician near me"; only the 9 published result keys; no email, user ID, consent ID, phone, address or clinic | specialty "General physician"; map query "General physician near me"; keys exactly the published ones; 0 matches for personal or doctor data | Pass | `screenshots/TC-SAF-A-19.png` |
 | TC-SAF-A-20 | FR-06, DR-02 | Guidance matches the risk tier | EP (one run per tier) | as TC-01 | Run SELF_CARE, CONSULT_DOCTOR and URGENT assessments | cold; dengue; chest pain + breathlessness | SELF_CARE: home-care steps; CONSULT_DOCTOR: "Book a visit with…"; URGENT: "Call 112 now…" and no home-care step | as expected on all three | Pass | `screenshots/TC-SAF-A-20.png` |
@@ -106,7 +106,7 @@ Compared field by field: risk tier, every condition (name, rank, label, why, spe
 
 | Defect | Found by | Summary | Severity | Status |
 |---|---|---|---|---|
-| [#348](https://github.com/NT1906/AI_based_Symptom_Checker/issues/348) | TC-SAF-A-17 | When every confirmed symptom is unknown to the model, `POST /analyze` returns 422 and leaves the assessment in `ANALYZING`, so it can be neither edited nor analysed again; expected a safe CONSULT_DOCTOR / General physician result. | High | Open (not fixed in this PR: one task per PR) |
+| [#348](https://github.com/NT1906/AI_based_Symptom_Checker/issues/348) | TC-SAF-A-17 | When every confirmed symptom is unknown to the model, `POST /analyze` returns 422 and leaves the assessment in `ANALYZING`, so it can be neither edited nor analysed again; expected a safe CONSULT_DOCTOR / General physician result. | High | **Fixed** in S2-NIS-28: an empty symptom list now gives the no-match result (CONSULT_DOCTOR, General physician) instead of an error; TC-SAF-A-17 re-tested and passes; also checked on the local app with PostgreSQL and Groq |
 
 ## Evidence
 
@@ -122,7 +122,7 @@ Compared field by field: risk tier, every condition (name, rank, label, why, spe
 | TC-SAF-A-06 | ![TC-SAF-A-06](screenshots/TC-SAF-A-06.png) |
 | TC-SAF-A-09 | ![TC-SAF-A-09](screenshots/TC-SAF-A-09.png) |
 | TC-SAF-A-17 | ![TC-SAF-A-17](screenshots/TC-SAF-A-17.png) |
-| TC-SAF-A-17 (failure output) | ![TC-SAF-A-17 failure](screenshots/TC-SAF-A-17-failure.png) |
+| TC-SAF-A-17 (failure output before the #348 fix) | ![TC-SAF-A-17 failure](screenshots/TC-SAF-A-17-failure.png) |
 | TC-SAF-A-18 | ![TC-SAF-A-18](screenshots/TC-SAF-A-18.png) |
 
 # Part 2: manual browser test cases (TC-SAF-M, S2-NIS-24, #331)

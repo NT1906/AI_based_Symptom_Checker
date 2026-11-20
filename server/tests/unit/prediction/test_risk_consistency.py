@@ -15,9 +15,11 @@ Covers:
       interpreters with different ``PYTHONHASHSEED`` values, so set and dict
       ordering cannot leak into the result.
     - Edge case: a repeated symptom does not change the output.
-    - Failure case: an empty input fails the same way every time.
+    - Edge case: an empty input (every symptom unknown, #348) gives the same
+      safe no-match result every time.
 
 Owner: Nisarg (prediction) · Task: S2-NIS-9 · Requirements: DR-02
+Empty input gives the no-match result: Nisarg · S2-NIS-28 (#348)
 """
 
 import hashlib
@@ -32,7 +34,6 @@ from typing import Any
 from uuid import UUID
 
 import pytest
-from app.core.errors import ValidationError
 from app.schemas.enums import Severity
 from app.services.prediction.condition_catalog import get_catalog
 from app.services.prediction.condition_predictor import BaselineConditionModel
@@ -223,7 +224,10 @@ def test_repeated_symptom_does_not_change_the_output() -> None:
     assert run_pipeline(doubled) == run_pipeline(case)
 
 
-def test_empty_input_fails_the_same_way_every_time() -> None:
+def test_empty_input_gives_the_same_safe_result_every_time() -> None:
+    first = run_pipeline(Case(symptoms=()))
+    assert first["predictions"] == []
+    assert first["result"]["risk_level"] == "CONSULT_DOCTOR"
+    assert first["result"]["referral"]["specialty"] == "General physician"
     for _ in range(RUNS):
-        with pytest.raises(ValidationError, match="At least one confirmed symptom"):
-            run_pipeline(Case(symptoms=()))
+        assert run_pipeline(Case(symptoms=())) == first

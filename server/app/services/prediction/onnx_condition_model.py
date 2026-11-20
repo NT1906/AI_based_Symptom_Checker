@@ -15,6 +15,7 @@ Deterministic: CPU inference on fixed weights, same input, same output.
 The model only ranks; risk stays with the deterministic risk engine.
 
 Owner: Nisarg (prediction) · Task: S2-NIS-3 · Requirements: FR-05, FR-23, NFR-07
+Empty input returns no predictions: Nisarg · S2-NIS-28 (#348)
 """
 
 import json
@@ -23,7 +24,6 @@ from pathlib import Path
 
 import numpy as np
 
-from app.core.errors import ValidationError
 from app.core.logging import get_logger
 from app.schemas.enums import ConfidenceLabel
 from app.services.prediction.condition_catalog import (
@@ -101,13 +101,9 @@ class OnnxConditionModel:
 
         Returns:
             Up to ``TOP_K`` predictions, best first; empty when no reported
-            symptom matches any condition.
-
-        Raises:
-            ValidationError: If ``symptom_ids`` is empty.
+            symptom matches any condition, including when ``symptom_ids`` is
+            empty (#348).
         """
-        if not symptom_ids:
-            raise ValidationError("At least one confirmed symptom is required.")
         reported = frozenset(symptom_ids) & self._catalog.symptom_ids
         ranked: list[tuple[float, str, ConditionProfile, tuple[str, ...], bool]] = []
         if reported:
