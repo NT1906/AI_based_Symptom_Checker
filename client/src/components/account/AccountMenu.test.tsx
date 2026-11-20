@@ -72,7 +72,7 @@ describe("AccountMenu", () => {
     await user.click(trigger);
 
     expect(trigger).toHaveAttribute("aria-expanded", "true");
-    const menu = screen.getByRole("menu", { name: "Account" });
+    const menu = screen.getByRole("menu", { name: /account menu for asha@example.com/i });
     expect(menu).toHaveTextContent("Signed in as");
     expect(menu).toHaveTextContent("asha@example.com");
     expect(screen.getByRole("menuitem", { name: /my history/i })).toHaveAttribute(

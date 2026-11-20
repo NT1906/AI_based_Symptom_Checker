@@ -6,8 +6,10 @@
  * detections, and add missing symptoms from a canonical selectable list before analysis.
  *
  * Owner: Mann (Frontend + Deployment · Testing) · Task: S1-MAN-1 · Requirements: FR-16, FR-21, FR-03, DR-01
+ * Restyle (design tokens, lucide icons, dark mode): Nisarg · S2-NIS-22 (#323)
  */
 
+import { ArrowLeft, ArrowRight, ClipboardList, Clock, MapPin, Pencil, Trash2 } from "lucide-react";
 import React, { useState } from "react";
 import { CANONICAL_SYMPTOMS } from "./canonicalSymptoms";
 import type {
@@ -30,13 +32,13 @@ export const CONFIRMATION_DISCLAIMER_TEXT =
 function getSeverityBadgeClass(severity: SeverityLevel): string {
   switch (severity) {
     case "SEVERE":
-      return "bg-rose-100 text-rose-800 border-rose-300 dark:bg-rose-950 dark:text-rose-200 dark:border-rose-800";
+      return "bg-danger/15 text-danger-strong border-danger/40";
     case "MODERATE":
-      return "bg-amber-100 text-amber-800 border-amber-300 dark:bg-amber-950 dark:text-amber-200 dark:border-amber-800";
+      return "bg-warning/15 text-warning-strong border-warning/40";
     case "MILD":
-      return "bg-emerald-100 text-emerald-800 border-emerald-300 dark:bg-emerald-950 dark:text-emerald-200 dark:border-emerald-800";
+      return "bg-success/15 text-success-strong border-success/40";
     default:
-      return "bg-slate-100 text-slate-700 border-slate-300 dark:bg-slate-800 dark:text-slate-300 dark:border-slate-700";
+      return "bg-muted text-muted-foreground border-input";
   }
 }
 
@@ -131,14 +133,14 @@ export function SymptomConfirmationCard({
   return (
     <section
       aria-label="Symptom Confirmation"
-      className="w-full max-w-2xl mx-auto bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-2xl shadow-sm overflow-hidden"
+      className="w-full max-w-2xl mx-auto bg-card border border-border rounded-xl shadow-sm overflow-hidden"
     >
       {/* Header Banner */}
-      <div className="bg-teal-50/80 dark:bg-teal-950/40 border-b border-teal-100 dark:border-teal-900/60 p-6">
-        <h2 className="text-xl font-bold text-slate-900 dark:text-slate-100 flex items-center gap-2">
-          <span aria-hidden="true">📋</span> Review & Confirm Symptoms
+      <div className="bg-primary/5 border-b border-primary/25 p-6">
+        <h2 className="text-xl font-bold text-foreground flex items-center gap-2">
+          <ClipboardList className="size-4 shrink-0" aria-hidden="true" /> Review & Confirm Symptoms
         </h2>
-        <p className="text-sm text-slate-600 dark:text-slate-300 mt-1">
+        <p className="text-sm text-muted-foreground mt-1">
           Please verify what we understood from your description. You can adjust details, remove
           inaccurate items, or add symptoms below.
         </p>
@@ -149,13 +151,13 @@ export function SymptomConfirmationCard({
         <div
           role="status"
           aria-live="polite"
-          className="px-6 py-2.5 bg-teal-100/70 dark:bg-teal-900/40 text-teal-800 dark:text-teal-200 text-xs font-medium flex justify-between items-center"
+          className="px-6 py-2.5 bg-primary/15 text-primary-strong text-xs font-medium flex justify-between items-center"
         >
           <span>{notification}</span>
           <button
             type="button"
             onClick={() => setNotification(null)}
-            className="text-teal-700 dark:text-teal-300 hover:text-teal-900 underline text-xs ml-3"
+            className="text-primary hover:text-primary-strong underline text-xs ml-3"
             aria-label="Dismiss notification"
           >
             Dismiss
@@ -165,15 +167,15 @@ export function SymptomConfirmationCard({
 
       {/* Symptoms List Container */}
       <div className="p-6 space-y-4">
-        <div className="flex items-center justify-between pb-2 border-b border-slate-100 dark:border-slate-800">
-          <span className="text-xs font-semibold uppercase tracking-wider text-slate-500 dark:text-slate-400">
+        <div className="flex items-center justify-between pb-2 border-b border-border">
+          <span className="text-xs font-semibold uppercase tracking-wider text-muted-foreground">
             Reported Symptoms ({symptoms.length})
           </span>
           {!isAddingSymptom && (
             <button
               type="button"
               onClick={() => setIsAddingSymptom(true)}
-              className="text-xs font-semibold text-teal-700 dark:text-teal-400 hover:text-teal-800 dark:hover:text-teal-300 hover:underline flex items-center gap-1 focus:outline-none focus-visible:ring-2 focus-visible:ring-teal-600 rounded px-1 py-0.5"
+              className="text-xs font-semibold text-primary hover:text-primary-strong hover:underline flex items-center gap-1 focus:outline-none focus-visible:ring-2 focus-visible:ring-ring rounded px-1 py-0.5"
             >
               <span aria-hidden="true">+</span> Add Symptom
             </button>
@@ -181,9 +183,9 @@ export function SymptomConfirmationCard({
         </div>
 
         {symptoms.length === 0 ? (
-          <div className="text-center py-8 text-slate-500 dark:text-slate-400">
+          <div className="text-center py-8 text-muted-foreground">
             <p className="text-sm font-medium">No symptoms listed.</p>
-            <p className="text-xs mt-1 text-slate-400 dark:text-slate-500">
+            <p className="text-xs mt-1 text-muted-foreground">
               Please add at least one symptom below so we can assist with informational triage.
             </p>
           </div>
@@ -195,19 +197,19 @@ export function SymptomConfirmationCard({
               return (
                 <li
                   key={symptom.id}
-                  className="p-4 rounded-xl border border-slate-200 dark:border-slate-800 bg-slate-50/60 dark:bg-slate-800/40 transition-colors"
+                  className="p-4 rounded-xl border border-border bg-muted/60 transition-colors"
                 >
                   {isEditing ? (
                     // Inline Edit Form
                     <div className="space-y-3">
                       <div className="flex items-center justify-between">
-                        <span className="font-semibold text-slate-900 dark:text-slate-100 text-sm">
+                        <span className="font-semibold text-foreground text-sm">
                           Editing: {symptom.name}
                         </span>
                         <button
                           type="button"
                           onClick={() => setEditingId(null)}
-                          className="text-xs text-slate-500 hover:text-slate-700 dark:hover:text-slate-300 font-medium"
+                          className="text-xs text-muted-foreground hover:text-muted-foreground font-medium"
                         >
                           Done
                         </button>
@@ -218,7 +220,7 @@ export function SymptomConfirmationCard({
                         <div>
                           <label
                             htmlFor={`severity-${symptom.id}`}
-                            className="block font-medium text-slate-700 dark:text-slate-300 mb-1"
+                            className="block font-medium text-muted-foreground mb-1"
                           >
                             Severity Level
                           </label>
@@ -230,7 +232,7 @@ export function SymptomConfirmationCard({
                                 severity: e.target.value as SeverityLevel,
                               })
                             }
-                            className="w-full px-2.5 py-1.5 rounded-lg border border-slate-300 dark:border-slate-700 bg-white dark:bg-slate-900 text-slate-900 dark:text-slate-100 focus:ring-2 focus:ring-teal-600 focus:outline-none"
+                            className="w-full px-2.5 py-1.5 rounded-lg border border-input bg-card text-foreground focus:ring-2 focus:ring-ring focus:outline-none"
                           >
                             <option value="MILD">Mild (noticeable, does not disrupt activities)</option>
                             <option value="MODERATE">Moderate (uncomfortable, somewhat disruptive)</option>
@@ -243,7 +245,7 @@ export function SymptomConfirmationCard({
                         <div>
                           <label
                             htmlFor={`duration-value-${symptom.id}`}
-                            className="block font-medium text-slate-700 dark:text-slate-300 mb-1"
+                            className="block font-medium text-muted-foreground mb-1"
                           >
                             Duration Length
                           </label>
@@ -265,7 +267,7 @@ export function SymptomConfirmationCard({
                                   },
                                 });
                               }}
-                              className="w-20 px-2.5 py-1.5 rounded-lg border border-slate-300 dark:border-slate-700 bg-white dark:bg-slate-900 text-slate-900 dark:text-slate-100 focus:ring-2 focus:ring-teal-600 focus:outline-none"
+                              className="w-20 px-2.5 py-1.5 rounded-lg border border-input bg-card text-foreground focus:ring-2 focus:ring-ring focus:outline-none"
                             />
                             <select
                               id={`duration-unit-${symptom.id}`}
@@ -279,7 +281,7 @@ export function SymptomConfirmationCard({
                                   },
                                 })
                               }
-                              className="flex-1 px-2.5 py-1.5 rounded-lg border border-slate-300 dark:border-slate-700 bg-white dark:bg-slate-900 text-slate-900 dark:text-slate-100 focus:ring-2 focus:ring-teal-600 focus:outline-none"
+                              className="flex-1 px-2.5 py-1.5 rounded-lg border border-input bg-card text-foreground focus:ring-2 focus:ring-ring focus:outline-none"
                             >
                               <option value="HOUR">Hours</option>
                               <option value="DAY">Days</option>
@@ -293,7 +295,7 @@ export function SymptomConfirmationCard({
                         <div className="sm:col-span-2">
                           <label
                             htmlFor={`location-${symptom.id}`}
-                            className="block font-medium text-slate-700 dark:text-slate-300 mb-1"
+                            className="block font-medium text-muted-foreground mb-1"
                           >
                             Body Location (Optional)
                           </label>
@@ -307,7 +309,7 @@ export function SymptomConfirmationCard({
                                 bodyLocation: e.target.value.trim() ? e.target.value : null,
                               })
                             }
-                            className="w-full px-2.5 py-1.5 rounded-lg border border-slate-300 dark:border-slate-700 bg-white dark:bg-slate-900 text-slate-900 dark:text-slate-100 focus:ring-2 focus:ring-teal-600 focus:outline-none"
+                            className="w-full px-2.5 py-1.5 rounded-lg border border-input bg-card text-foreground focus:ring-2 focus:ring-ring focus:outline-none"
                           />
                         </div>
                       </div>
@@ -317,7 +319,7 @@ export function SymptomConfirmationCard({
                     <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
                       <div>
                         <div className="flex items-center gap-2 flex-wrap">
-                          <span className="font-semibold text-slate-900 dark:text-slate-100 text-base">
+                          <span className="font-semibold text-foreground text-base">
                             {index + 1}. {symptom.name}
                           </span>
                           <span
@@ -329,19 +331,19 @@ export function SymptomConfirmationCard({
                           </span>
                         </div>
 
-                        <div className="flex items-center gap-3 mt-1.5 text-xs text-slate-600 dark:text-slate-400">
+                        <div className="flex items-center gap-3 mt-1.5 text-xs text-muted-foreground">
                           {symptom.duration ? (
                             <span>
-                              ⏳ Duration: {symptom.duration.value}{" "}
+                              <Clock className="inline size-3.5 align-[-2px]" aria-hidden="true" /> Duration: {symptom.duration.value}{" "}
                               {symptom.duration.unit.toLowerCase()}
                               {symptom.duration.value !== 1 ? "s" : ""}
                             </span>
                           ) : (
-                            <span>⏳ Duration: Not specified</span>
+                            <span><Clock className="inline size-3.5 align-[-2px]" aria-hidden="true" /> Duration: Not specified</span>
                           )}
 
                           {symptom.bodyLocation && (
-                            <span>📍 Location: {symptom.bodyLocation}</span>
+                            <span><MapPin className="inline size-3.5 align-[-2px]" aria-hidden="true" /> Location: {symptom.bodyLocation}</span>
                           )}
                         </div>
                       </div>
@@ -350,18 +352,18 @@ export function SymptomConfirmationCard({
                         <button
                           type="button"
                           onClick={() => setEditingId(symptom.id)}
-                          className="px-2.5 py-1 text-xs font-medium text-slate-700 dark:text-slate-200 bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-lg hover:bg-slate-100 dark:hover:bg-slate-700 focus:outline-none focus:ring-2 focus:ring-teal-600"
+                          className="px-2.5 py-1 text-xs font-medium text-muted-foreground bg-card border border-border rounded-lg hover:bg-muted focus:outline-none focus:ring-2 focus:ring-ring"
                           aria-label={`Edit ${symptom.name} details`}
                         >
-                          ✏️ Edit
+                          <Pencil className="inline size-4 align-[-3px]" aria-hidden="true" /> Edit
                         </button>
                         <button
                           type="button"
                           onClick={() => handleRemoveSymptom(symptom.id)}
-                          className="px-2.5 py-1 text-xs font-medium text-rose-700 dark:text-rose-300 bg-rose-50 dark:bg-rose-950/40 border border-rose-200 dark:border-rose-900 rounded-lg hover:bg-rose-100 dark:hover:bg-rose-900 focus:outline-none focus:ring-2 focus:ring-rose-500"
+                          className="px-2.5 py-1 text-xs font-medium text-danger-strong bg-danger/10 border border-danger/25 rounded-lg hover:bg-danger/15 focus:outline-none focus:ring-2 focus:ring-danger/40"
                           aria-label={`Remove ${symptom.name}`}
                         >
-                          🗑️ Remove
+                          <Trash2 className="inline size-4 align-[-3px]" aria-hidden="true" /> Remove
                         </button>
                       </div>
                     </div>
@@ -374,9 +376,9 @@ export function SymptomConfirmationCard({
 
         {/* Add Symptom Selectable Section */}
         {isAddingSymptom && (
-          <div className="p-4 rounded-xl border border-teal-200 dark:border-teal-800/80 bg-teal-50/50 dark:bg-teal-950/30 space-y-3">
+          <div className="p-4 rounded-xl border border-primary/25 bg-primary/5 space-y-3">
             <div className="flex items-center justify-between">
-              <span className="text-xs font-semibold text-teal-900 dark:text-teal-200">
+              <span className="text-xs font-semibold text-primary-strong">
                 Search & Add a Symptom (FR-03, FR-16)
               </span>
               <button
@@ -385,7 +387,7 @@ export function SymptomConfirmationCard({
                   setIsAddingSymptom(false);
                   setSearchQuery("");
                 }}
-                className="text-xs text-slate-500 hover:text-slate-700 dark:hover:text-slate-300"
+                className="text-xs text-muted-foreground hover:text-muted-foreground"
               >
                 Cancel
               </button>
@@ -403,14 +405,14 @@ export function SymptomConfirmationCard({
                     handleAddSymptom(searchQuery);
                   }
                 }}
-                className="flex-1 px-3 py-2 text-sm rounded-lg border border-slate-300 dark:border-slate-700 bg-white dark:bg-slate-900 text-slate-900 dark:text-slate-100 focus:ring-2 focus:ring-teal-600 focus:outline-none"
+                className="flex-1 px-3 py-2 text-sm rounded-lg border border-input bg-card text-foreground focus:ring-2 focus:ring-ring focus:outline-none"
                 aria-label="Search or enter symptom name"
               />
               <button
                 type="button"
                 disabled={!searchQuery.trim()}
                 onClick={() => handleAddSymptom(searchQuery)}
-                className="px-4 py-2 bg-teal-700 hover:bg-teal-800 disabled:opacity-50 text-white rounded-lg text-xs font-semibold focus:outline-none focus:ring-2 focus:ring-teal-600"
+                className="px-4 py-2 bg-primary hover:bg-primary/90 disabled:opacity-50 text-primary-foreground rounded-lg text-xs font-semibold focus:outline-none focus:ring-2 focus:ring-ring"
               >
                 Add
               </button>
@@ -422,7 +424,7 @@ export function SymptomConfirmationCard({
                 className="max-h-40 overflow-y-auto space-y-1 pr-1"
                 aria-label="Symptom suggestions"
               >
-                <span className="text-[11px] font-medium text-slate-500 dark:text-slate-400 block mb-1">
+                <span className="text-[11px] font-medium text-muted-foreground block mb-1">
                   Suggested matching symptoms:
                 </span>
                 {filteredSuggestions.map((item) => (
@@ -430,10 +432,10 @@ export function SymptomConfirmationCard({
                     key={item.id}
                     type="button"
                     onClick={() => handleAddSymptom(item.name)}
-                    className="w-full text-left px-2.5 py-1.5 rounded text-xs bg-white dark:bg-slate-800 hover:bg-teal-50 dark:hover:bg-teal-900/40 border border-slate-200 dark:border-slate-700 text-slate-800 dark:text-slate-200 flex justify-between items-center transition-colors"
+                    className="w-full text-left px-2.5 py-1.5 rounded text-xs bg-card hover:bg-primary/10 border border-border text-foreground flex justify-between items-center transition-colors"
                   >
                     <span>{item.name}</span>
-                    <span className="text-[10px] text-slate-400 uppercase tracking-wider">
+                    <span className="text-[10px] text-muted-foreground uppercase tracking-wider">
                       {item.bodySystem}
                     </span>
                   </button>
@@ -445,15 +447,15 @@ export function SymptomConfirmationCard({
       </div>
 
       {/* Action Footer */}
-      <div className="p-6 bg-slate-50/80 dark:bg-slate-950/60 border-t border-slate-200 dark:border-slate-800 flex flex-col sm:flex-row items-center justify-between gap-4">
+      <div className="p-6 bg-muted/60 border-t border-border flex flex-col sm:flex-row items-center justify-between gap-4">
         {onCancel ? (
           <button
             type="button"
             onClick={onCancel}
             disabled={isSubmitting}
-            className="w-full sm:w-auto px-4 py-2.5 text-sm font-medium text-slate-700 dark:text-slate-300 hover:text-slate-900 dark:hover:text-slate-100 hover:bg-slate-100 dark:hover:bg-slate-800 rounded-xl transition-colors focus:outline-none focus:ring-2 focus:ring-slate-400"
+            className="w-full sm:w-auto px-4 py-2.5 text-sm font-medium text-muted-foreground hover:text-foreground hover:bg-muted rounded-xl transition-colors focus:outline-none focus:ring-2 focus:ring-ring"
           >
-            ← Back to Chat
+            <ArrowLeft className="inline size-3.5 align-[-2px]" aria-hidden="true" /> Back to Chat
           </button>
         ) : (
           <div />
@@ -463,7 +465,7 @@ export function SymptomConfirmationCard({
           type="button"
           onClick={handleConfirm}
           disabled={symptoms.length === 0 || isSubmitting}
-          className="w-full sm:w-auto px-6 py-2.5 bg-teal-700 hover:bg-teal-800 disabled:opacity-50 disabled:cursor-not-allowed text-white font-semibold text-sm rounded-xl shadow-sm transition-colors focus:outline-none focus:ring-2 focus:ring-teal-600 focus:ring-offset-2 flex items-center justify-center gap-2"
+          className="w-full sm:w-auto px-6 py-2.5 bg-primary hover:bg-primary/90 disabled:opacity-50 disabled:cursor-not-allowed text-primary-foreground font-semibold text-sm rounded-xl shadow-sm transition-colors focus:outline-none focus:ring-2 focus:ring-ring focus:ring-offset-2 flex items-center justify-center gap-2"
         >
           {isSubmitting ? (
             <>
@@ -474,13 +476,13 @@ export function SymptomConfirmationCard({
               Analyzing...
             </>
           ) : (
-            <>Confirm & Analyze Symptoms ➤</>
+            <>Confirm & Analyze Symptoms <ArrowRight className="size-4" aria-hidden="true" /></>
           )}
         </button>
       </div>
 
       {/* Mandatory Medical Disclaimer (DR-01) */}
-      <footer className="px-6 py-3 bg-slate-100 dark:bg-slate-900 border-t border-slate-200 dark:border-slate-800 text-[11px] leading-relaxed text-slate-500 dark:text-slate-400 text-center">
+      <footer className="px-6 py-3 bg-muted border-t border-border text-[11px] leading-relaxed text-muted-foreground text-center">
         {CONFIRMATION_DISCLAIMER_TEXT}
       </footer>
     </section>

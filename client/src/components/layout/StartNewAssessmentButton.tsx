@@ -4,10 +4,11 @@
  * Implements requirement FR-25: "Start new assessment" button, always visible,
  * with confirmation dialog to prevent accidental loss of triage progress.
  *
- * Owner: Mann (Frontend + Deployment · Testing) · Task: S1-MAN-4 · Requirements: FR-25, NFR-06
+ * Owner: Mann (Frontend + Deployment · Testing) · Task: S1-MAN-4, S2-NIS-19 (#320 restyle) · Requirements: FR-25, NFR-06
  */
 
 import React, { useState, useEffect, useRef } from "react";
+import { RotateCcw, TriangleAlert } from "lucide-react";
 import { useAssessmentStore } from "../../stores/assessmentStore";
 
 /** Props for the StartNewAssessmentButton component. */
@@ -94,11 +95,11 @@ export function StartNewAssessmentButton({
   // Variant styling
   const variantClasses = {
     header:
-      "inline-flex min-h-[44px] min-w-[44px] items-center justify-center gap-1.5 rounded-lg border border-slate-300 bg-white px-3 py-2 text-xs font-medium text-slate-700 transition hover:bg-slate-50 hover:text-slate-900 focus:outline-none focus:ring-2 focus:ring-teal-700 focus:ring-offset-2 dark:border-slate-700 dark:bg-slate-800 dark:text-slate-200 dark:hover:bg-slate-700",
+      "inline-flex h-10 min-w-10 items-center justify-center gap-1.5 rounded-md border border-border bg-background px-3 text-sm font-medium text-foreground shadow-xs transition hover:bg-accent hover:text-accent-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring",
     primary:
-      "inline-flex min-h-[44px] items-center justify-center gap-2 rounded-xl bg-teal-600 px-5 py-2.5 text-sm font-semibold text-white shadow-xs transition hover:bg-teal-700 focus:outline-none focus:ring-4 focus:ring-teal-500/40",
+      "inline-flex min-h-[44px] items-center justify-center gap-2 rounded-md bg-primary px-5 py-2.5 text-sm font-semibold text-primary-foreground shadow-sm transition hover:bg-primary/90 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 focus-visible:ring-offset-background",
     secondary:
-      "inline-flex min-h-[44px] items-center justify-center gap-2 rounded-xl border border-slate-300 bg-white px-5 py-2.5 text-sm font-semibold text-slate-800 shadow-xs transition hover:bg-slate-50 focus:outline-none focus:ring-4 focus:ring-slate-300 dark:border-slate-700 dark:bg-slate-800 dark:text-slate-200 dark:hover:bg-slate-700",
+      "inline-flex min-h-[44px] items-center justify-center gap-2 rounded-md border border-border bg-background px-5 py-2.5 text-sm font-semibold text-foreground shadow-xs transition hover:bg-accent hover:text-accent-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring",
   };
 
   return (
@@ -113,8 +114,8 @@ export function StartNewAssessmentButton({
         aria-label="Start a new assessment from scratch"
         className={[variantClasses[variant], className].join(" ")}
       >
-        <span aria-hidden="true">🔄</span>
-        <span>{label}</span>
+        <RotateCcw className="size-4" aria-hidden="true" />
+        <span className={variant === "header" ? "hidden sm:inline" : undefined}>{label}</span>
       </button>
 
       {/* Confirmation Modal Dialog (FR-25) */}
@@ -125,7 +126,8 @@ export function StartNewAssessmentButton({
         >
           {/* Backdrop Overlay */}
           <div
-            className="fixed inset-0 bg-slate-900/60 backdrop-blur-xs transition-opacity"
+            data-testid="confirm-backdrop"
+            className="fixed inset-0 bg-black/50 backdrop-blur-sm animate-in fade-in-0"
             onClick={handleCancel}
             aria-hidden="true"
           />
@@ -136,26 +138,26 @@ export function StartNewAssessmentButton({
             aria-modal="true"
             aria-labelledby="confirm-dialog-title"
             aria-describedby="confirm-dialog-desc"
-            className="relative w-full max-w-md rounded-2xl border border-slate-200 bg-white p-6 shadow-2xl transition-all sm:p-7 dark:border-slate-800 dark:bg-slate-900"
+            className="relative w-full max-w-md rounded-xl border border-border bg-card p-6 text-card-foreground shadow-2xl animate-in fade-in-0 zoom-in-95 sm:p-7"
           >
             {/* Header Icon & Title */}
             <div className="flex items-start gap-4">
               <div
-                className="flex h-11 w-11 shrink-0 items-center justify-center rounded-xl bg-amber-100 text-xl text-amber-700 dark:bg-amber-950/60 dark:text-amber-300"
+                className="flex size-10 shrink-0 items-center justify-center rounded-lg bg-warning/15 text-warning"
                 aria-hidden="true"
               >
-                ⚠️
+                <TriangleAlert className="size-5" />
               </div>
               <div className="space-y-1">
                 <h2
                   id="confirm-dialog-title"
-                  className="text-lg font-bold text-slate-900 sm:text-xl dark:text-slate-100"
+                  className="text-lg font-semibold tracking-tight"
                 >
                   {dialogTitle}
                 </h2>
                 <p
                   id="confirm-dialog-desc"
-                  className="text-xs leading-relaxed text-slate-600 sm:text-sm dark:text-slate-400"
+                  className="text-sm leading-relaxed text-muted-foreground"
                 >
                   {dialogDescription}
                 </p>
@@ -163,8 +165,9 @@ export function StartNewAssessmentButton({
             </div>
 
             {/* Informational Safe-Handling Note */}
-            <div className="mt-4 rounded-lg bg-slate-50 p-3 text-[11px] text-slate-500 dark:bg-slate-800/60 dark:text-slate-400">
-              Session data is maintained in-memory only and is never stored permanently.
+            <div className="mt-4 rounded-md bg-muted p-3 text-xs text-muted-foreground">
+              Your current answers will be cleared. Results already saved to your
+              history are not affected.
             </div>
 
             {/* Action Buttons */}
@@ -173,14 +176,14 @@ export function StartNewAssessmentButton({
                 ref={cancelButtonRef}
                 type="button"
                 onClick={handleCancel}
-                className="inline-flex min-h-[44px] items-center justify-center rounded-xl border border-slate-300 bg-white px-4 py-2.5 text-xs font-semibold text-slate-700 transition hover:bg-slate-50 focus:outline-none focus:ring-2 focus:ring-teal-700 focus:ring-offset-2 dark:border-slate-700 dark:bg-slate-800 dark:text-slate-200 dark:hover:bg-slate-700"
+                className="inline-flex h-10 items-center justify-center rounded-md border border-border bg-background px-4 text-sm font-medium transition hover:bg-accent focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
               >
                 Cancel &amp; Keep Progress
               </button>
               <button
                 type="button"
                 onClick={handleConfirm}
-                className="inline-flex min-h-[44px] items-center justify-center rounded-xl bg-rose-600 px-4 py-2.5 text-xs font-semibold text-white shadow-xs transition hover:bg-rose-700 focus:outline-none focus:ring-2 focus:ring-rose-600 focus:ring-offset-2"
+                className="inline-flex h-10 items-center justify-center rounded-md bg-danger px-4 text-sm font-semibold text-danger-foreground shadow-sm transition hover:bg-danger/90 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-danger focus-visible:ring-offset-2 focus-visible:ring-offset-background"
               >
                 Yes, Start Over
               </button>

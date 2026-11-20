@@ -104,7 +104,7 @@ describe("StartNewAssessmentButton", () => {
     expect(screen.getByRole("alertdialog")).toBeInTheDocument();
 
     // Click backdrop
-    const backdrop = container.querySelector(".bg-slate-900\\/60");
+    const backdrop = container.querySelector('[data-testid="confirm-backdrop"]');
     expect(backdrop).not.toBeNull();
     if (backdrop) {
       fireEvent.click(backdrop);

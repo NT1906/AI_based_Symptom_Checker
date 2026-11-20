@@ -1,8 +1,10 @@
 /**
  * @file Situational image attachment component with mobile camera capture and in-memory validation.
  * Owner: Mann (Frontend + Deployment · Testing) · Task: S2-MAN-1 · Requirements: idea §3
+ * Restyle (design tokens, lucide icons, dark mode): Nisarg · S2-NIS-22 (#323)
  */
 
+import { Camera, FolderOpen, TriangleAlert } from "lucide-react";
 import {
   type ChangeEvent,
   useEffect,
@@ -173,24 +175,24 @@ export function ImageAttach({
     <div
       role="region"
       aria-label="Visual symptom photo attachment"
-      className={`rounded-xl border border-teal-200 bg-teal-50/60 p-4 transition ${className}`}
+      className={`rounded-xl border border-primary/25 bg-primary/5 p-4 transition ${className}`}
     >
       {/* Situational prompt banner */}
       <div className="flex items-start justify-between gap-3">
         <div className="flex items-start gap-2.5">
           <span className="text-xl" aria-hidden="true">
-            📷
+            <Camera className="size-5" aria-hidden="true" />
           </span>
           <div>
             <div className="flex items-center gap-2">
-              <h3 className="text-sm font-semibold text-teal-900">
+              <h3 className="text-sm font-semibold text-primary-strong">
                 Visual Symptom Detected
               </h3>
-              <span className="rounded-full bg-teal-200/70 px-2 py-0.5 text-[11px] font-medium text-teal-800">
+              <span className="rounded-full bg-primary/25 px-2 py-0.5 text-[11px] font-medium text-primary-strong">
                 Optional
               </span>
             </div>
-            <p className="mt-1 text-xs text-teal-800/90 leading-relaxed">
+            <p className="mt-1 text-xs text-primary-strong leading-relaxed">
               Since your symptoms include a visible skin condition or rash, you may attach a
               photo to assist in triage.
             </p>
@@ -202,10 +204,10 @@ export function ImageAttach({
       {errorMessage && (
         <div
           role="alert"
-          className="mt-3 flex items-start gap-2 rounded-lg border border-red-200 bg-red-50 p-2.5 text-xs text-red-800"
+          className="mt-3 flex items-start gap-2 rounded-lg border border-danger/25 bg-danger/10 p-2.5 text-xs text-danger-strong"
         >
           <span className="font-bold" aria-hidden="true">
-            ⚠️
+            <TriangleAlert className="size-5" aria-hidden="true" />
           </span>
           <span>{errorMessage}</span>
         </div>
@@ -213,18 +215,18 @@ export function ImageAttach({
 
       {/* Selected photo preview & actions */}
       {currentFile && previewUrl ? (
-        <div className="mt-3 flex items-center justify-between rounded-lg border border-teal-200 bg-white p-3 shadow-xs">
+        <div className="mt-3 flex items-center justify-between rounded-lg border border-primary/25 bg-card p-3 shadow-xs">
           <div className="flex items-center gap-3 overflow-hidden">
             <img
               src={previewUrl}
               alt="Attached visual symptom preview"
-              className="h-14 w-14 rounded-md object-cover border border-slate-200"
+              className="h-14 w-14 rounded-md object-cover border border-border"
             />
             <div className="min-w-0">
-              <p className="truncate text-xs font-semibold text-slate-800">
+              <p className="truncate text-xs font-semibold text-foreground">
                 {currentFile.name}
               </p>
-              <p className="text-[11px] text-slate-500">
+              <p className="text-[11px] text-muted-foreground">
                 {formatFileSize(currentFile.size)} · In-memory
               </p>
             </div>
@@ -236,7 +238,7 @@ export function ImageAttach({
               onClick={handleRemovePhoto}
               disabled={disabled}
               aria-label="Remove attached photo"
-              className="rounded-md border border-slate-300 bg-white px-2.5 py-1.5 text-xs font-medium text-red-700 hover:bg-red-50 focus:outline-none focus:ring-2 focus:ring-red-400 disabled:cursor-not-allowed disabled:opacity-50"
+              className="rounded-md border border-input bg-card px-2.5 py-1.5 text-xs font-medium text-danger-strong hover:bg-danger/10 focus:outline-none focus:ring-2 focus:ring-danger/40 disabled:cursor-not-allowed disabled:opacity-50"
             >
               Remove
             </button>
@@ -274,9 +276,9 @@ export function ImageAttach({
             type="button"
             onClick={triggerCameraInput}
             disabled={disabled}
-            className="flex items-center gap-1.5 rounded-lg bg-teal-700 px-3 py-2 text-xs font-semibold text-white transition hover:bg-teal-800 focus:outline-none focus:ring-2 focus:ring-teal-500 focus:ring-offset-1 disabled:cursor-not-allowed disabled:opacity-50"
+            className="flex items-center gap-1.5 rounded-lg bg-primary px-3 py-2 text-xs font-semibold text-primary-foreground transition hover:bg-primary/90 focus:outline-none focus:ring-2 focus:ring-ring focus:ring-offset-1 disabled:cursor-not-allowed disabled:opacity-50"
           >
-            <span aria-hidden="true">📸</span>
+            <Camera className="size-4 shrink-0" aria-hidden="true" />
             <span>Take photo</span>
           </button>
 
@@ -284,20 +286,20 @@ export function ImageAttach({
             type="button"
             onClick={triggerFileInput}
             disabled={disabled}
-            className="flex items-center gap-1.5 rounded-lg border border-teal-600 bg-white px-3 py-2 text-xs font-semibold text-teal-800 transition hover:bg-teal-50 focus:outline-none focus:ring-2 focus:ring-teal-500 focus:ring-offset-1 disabled:cursor-not-allowed disabled:opacity-50"
+            className="flex items-center gap-1.5 rounded-lg border border-primary/60 bg-card px-3 py-2 text-xs font-semibold text-primary-strong transition hover:bg-primary/10 focus:outline-none focus:ring-2 focus:ring-ring focus:ring-offset-1 disabled:cursor-not-allowed disabled:opacity-50"
           >
-            <span aria-hidden="true">📁</span>
+            <FolderOpen className="size-4 shrink-0" aria-hidden="true" />
             <span>Choose photo</span>
           </button>
 
-          <span className="text-[11px] text-teal-700/80">
+          <span className="text-[11px] text-primary">
             JPG, PNG, WebP up to 5 MB
           </span>
         </div>
       )}
 
       {/* Mandatory medical safety and privacy notice (DR-06, AI_RULES.md §2.10) */}
-      <div className="mt-3 border-t border-teal-200/80 pt-2 text-[11px] text-teal-900/80 leading-snug">
+      <div className="mt-3 border-t border-primary/25 pt-2 text-[11px] text-primary-strong leading-snug">
         <p>
           <strong className="font-semibold">Privacy notice: </strong>
           {IMAGE_PRIVACY_DISCLAIMER}

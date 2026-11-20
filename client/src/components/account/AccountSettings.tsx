@@ -1,6 +1,6 @@
 /**
  * @file Account settings on the profile page: change password, export or delete the account.
- * Owner: Nisarg · Task: S2-NIS-18 · Issue: #315 · Requirements: FR-01, DR-06, NFR-06
+ * Owner: Nisarg · Task: S2-NIS-18, S2-NIS-21 · Issues: #315, #322 · Requirements: FR-01, DR-06, NFR-06
  *
  * Responsibilities:
  * - Let a logged-in user change their password (current password required).
@@ -56,7 +56,7 @@ function failureMessage(error: unknown): string {
 }
 
 const inputClass =
-  "mt-1 block min-h-[44px] w-full rounded-lg border border-slate-300 px-3 py-2 text-sm text-slate-900 focus:border-teal-600 focus:outline-none focus:ring-2 focus:ring-teal-600/30";
+  "mt-1.5 block h-11 w-full rounded-lg border border-input bg-background px-3 text-sm text-foreground shadow-xs transition focus-visible:border-ring focus-visible:outline-none focus-visible:ring-3 focus-visible:ring-ring/40";
 
 /**
  * Account settings for the logged-in user.
@@ -99,10 +99,10 @@ export function AccountSettings(): React.JSX.Element | null {
   return (
     <section aria-labelledby="account-settings-heading" className="space-y-6">
       <div>
-        <h2 id="account-settings-heading" className="text-xl font-bold text-slate-900">
+        <h2 id="account-settings-heading" className="text-lg font-semibold tracking-tight">
           Account settings
         </h2>
-        <p className="text-sm text-slate-600">
+        <p className="text-sm text-muted-foreground">
           Signed in as <strong>{user.email}</strong>
         </p>
       </div>
@@ -110,13 +110,13 @@ export function AccountSettings(): React.JSX.Element | null {
       <form
         onSubmit={(event) => void handleSubmit(event)}
         aria-labelledby="change-password-heading"
-        className="space-y-4 rounded-xl border border-slate-200 bg-white p-5 shadow-sm"
+        className="space-y-4 rounded-xl border border-border bg-card p-6 text-card-foreground shadow-xs sm:p-8"
         noValidate
       >
-        <h3 id="change-password-heading" className="text-base font-bold text-slate-900">
+        <h3 id="change-password-heading" className="font-semibold tracking-tight">
           Change password
         </h3>
-        <label className="block text-sm font-semibold text-slate-800">
+        <label className="block text-sm font-medium">
           Current password
           <input
             type="password"
@@ -126,7 +126,7 @@ export function AccountSettings(): React.JSX.Element | null {
             className={inputClass}
           />
         </label>
-        <label className="block text-sm font-semibold text-slate-800">
+        <label className="block text-sm font-medium">
           New password
           <input
             type="password"
@@ -137,10 +137,10 @@ export function AccountSettings(): React.JSX.Element | null {
             aria-describedby="new-password-hint"
           />
         </label>
-        <p id="new-password-hint" className="-mt-2 text-xs text-slate-500">
+        <p id="new-password-hint" className="-mt-2 text-xs text-muted-foreground">
           At least {MIN_PASSWORD_LENGTH} characters.
         </p>
-        <label className="block text-sm font-semibold text-slate-800">
+        <label className="block text-sm font-medium">
           Confirm new password
           <input
             type="password"
@@ -154,7 +154,7 @@ export function AccountSettings(): React.JSX.Element | null {
           <p
             role={status.type === "error" ? "alert" : "status"}
             className={
-              status.type === "error" ? "text-sm text-rose-700" : "text-sm text-emerald-800"
+              status.type === "error" ? "text-sm text-danger" : "text-sm text-success"
             }
           >
             {status.text}
@@ -163,7 +163,7 @@ export function AccountSettings(): React.JSX.Element | null {
         <button
           type="submit"
           disabled={saving}
-          className="inline-flex min-h-[44px] items-center rounded-lg bg-teal-700 px-5 py-2 text-sm font-semibold text-white transition hover:bg-teal-800 disabled:opacity-60"
+          className="inline-flex h-10 items-center gap-2 rounded-md bg-primary px-5 text-sm font-semibold text-primary-foreground shadow-sm transition hover:bg-primary/90 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring disabled:opacity-60"
         >
           {saving ? "Saving..." : "Change password"}
         </button>

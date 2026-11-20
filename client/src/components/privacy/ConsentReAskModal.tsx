@@ -1,6 +1,7 @@
 /**
  * @file ConsentReAskModal — re-consent modal when privacy policy version changes.
  * Owner: Dimple · Task: S2-DIM-3 · Requirements: DR-06, DR-08
+ * Restyle (design tokens, lucide icons, dark mode): Nisarg · S2-NIS-22 (#323)
  *
  * Implements DPDP Act 2023 Section 5 and DR-08:
  * - Automatically prompts users to re-consent whenever the active policy version
@@ -9,15 +10,11 @@
  * - Allows affirmative re-consent or graceful withdrawal with data clearing.
  */
 
+import { TriangleAlert } from "lucide-react";
 import React, { useState } from "react";
 import { postConsent, CURRENT_POLICY_VERSION } from "../../services/consentApi";
 import { isConsentOutdated } from "../../services/privacyApi";
 import { useConsentStore } from "../../stores/consentStore";
-import {
-  COLOR_TOKENS,
-  SHADOW_TOKENS,
-  ACCESSIBILITY_TOKENS,
-} from "../../theme/tokens";
 
 /** Props for the ConsentReAskModal component. */
 export interface ConsentReAskModalProps {
@@ -88,36 +85,32 @@ export function ConsentReAskModal({
       aria-modal="true"
       aria-labelledby="reask-modal-title"
       aria-describedby="reask-modal-desc"
-      className="fixed inset-0 z-50 flex items-center justify-center bg-slate-900/80 p-4 backdrop-blur-xs animate-in fade-in duration-200"
+      className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 p-4 backdrop-blur-xs animate-in fade-in duration-200"
     >
       <div
-        className="w-full max-w-lg rounded-3xl bg-white p-6 shadow-2xl space-y-5 sm:p-8"
-        style={{
-          boxShadow: SHADOW_TOKENS.lg,
-          background: COLOR_TOKENS.neutral.surface,
-        }}
+        className="w-full max-w-lg rounded-xl bg-card p-6 shadow-2xl space-y-5 sm:p-8"
       >
         {/* Header */}
-        <div className="space-y-1.5 border-b border-slate-100 pb-4">
+        <div className="space-y-1.5 border-b border-border pb-4">
           <div className="flex items-center gap-2">
             <span
-              className="inline-flex items-center gap-1.5 rounded-full border border-teal-300 bg-teal-50 px-2.5 py-0.5 text-xs font-bold text-teal-800"
+              className="inline-flex items-center gap-1.5 rounded-full border border-primary/40 bg-primary/10 px-2.5 py-0.5 text-xs font-bold text-primary-strong"
               role="status"
             >
               <span>Version {CURRENT_POLICY_VERSION}</span>
             </span>
-            <span className="text-xs font-semibold uppercase tracking-wider text-slate-500">
+            <span className="text-xs font-semibold uppercase tracking-wider text-muted-foreground">
               Policy Update (DR-08)
             </span>
           </div>
 
           <h2
             id="reask-modal-title"
-            className="text-xl font-bold tracking-tight text-slate-900 sm:text-2xl"
+            className="text-xl font-bold tracking-tight text-foreground sm:text-2xl"
           >
             Updated Privacy &amp; Data Notice
           </h2>
-          <p id="reask-modal-desc" className="text-xs text-slate-600 sm:text-sm">
+          <p id="reask-modal-desc" className="text-xs text-muted-foreground sm:text-sm">
             We have updated our Privacy Policy to enhance protections under the{" "}
             <strong>Digital Personal Data Protection Act, 2023</strong>. Because
             this affects how health information is handled, we require your
@@ -126,8 +119,8 @@ export function ConsentReAskModal({
         </div>
 
         {/* Key Highlights */}
-        <div className="space-y-2 rounded-2xl border border-slate-200 bg-slate-50 p-4 text-xs sm:text-sm text-slate-700">
-          <h3 className="font-bold text-slate-900">
+        <div className="space-y-2 rounded-xl border border-border bg-muted/60 p-4 text-xs sm:text-sm text-muted-foreground">
+          <h3 className="font-bold text-foreground">
             Summary of Key Policy Terms:
           </h3>
           <ul className="space-y-1.5 list-disc pl-5 leading-relaxed">
@@ -150,9 +143,9 @@ export function ConsentReAskModal({
         {errorMessage && (
           <div
             role="alert"
-            className="rounded-xl border border-rose-300 bg-rose-50 p-3 text-xs font-medium text-rose-900 sm:text-sm"
+            className="rounded-xl border border-danger/40 bg-danger/10 p-3 text-xs font-medium text-danger-strong sm:text-sm"
           >
-            ⚠️ {errorMessage}
+            <TriangleAlert className="inline size-4 align-[-3px]" aria-hidden="true" /> {errorMessage}
           </div>
         )}
 
@@ -162,8 +155,7 @@ export function ConsentReAskModal({
             type="button"
             onClick={handleDecline}
             disabled={isSubmitting}
-            className="inline-flex min-h-[44px] items-center justify-center rounded-xl border border-slate-300 bg-white px-4 py-2.5 text-xs font-semibold text-slate-700 transition hover:bg-slate-100 sm:text-sm"
-            style={{ minHeight: ACCESSIBILITY_TOKENS.minTouchTarget }}
+            className="inline-flex min-h-[44px] items-center justify-center rounded-xl border border-input bg-card px-4 py-2.5 text-xs font-semibold text-muted-foreground transition hover:bg-muted sm:text-sm"
           >
             Decline &amp; Clear Session
           </button>
@@ -172,8 +164,7 @@ export function ConsentReAskModal({
             onClick={() => void handleAcceptUpdatedPolicy()}
             disabled={isSubmitting}
             aria-busy={isSubmitting}
-            className="inline-flex min-h-[44px] items-center justify-center gap-2 rounded-xl bg-teal-700 px-5 py-2.5 text-xs font-semibold text-white shadow-xs transition hover:bg-teal-800 disabled:opacity-60 sm:text-sm"
-            style={{ minHeight: ACCESSIBILITY_TOKENS.minTouchTarget }}
+            className="inline-flex min-h-[44px] items-center justify-center gap-2 rounded-xl bg-primary px-5 py-2.5 text-xs font-semibold text-primary-foreground shadow-xs transition hover:bg-primary/90 disabled:opacity-60 sm:text-sm"
           >
             <span>{isSubmitting ? "Recording Consent…" : "I Agree & Continue"}</span>
           </button>

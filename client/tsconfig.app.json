@@ -21,7 +21,10 @@
     "noUnusedLocals": true,
     "noUnusedParameters": true,
     "erasableSyntaxOnly": true,
-    "noFallthroughCasesInSwitch": true
+    "noFallthroughCasesInSwitch": true,
+
+    /* Path alias for shadcn/ui components (S2-NIS-19) */
+    "paths": { "@/*": ["./src/*"] }
   },
   "include": ["src"]
 }

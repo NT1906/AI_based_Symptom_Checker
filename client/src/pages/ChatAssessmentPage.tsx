@@ -1,6 +1,7 @@
 /**
  * @file The assessment flow on /chat: conversation, symptom confirmation, result.
  * Owner: Nisarg (integration) · Task: S2-NIS-13 · Issue: #280 · Requirements: FR-01, FR-03, FR-06, FR-16, DR-01, DR-02
+ * Restyle (design tokens, lucide icons, dark mode): Nisarg · S2-NIS-22 (#323)
  *
  * Connects the existing components to the assessment API:
  * 1. create the assessment with the user's consent ID;
@@ -223,12 +224,12 @@ export function ChatAssessmentPage({
     >
       <div className="flex flex-col gap-6 pb-12">
         {phase === "expired" ? (
-          <div role="alert" className="rounded-xl border border-amber-200 bg-amber-50 p-5 text-amber-900">
+          <div role="alert" className="rounded-xl border border-warning/25 bg-warning/10 p-5 text-warning-strong">
             <p>{error}</p>
             <button
               type="button"
               onClick={startOver}
-              className="mt-3 rounded-lg bg-teal-700 px-4 py-2 text-sm font-semibold text-white hover:bg-teal-800 focus:outline-none focus:ring-2 focus:ring-teal-600 focus:ring-offset-2"
+              className="mt-3 rounded-lg bg-primary px-4 py-2 text-sm font-semibold text-primary-foreground hover:bg-primary/90 focus:outline-none focus:ring-2 focus:ring-ring focus:ring-offset-2"
             >
               Start a new assessment
             </button>
@@ -250,7 +251,7 @@ export function ChatAssessmentPage({
           <button
             type="button"
             onClick={handleReview}
-            className="self-start rounded-lg border border-teal-700 px-4 py-2 text-sm font-semibold text-teal-800 hover:bg-teal-50 focus:outline-none focus:ring-2 focus:ring-teal-600 focus:ring-offset-2"
+            className="self-start rounded-lg border border-primary/60 px-4 py-2 text-sm font-semibold text-primary-strong hover:bg-primary/10 focus:outline-none focus:ring-2 focus:ring-ring focus:ring-offset-2"
           >
             I'm done, review my symptoms
           </button>
@@ -259,7 +260,7 @@ export function ChatAssessmentPage({
         {(phase === "confirming" || phase === "analyzing") && (
           <>
             {error && (
-              <div role="alert" className="rounded-xl border border-red-200 bg-red-50 p-4 text-sm text-red-800">
+              <div role="alert" className="rounded-xl border border-danger/25 bg-danger/10 p-4 text-sm text-danger-strong">
                 <p>{error}</p>
                 {retry.current && (
                   <button

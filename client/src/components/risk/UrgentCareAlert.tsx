@@ -1,6 +1,7 @@
 ﻿/**
  * @file UrgentCareAlert — full-screen overlay shown for URGENT risk results.
  * Owner: Dimple · Task: S1-DIM-3, S2-DIM-5 · Requirements: FR-06, FR-15, DR-02, NFR-06
+ * Restyle (design tokens, lucide icons, dark mode): Nisarg · S2-NIS-22 (#323)
  *
  * Per DR-02 and AI_RULES.md §2 rule 5:
  * - 112 (Unified Emergency) is displayed FIRST and LARGEST.
@@ -15,6 +16,7 @@
  * - Meets 44px touch targets and high-contrast text requirements.
  */
 
+import { Siren } from "lucide-react";
 import { useRef } from "react";
 import { useFocusTrap } from "../../lib/useFocusTrap";
 
@@ -54,16 +56,16 @@ export function UrgentCareAlert({ onDismiss }: UrgentCareAlertProps) {
       aria-modal="true"
       aria-labelledby="urgent-title"
       aria-describedby="urgent-body"
-      className="fixed inset-0 z-50 flex items-center justify-center bg-red-950/85 p-4 backdrop-blur-md animate-in fade-in duration-200 motion-reduce:animate-none"
+      className="fixed inset-0 z-50 flex items-center justify-center bg-black/70 p-4 backdrop-blur-md animate-in fade-in duration-200 motion-reduce:animate-none"
     >
-      <div className="w-full max-w-md overflow-hidden rounded-3xl bg-white shadow-2xl ring-1 ring-red-500/20">
+      <div className="w-full max-w-md overflow-hidden rounded-xl bg-card shadow-2xl ring-1 ring-danger/40">
         {/* Header with emergency alert tone */}
-        <div className="bg-gradient-to-b from-red-600 to-red-700 px-6 py-6 text-center text-white">
+        <div className="bg-danger px-6 py-6 text-center text-danger-foreground">
           <div
-            className="mx-auto flex h-14 w-14 items-center justify-center rounded-2xl bg-white/10 text-3xl shadow-inner"
+            className="mx-auto flex size-14 items-center justify-center rounded-xl bg-white/15 shadow-inner"
             aria-hidden="true"
           >
-            🚨
+            <Siren className="size-7" aria-hidden="true" />
           </div>
           <h1
             id="urgent-title"
@@ -71,16 +73,16 @@ export function UrgentCareAlert({ onDismiss }: UrgentCareAlertProps) {
           >
             Urgent Care Needed
           </h1>
-          <p className="mt-1 text-xs font-semibold text-red-50">
+          <p className="mt-1 text-xs font-semibold text-danger-foreground/90">
             Immediate Clinical Assessment Required
           </p>
         </div>
 
         {/* Body */}
         <div id="urgent-body" className="px-6 py-6 text-center">
-          <p className="text-sm font-medium text-slate-800">
+          <p className="text-sm font-medium text-foreground">
             Based on the reported symptoms, you may require{" "}
-            <strong className="text-red-700">immediate emergency medical attention</strong>.
+            <strong className="text-danger-strong">immediate emergency medical attention</strong>.
           </p>
 
           {/* Emergency numbers — 112 first and largest (DR-02) */}
@@ -90,7 +92,7 @@ export function UrgentCareAlert({ onDismiss }: UrgentCareAlertProps) {
               ref={primaryEmergencyRef}
               href={`tel:${EMERGENCY_UNIFIED}`}
               aria-label={`Call ${EMERGENCY_UNIFIED} — Unified Emergency (Police, Fire, Ambulance)`}
-              className="group flex min-h-[56px] w-full items-center justify-center gap-4 rounded-2xl bg-red-600 p-4 text-white shadow-lg shadow-red-600/30 transition-all hover:bg-red-700 focus-visible:outline-hidden focus-visible:ring-2 focus-visible:ring-red-600 focus-visible:ring-offset-2 active:scale-[0.99]"
+              className="group flex min-h-[56px] w-full items-center justify-center gap-4 rounded-xl bg-danger p-4 text-danger-foreground shadow-lg shadow-danger/20 transition-all hover:bg-danger/90 focus-visible:outline-hidden focus-visible:ring-2 focus-visible:ring-danger/40 focus-visible:ring-offset-2 active:scale-[0.99]"
             >
               <span className="text-3xl font-black tracking-wider">
                 {EMERGENCY_UNIFIED}
@@ -99,7 +101,7 @@ export function UrgentCareAlert({ onDismiss }: UrgentCareAlertProps) {
                 <span className="block text-sm font-bold leading-tight">
                   Unified Emergency
                 </span>
-                <span className="text-xs font-medium text-red-100">
+                <span className="text-xs font-medium text-danger-foreground">
                   Police · Fire · Ambulance
                 </span>
               </span>
@@ -109,7 +111,7 @@ export function UrgentCareAlert({ onDismiss }: UrgentCareAlertProps) {
             <a
               href={`tel:${EMERGENCY_AMBULANCE}`}
               aria-label={`Call ${EMERGENCY_AMBULANCE} — Ambulance (Medical Emergencies)`}
-              className="flex min-h-[48px] w-full items-center justify-center gap-3 rounded-2xl border border-red-200 bg-red-50/80 p-3.5 text-red-800 transition hover:bg-red-100 focus-visible:outline-hidden focus-visible:ring-2 focus-visible:ring-red-400 focus-visible:ring-offset-2"
+              className="flex min-h-[48px] w-full items-center justify-center gap-3 rounded-xl border border-danger/25 bg-danger/5 p-3.5 text-danger-strong transition hover:bg-danger/15 focus-visible:outline-hidden focus-visible:ring-2 focus-visible:ring-danger/40 focus-visible:ring-offset-2"
             >
               <span className="text-2xl font-extrabold tracking-wide">
                 {EMERGENCY_AMBULANCE}
@@ -118,31 +120,31 @@ export function UrgentCareAlert({ onDismiss }: UrgentCareAlertProps) {
                 <span className="block text-xs font-bold leading-tight">
                   Ambulance
                 </span>
-                <span className="text-[11px] font-semibold text-red-700">
+                <span className="text-[11px] font-semibold text-danger-strong">
                   Medical Emergencies
                 </span>
               </span>
             </a>
           </div>
 
-          <p className="mt-4 text-xs font-medium text-slate-600">
+          <p className="mt-4 text-xs font-medium text-muted-foreground">
             Or go directly to the nearest emergency room.
           </p>
 
           {/* Mandatory disclaimer (AI_RULES.md §2 rule 8) */}
-          <div className="mt-5 rounded-xl border border-slate-200 bg-slate-50 px-4 py-3 text-left">
-            <p className="text-xs leading-relaxed text-slate-600">
+          <div className="mt-5 rounded-xl border border-border bg-muted/60 px-4 py-3 text-left">
+            <p className="text-xs leading-relaxed text-muted-foreground">
               <strong>Medical Disclaimer:</strong> This is not a medical diagnosis. Always consult a qualified healthcare professional.
             </p>
           </div>
         </div>
 
         {/* Dismiss Button */}
-        <div className="border-t border-slate-100 bg-slate-50/60 px-6 py-4 text-center">
+        <div className="border-t border-border bg-muted/60 px-6 py-4 text-center">
           <button
             type="button"
             onClick={onDismiss}
-            className="inline-flex min-h-[44px] w-full items-center justify-center rounded-xl border border-slate-300 bg-white py-2.5 text-xs font-bold text-slate-700 shadow-xs transition hover:bg-slate-50 focus-visible:outline-hidden focus-visible:ring-2 focus-visible:ring-slate-600"
+            className="inline-flex min-h-[44px] w-full items-center justify-center rounded-xl border border-input bg-card py-2.5 text-xs font-bold text-muted-foreground shadow-xs transition hover:bg-muted/60 focus-visible:outline-hidden focus-visible:ring-2 focus-visible:ring-ring"
           >
             Continue to Full Result
           </button>
