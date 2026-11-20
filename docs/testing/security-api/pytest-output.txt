@@ -1,0 +1,57 @@
+﻿============================= test session starts =============================
+platform win32 -- Python 3.14.6, pytest-9.1.1, pluggy-1.6.0 -- C:\Users\Lenovo\AppData\Local\Python\pythoncore-3.14-64\python.exe
+cachedir: .pytest_cache
+rootdir: C:\Users\Lenovo\OneDrive\Pictures\Empty\AI_based_Symptom_Checker\server
+configfile: pyproject.toml
+plugins: anyio-4.14.2, langsmith-0.11.0, asyncio-1.4.0, cov-7.1.0
+asyncio: mode=Mode.AUTO, debug=False, asyncio_default_fixture_loop_scope=None, asyncio_default_test_loop_scope=function
+collecting ... collected 16 items
+
+server\tests\integration\test_security_api.py::test_tc_sec_a_01_cross_user_history_detail_access_denied[asyncio] PASSED [  6%]
+server\tests\integration\test_security_api.py::test_tc_sec_a_02_unauthenticated_request_to_protected_routes_denied[asyncio] PASSED [ 12%]
+server\tests\integration\test_security_api.py::test_tc_sec_a_03_user_history_list_strict_tenant_isolation[asyncio] PASSED [ 18%]
+server\tests\integration\test_security_api.py::test_tc_sec_a_04_cross_user_assessment_claiming_rejected[asyncio] PASSED [ 25%]
+server\tests\integration\test_security_api.py::test_tc_sec_a_05_csrf_valid_double_submit_token_succeeds[asyncio] PASSED [ 31%]
+server\tests\integration\test_security_api.py::test_tc_sec_a_06_csrf_missing_header_rejected_401[asyncio] PASSED [ 37%]
+server\tests\integration\test_security_api.py::test_tc_sec_a_07_csrf_missing_cookie_rejected_401[asyncio] PASSED [ 43%]
+server\tests\integration\test_security_api.py::test_tc_sec_a_08_csrf_token_mismatch_and_empty_token_rejected_401[asyncio] PASSED [ 50%]
+server\tests\integration\test_security_api.py::test_tc_sec_a_09_direct_instruction_override_intercepted[asyncio] PASSED [ 56%]
+server\tests\integration\test_security_api.py::test_tc_sec_a_10_delimiter_and_markup_jailbreak_neutralized[asyncio] PASSED [ 62%]
+server\tests\integration\test_security_api.py::test_tc_sec_a_11_malicious_prescribing_persona_roleplay_refused[asyncio] PASSED [ 68%]
+server\tests\integration\test_security_api.py::test_tc_sec_a_12_sql_and_xss_injection_in_message_stored_as_inert_text[asyncio] PASSED [ 75%]
+server\tests\integration\test_security_api.py::test_tc_sec_a_13_ai_timeout_returns_504_gateway_timeout[asyncio] PASSED [ 81%]
+server\tests\integration\test_security_api.py::test_tc_sec_a_14_ai_upstream_failure_returns_503_service_unavailable[asyncio] PASSED [ 87%]
+server\tests\integration\test_security_api.py::test_tc_sec_a_15_ai_invalid_json_schema_returns_502_bad_gateway[asyncio] PASSED [ 93%]
+server\tests\integration\test_security_api.py::test_tc_sec_a_16_zero_sensitive_data_or_stack_traces_leaked_in_errors[asyncio] PASSED [100%]
+
+============================== warnings summary ===============================
+server\app\api\v1\__init__.py:3
+server\app\api\v1\__init__.py:3
+server\app\api\v1\__init__.py:3
+server\app\api\v1\__init__.py:3
+server\app\api\v1\__init__.py:3
+server\app\api\v1\__init__.py:3
+server\app\api\v1\__init__.py:3
+  C:\Users\Lenovo\OneDrive\Pictures\Empty\AI_based_Symptom_Checker\server\app\api\v1\__init__.py:3: StarletteDeprecationWarning: 'HTTP_422_UNPROCESSABLE_ENTITY' is deprecated. Use 'HTTP_422_UNPROCESSABLE_CONTENT' instead.
+    from app.api.v1 import (
+
+server\app\api\v1\history.py:227
+  C:\Users\Lenovo\OneDrive\Pictures\Empty\AI_based_Symptom_Checker\server\app\api\v1\history.py:227: StarletteDeprecationWarning: 'HTTP_422_UNPROCESSABLE_ENTITY' is deprecated. Use 'HTTP_422_UNPROCESSABLE_CONTENT' instead.
+    router = create_history_router(get_history_user_id, get_history_service)
+
+tests/integration/test_security_api.py::test_tc_sec_a_01_cross_user_history_detail_access_denied[asyncio]
+tests/integration/test_security_api.py::test_tc_sec_a_03_user_history_list_strict_tenant_isolation[asyncio]
+tests/integration/test_security_api.py::test_tc_sec_a_03_user_history_list_strict_tenant_isolation[asyncio]
+  C:\Users\Lenovo\AppData\Local\Python\pythoncore-3.14-64\Lib\site-packages\httpx\_client.py:1768: DeprecationWarning: Setting per-request cookies=<...> is being deprecated, because the expected behaviour on cookie persistence is ambiguous. Set cookies directly on the client instance instead.
+    return await self.request(
+
+tests/integration/test_security_api.py::test_tc_sec_a_05_csrf_valid_double_submit_token_succeeds[asyncio]
+tests/integration/test_security_api.py::test_tc_sec_a_06_csrf_missing_header_rejected_401[asyncio]
+tests/integration/test_security_api.py::test_tc_sec_a_07_csrf_missing_cookie_rejected_401[asyncio]
+tests/integration/test_security_api.py::test_tc_sec_a_08_csrf_token_mismatch_and_empty_token_rejected_401[asyncio]
+tests/integration/test_security_api.py::test_tc_sec_a_08_csrf_token_mismatch_and_empty_token_rejected_401[asyncio]
+  C:\Users\Lenovo\AppData\Local\Python\pythoncore-3.14-64\Lib\site-packages\httpx\_client.py:1859: DeprecationWarning: Setting per-request cookies=<...> is being deprecated, because the expected behaviour on cookie persistence is ambiguous. Set cookies directly on the client instance instead.
+    return await self.request(
+
+-- Docs: https://docs.pytest.org/en/stable/how-to/capture-warnings.html
+======================= 16 passed, 16 warnings in 5.18s =======================
