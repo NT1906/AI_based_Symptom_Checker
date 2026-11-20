@@ -1,6 +1,6 @@
 # Database foundation
 
-Owner: Harsh, Dimple, Kavya, Nishith · Tasks: S0-HAR-1, S1-DIM-4, S1-KAV-4, S1-NIT-4, S2-KAV-3, S2-NIT-3, S2-NIT-4, S2-NIT-6, S2-NIT-7, S2-KAV-6 · Issues: #9, #38, #37, #36, #161, #159, #160, #198, #199, #200 · Requirements: FR-01, FR-02, FR-03, FR-17, FR-18, NFR-01, NFR-05, NFR-08, NFR-10, DR-02, DR-06, idea § 10
+Owner: Harsh, Dimple, Kavya, Nishith · Tasks: S0-HAR-1, S1-DIM-4, S1-KAV-4, S1-NIT-4, S2-KAV-3, S2-NIT-3, S2-NIT-4, S2-NIT-6, S2-NIT-7, S2-KAV-6, S2-KAV-7 · Issues: #9, #38, #37, #36, #161, #159, #160, #198, #199, #200, #201 · Requirements: FR-01, FR-02, FR-03, FR-17, FR-18, NFR-01, NFR-05, NFR-08, NFR-10, DR-02, DR-06, idea § 10
 
 This change supplies PostgreSQL-oriented SQLAlchemy 2 models, session factories,
 Alembic migrations (revisions `0001_database_foundation` through `0009_assessment_result`),
@@ -592,6 +592,27 @@ The test suite validates:
 - **Constraint Boundaries:** Check constraints for emails, password hashes, age bands, biological sex, state names, roles, positions, nonblank strings, and token hash lengths.
 - **Transactional Rollback:** Guarantees that mid-transaction constraint violations leave zero orphan records and preserve ACID atomicity.
 - **Compliance Rules:** Verification of zero binary image storage, SHA-256 token hashing, and DPDP anonymization.
+
+---
+
+## Migration Safety & Zero-Downtime Rollback Protocol (S2-KAV-7, NFR-05)
+
+Owner: Kavya · Task: S2-KAV-7 · Issue: #201 · Requirement: NFR-05
+
+All Alembic revisions (`0001_database_foundation` through `0009_assessment_result`) comply with the zero-downtime rolling deployment and backward-compatibility rules established in [migration-safety-review.md](migration-safety-review.md):
+
+1. **Strictly Linear Revision Chain:** A single, unbranched migration history with one head (`0009_assessment_result`) and one base (`0001_database_foundation`).
+2. **Additive DDL Only:** No migration drops tables or columns during `upgrade()`.
+3. **Safe Column Additions:** All columns added to existing tables are either `nullable=True` (`assessments.guest_session_id`, `assessments.result`) or specify a constant server default (`symptoms.details` with default `'{}'`). In PostgreSQL 11+, these execute via fast catalog metadata updates without table rewrites or table-locking bottlenecks.
+4. **Tested Bidirectional Downgrades:** Every revision defines an explicit, tested `downgrade()` implementation verified step-by-step and with populated clinical data.
+5. **Staging Rollback Drill:** Step-by-step commands to execute single-step or multi-step rollbacks and re-upgrades on staging without data corruption are detailed in [migration-safety-review.md](migration-safety-review.md).
+
+Run the automated migration safety and rollback test suite from `server/`:
+
+```powershell
+python -m pytest tests/unit/db/test_migration_safety.py -v
+```
+
 
 
 

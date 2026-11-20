@@ -1,6 +1,6 @@
 # Repositories
 
-Owner: Harsh, Kavya, Nishith · Tasks: S0-HAR-1, S1-KAV-4, S1-NIT-4, S2-KAV-3, S2-KAV-4, S2-NIT-3, S2-NIT-4, S2-KAV-6 · Issues: #9, #36, #37, #159, #160, #161, #162, #200 · Requirements: FR-01, FR-02, FR-03, FR-17, FR-18, DR-02, NFR-01, NFR-08, NFR-10, idea § 10
+Owner: Harsh, Kavya, Nishith · Tasks: S0-HAR-1, S1-KAV-4, S1-NIT-4, S2-KAV-3, S2-KAV-4, S2-NIT-3, S2-NIT-4, S2-KAV-6, S2-KAV-7 · Issues: #9, #36, #37, #159, #160, #161, #162, #200, #201 · Requirements: FR-01, FR-02, FR-03, FR-17, FR-18, DR-02, NFR-01, NFR-05, NFR-08, NFR-10, idea § 10
 
 Database access layer providing typed CRUD persistence for assessments, dialogue messages, structured symptoms, user profiles, guest sessions, audit logging, and symptom vector embeddings.
 
@@ -76,6 +76,9 @@ python -m pytest tests/unit/db -v
 
 # Run schema data integrity and invariant tests
 python -m pytest tests/unit/db/test_data_integrity.py -v
+
+# Run migration safety and rollback drill tests
+python -m pytest tests/unit/db/test_migration_safety.py -v
 ```
 
-See [database setup and design](../../../docs/database.md) and [data integrity report](../../../docs/data-integrity.md) for full relational specifications and constraint verification.
+See [database setup and design](../../../docs/database.md), [data integrity report](../../../docs/data-integrity.md), and [migration safety review](../../../docs/migration-safety-review.md) for full relational specifications, constraint verification, and rollback procedures.
