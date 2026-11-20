@@ -5,6 +5,7 @@
  * Covers the happy path (chat, confirm, result from the server), the urgent
  * result, and failures: start error, send error with retry, an expired
  * assessment, and the server asking for confirmation (409).
+ * Scroll-to-top on result: Nisarg · S2-NIS-25 (#338)
  */
 
 import { render, screen, waitFor } from "@testing-library/react";
@@ -107,6 +108,35 @@ describe("ChatAssessmentPage", () => {
     expect(screen.getByText("No physical examination was done.")).toBeInTheDocument();
     // Never the result page's built-in sample data.
     expect(screen.queryByText(/Migraine with Photophobia/)).not.toBeInTheDocument();
+  });
+
+  it("opens the result scrolled to the top, not at the chat's scroll position", async () => {
+    vi.mocked(api.sendAssessmentMessage).mockResolvedValue(reply("Please confirm.", "CONFIRMING"));
+    const scrollTo = vi.spyOn(window, "scrollTo");
+    renderPage();
+    await sendMessage("I have a sore throat");
+    await screen.findByText(/1\. Sore throat/);
+    scrollTo.mockClear();
+
+    await userEvent.click(screen.getByRole("button", { name: /Confirm & Analyze Symptoms/i }));
+
+    await screen.findAllByText("Sore throat (pharyngitis)");
+    expect(scrollTo).toHaveBeenCalledWith(0, 0);
+    scrollTo.mockRestore();
+  });
+
+  it("does not jump the page while the user is still chatting", async () => {
+    vi.mocked(api.sendAssessmentMessage).mockResolvedValue(reply("How long?", "CLARIFYING"));
+    renderPage();
+    const input = await screen.findByRole("textbox");
+    await waitFor(() => expect(input).toBeEnabled());
+    const scrollTo = vi.spyOn(window, "scrollTo");
+
+    await sendMessage("sore throat");
+    await screen.findByText("How long?");
+
+    expect(scrollTo).not.toHaveBeenCalled();
+    scrollTo.mockRestore();
   });
 
   it("lets the user review symptoms before the server asks", async () => {
