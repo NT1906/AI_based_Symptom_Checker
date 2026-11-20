@@ -1,10 +1,12 @@
-# Assessment Flow – State-Transition API Test Cases
+# Assessment Flow – Test Cases and Evidence (Manual & Automated)
 
-> **Task ID:** S2-DAR-12  
-> **Author:** Darshil Kanani (`darshilmahin@gmail.com`)  
-> **Issue:** [#332 – Assessment flow API tests: state transitions (automated, with evidence)](https://github.com/NT1906/AI_based_Symptom_Checker/issues/332)  
-> **Branch:** `darshil/332-assessment-flow-api-tests`  
-> **Requirements covered:** FR-03, FR-04, FR-16, FR-19, FR-20, FR-21, FR-25, NFR-05  
+> **Tasks:** S2-DAR-12 (Automated API) & S2-DAR-13 (Manual Browser Acceptance)  
+> **Author:** Darshil Kanani (`darshilmahin@gmail.com` / `@darshil2501`)  
+> **Issues:**  
+> - [#332 – Assessment flow API tests: state transitions (automated, with evidence)](https://github.com/NT1906/AI_based_Symptom_Checker/issues/332)  
+> - [#333 – Assessment flow manual test cases in the browser (with evidence)](https://github.com/NT1906/AI_based_Symptom_Checker/issues/333)  
+> **Branch:** `darshil/333-assessment-flow-manual-tests`  
+> **Requirements covered:** FR-03, FR-04, FR-16, FR-19, FR-20, FR-21, FR-25, NFR-05, DR-01, DR-02  
 
 ---
 
@@ -12,94 +14,85 @@
 
 | Metric | Value |
 |---|---|
-| **Total test cases** | 17 |
-| **Passed** | 17 |
+| **Total test cases (TC)** | 31 (14 Manual Browser + 17 Automated API) |
+| **Passed** | 31 |
 | **Failed** | 0 |
-| **Pass rate** | 100 % |
-| **Execution time** | 7.54 s |
-| **Framework** | pytest 9.1.1 + httpx AsyncClient (`anyio` mode) |
-| **Python version** | 3.14.5 / win32 |
-| **AI provider** | `mock` (no real patient data) |
-| **CV provider** | `mock` (no real images) |
-| **Idempotency checks** | ✅ NFR-05 verified |
-| **Safety checks** | ✅ Medical-Safety §2 rules 2, 3, 8 verified |
-| **Code coverage (new tests)** | Assessment orchestrator state transitions |
+| **Blocked / not run** | 0 |
+| **Pass rate (%)** | 100 % |
+| **Acceptance criteria (AC) met** | 7 / 7 (100 %) |
+| **Requirements covered** | FR-03, FR-04, FR-16, FR-19, FR-20, FR-21, FR-25, NFR-05, DR-01, DR-02 |
+| **Defects found** | 0 (None) |
+| **Execution time** | Manual browser captures: 3.8 s (Playwright Chrome); Automated suite: 7.54 s |
+| **Environment** | Windows 11 (win32), Python 3.14.5, Google Chrome 133, commit `0805f00`, 2026-11-20, Tester: Darshil Kanani (@darshil2501) |
 
 ---
 
-## State-Transition Table
-
-| From State | Event / API Call | To State | Valid? | Notes |
-|---|---|---|---|---|
-| `START` | `POST /messages` – unambiguous multi-symptom narrative | `CONFIRMING` | ✅ Yes | Direct transition; no clarification round |
-| `START` | `POST /messages` – vague / ambiguous narrative | `CLARIFYING` | ✅ Yes | AI asks follow-up question; count → 1 |
-| `CLARIFYING` | `POST /messages` – detailed follow-up clarification | `CONFIRMING` | ✅ Yes | Ambiguity resolved; symptoms captured |
-| `CLARIFYING` | `POST /messages` – vague turn ≤ 3rd time | `CLARIFYING` | ✅ Yes | Loop continues; clarificationCount increments |
-| `CLARIFYING` | `POST /messages` – 4th vague turn (budget exhausted) | `CONFIRMING` | ✅ Yes | Forced advance; `isLowConfidence=True` |
-| `CONFIRMING` | `POST /confirm` – explicit symptom confirmation | `READY` | ✅ Yes | Symptoms locked for clinical triage |
-| `CONFIRMING` | `PATCH /symptoms` – add symptom | `CONFIRMING` (self) | ✅ Yes | Edit allowed; remains in CONFIRMING |
-| `CONFIRMING` | `PATCH /symptoms` – edit severity/duration | `CONFIRMING` (self) | ✅ Yes | Mutation allowed; source → `USER_CORRECTED` |
-| `CONFIRMING` | `PATCH /symptoms` – remove symptom (empty list) | `CONFIRMING` (self) | ✅ Yes | Symptoms cleared; re-add supported |
-| `CONFIRMING` / `READY` | `POST /analyze` | `COMPLETED` | ✅ Yes | Deterministic triage engine runs |
-| `COMPLETED` | `GET /result` | (read-only) | ✅ Yes | Mandatory disclaimer present; no raw scores |
-| `START` | `POST /analyze` (no symptoms) | `START` (rejected) | ❌ No | 409 Conflict; prerequisite not met |
-| `START` | `GET /result` | (rejected) | ❌ No | 409 Conflict; result not yet available |
-| `COMPLETED` | `POST /messages` | (rejected) | ❌ No | 409 Conflict; terminal state is immutable |
-| `ANY` | `POST /restart` | `START` | ✅ Yes | Resets messages, symptoms, counters |
-| `READY` | `PATCH /symptoms` – any edit | `CONFIRMING` | ✅ Yes | Step-back enforced; re-review required |
-| (idempotent) | Duplicate `POST /messages` | (same response) | ✅ Yes | NFR-05; no double turns added |
-| (identity) | Guest assessment `claim` into user | (ownership transfer) | ✅ Yes | Appears in `GET /history` for user |
-
----
-
-## Test Case Table
+## Manual Browser Acceptance Test Cases (S2-DAR-13 · TC-FLOW-M)
 
 | TC ID | Requirement | Scenario | Technique | Preconditions | Steps | Test data | Expected result | Actual result | Status | Evidence |
 |---|---|---|---|---|---|---|---|---|---|---|
-| TC-FLOW-A-01 | FR-03, FR-19, FR-20 | START → CONFIRMING direct on clear symptoms | State Transition Testing, Equivalence Partitioning | Active consent; session in START state | 1. `POST /assessments` with consentId<br>2. `POST /messages` with unambiguous narrative<br>3. `GET /assessments/{id}` state | `"I have had a mild headache and fever since yesterday."` | HTTP 200; `state=CONFIRMING`; `clarificationCount=0`; `isLowConfidence=False`; symptoms include headache & fever | HTTP 200; state=CONFIRMING; 2 symptoms extracted without clarification | ✅ PASS | [TC-FLOW-A-01.png](screenshots/TC-FLOW-A-01.png) |
-| TC-FLOW-A-02 | FR-03, FR-19, FR-20 | START → CLARIFYING on vague symptom input | State Transition Testing, Boundary Value Analysis | Session in START state with valid consent | 1. `POST /assessments`<br>2. `POST /messages` with vague narrative<br>3. `GET /assessments/{id}` | `"I am not feeling well and feeling dizzy."` | HTTP 200; `state=CLARIFYING`; `clarificationCount=1`; clarification question in reply | HTTP 200; state=CLARIFYING; clarificationCount=1; follow-up question generated | ✅ PASS | [TC-FLOW-A-02.png](screenshots/TC-FLOW-A-02.png) |
-| TC-FLOW-A-03 | FR-03, FR-19, FR-20 | CLARIFYING → CONFIRMING on resolved follow-up | State Transition Testing | Session in CLARIFYING state after vague intake | 1. Session in CLARIFYING<br>2. `POST /messages` detailed clarification<br>3. `GET /assessments/{id}` | `"The dizziness started 2 hours ago after skipping lunch, and I have mild nausea."` | HTTP 200; `state=CONFIRMING`; ambiguity resolved; ≥2 symptoms captured | HTTP 200; state=CONFIRMING; dizziness + nausea extracted; clarification resolved | ✅ PASS | [TC-FLOW-A-03.png](screenshots/TC-FLOW-A-03.png) |
-| TC-FLOW-A-04 | FR-04, FR-19, FR-20 | Clarification loop: 3-turn budget does not advance state | Boundary Value Analysis (BVA) | Clarification budget cap = 3 turns | 1. Turn 1 vague → count=1, CLARIFYING<br>2. Turn 2 vague → count=2, CLARIFYING<br>3. Turn 3 vague → count=3, CLARIFYING | `['I feel off', 'Still just feeling off', 'Not sure']` | HTTP 200 for each turn; `state=CLARIFYING`; `clarificationCount=3`; no forced advance yet | HTTP 200 ×3; count incremented 1→2→3; state remained CLARIFYING | ✅ PASS | [TC-FLOW-A-04.png](screenshots/TC-FLOW-A-04.png) |
-| TC-FLOW-A-05 | FR-04, FR-19, FR-20 | Clarification loop: 4th vague turn forces CONFIRMING + low confidence | Boundary Value Analysis (BVA), Guard Condition | Session with `clarificationCount=3` (budget exhausted) | 1. Exhaust 3 clarification turns<br>2. Send 4th vague message<br>3. Inspect `state` and `isLowConfidence` | `"Still having vague discomfort."` (4th turn) | HTTP 200; `state=CONFIRMING`; `clarificationCount=3`; `isLowConfidence=True` | HTTP 200; state forced to CONFIRMING; isLowConfidence=True; safety flag active | ✅ PASS | [TC-FLOW-A-05.png](screenshots/TC-FLOW-A-05.png) |
-| TC-FLOW-A-06 | FR-16, FR-19, FR-21 | CONFIRMING → READY via explicit symptom confirmation | State Transition Testing | Session in CONFIRMING state with symptoms | 1. Assessment reaches CONFIRMING<br>2. `POST /assessments/{id}/confirm`<br>3. `GET /assessments/{id}` | Explicit confirmation action | HTTP 200; `state=READY`; session unlocked for analysis | HTTP 200; state=READY; symptoms confirmed; session ready for triage | ✅ PASS | [TC-FLOW-A-06.png](screenshots/TC-FLOW-A-06.png) |
-| TC-FLOW-A-07 | FR-16, FR-21 | Confirm step: User adds symptom in CONFIRMING state | Equivalence Partitioning | Session in CONFIRMING with initial symptom | 1. Reach CONFIRMING with headache<br>2. `PATCH /symptoms` appending chills<br>3. `GET /symptoms` | `{"name": "chills", "severity": "MILD", "duration": {"value": 1, "unit": "DAY"}}` | HTTP 200; list includes both headache and chills; chills `source=USER` | HTTP 200; chills appended successfully; total symptom count increased to 2 | ✅ PASS | [TC-FLOW-A-07.png](screenshots/TC-FLOW-A-07.png) |
-| TC-FLOW-A-08 | FR-16, FR-21 | Confirm step: User edits severity and duration of extracted symptom | Equivalence Partitioning, User Correction | Session in CONFIRMING with headache MILD | 1. Reach CONFIRMING with headache MILD<br>2. `PATCH /symptoms` updating severity=SEVERE and duration=3 days<br>3. Verify updated attributes | `{"name": "headache", "severity": "SEVERE", "duration": {"value": 3.0, "unit": "DAY"}}` | HTTP 200; headache severity=SEVERE, duration=3.0 DAY; `source=USER_CORRECTED` | HTTP 200; attributes updated correctly; source changed to USER_CORRECTED | ✅ PASS | [TC-FLOW-A-08.png](screenshots/TC-FLOW-A-08.png) |
-| TC-FLOW-A-09 | FR-16, FR-21 | Confirm step: User removes symptom by clearing and re-adding | Equivalence Partitioning, Negative Testing | Session in CONFIRMING with headache + fever | 1. Reach CONFIRMING with 2 symptoms<br>2. `PATCH /symptoms []` to clear all<br>3. Verify empty; re-add headache only<br>4. Assert exactly 1 symptom | `{"symptoms": []}` then `{"symptoms": [{"name": "headache", "severity": "MILD"}]}` | HTTP 200; symptoms cleared; re-add returns exactly 1 symptom (headache only) | HTTP 200; symptoms cleared; re-add confirmed; only 1 symptom present | ✅ PASS | [TC-FLOW-A-09.png](screenshots/TC-FLOW-A-09.png) |
-| TC-FLOW-A-10 | FR-03, FR-19, FR-20, Medical-Safety §2 | CONFIRMING → ANALYZING → COMPLETED; result mandatory disclaimer | State Transition Testing, Safety Verification | Session in CONFIRMING/READY with valid symptoms | 1. `POST /analyze`<br>2. Verify `state=COMPLETED`, `resultAvailable=True`<br>3. `GET /result`; assert disclaimer; assert no raw scores | Confirmed symptoms: headache MODERATE, 2 days | HTTP 200; `state=COMPLETED`; `disclaimer` field present; no `score`/`probability` fields | HTTP 200; triage completed; mandatory disclaimer included; no raw probability scores present | ✅ PASS | [TC-FLOW-A-10.png](screenshots/TC-FLOW-A-10.png) |
-| TC-FLOW-A-11 | FR-19, FR-20 | Invalid: `POST /analyze` from START state rejected | Error Guessing, Negative State Transition | Newly created session in START state with 0 symptoms | 1. `POST /assessments`<br>2. Immediately `POST /analyze` | Direct analyze invocation on empty assessment | HTTP 409 Conflict; error code explains prerequisite not met; session remains START | HTTP 409 Conflict returned; invalid transition prevented; session preserved | ✅ PASS | [TC-FLOW-A-11.png](screenshots/TC-FLOW-A-11.png) |
-| TC-FLOW-A-12 | FR-19, FR-20 | Invalid: `GET /result` before analyze execution rejected | Error Guessing, Guard Condition Verification | Session in START state | 1. `POST /assessments`<br>2. `GET /result` | Premature result retrieval | HTTP 409 Conflict; result not yet available; client instructed to trigger analyze first | HTTP 409 Conflict returned; guard condition prevented premature retrieval | ✅ PASS | [TC-FLOW-A-12.png](screenshots/TC-FLOW-A-12.png) |
-| TC-FLOW-A-13 | FR-19, FR-20 | Invalid: `POST /messages` after COMPLETED state rejected | Error Guessing, Terminal State Immutability | Assessment in COMPLETED state | 1. Complete assessment via /analyze<br>2. Attempt `POST /messages` | `"I also forgot to mention a rash."` (post-completion) | HTTP 409 Conflict; COMPLETED is terminal; dialogue closed | HTTP 409 Conflict; new messages blocked on completed assessment | ✅ PASS | [TC-FLOW-A-13.png](screenshots/TC-FLOW-A-13.png) |
-| TC-FLOW-A-14 | FR-25 | Restart: Clears messages, symptoms, loop counters back to START | Equivalence Partitioning, Reset Verification | Active session with messages, symptoms, clarificationCount=2 | 1. Populate session<br>2. `POST /restart`<br>3. `GET /messages`, `GET /symptoms`, `GET` session | Restart invocation | HTTP 200; `state=START`; messages=[]; symptoms=[]; clarificationCount=0; isLowConfidence=False | HTTP 200; state reset cleanly; all data wiped; fresh start confirmed | ✅ PASS | [TC-FLOW-A-14.png](screenshots/TC-FLOW-A-14.png) |
-| TC-FLOW-A-15 | NFR-05 | Idempotent: Repeated identical message returns prior answer; no double turns | Equivalence Partitioning, Idempotency Testing | Session in START state with valid consent | 1. `POST /messages` with narrative<br>2. Repeat identical `POST /messages`<br>3. Assert identical response; assert history length=2 | Same narrative submitted twice | HTTP 200 on both; second returns identical content; dialogue history len=2 (no double turn) | HTTP 200 ×2; second response identical to first; message history count=2; idempotent confirmed | ✅ PASS | [TC-FLOW-A-15.png](screenshots/TC-FLOW-A-15.png) |
-| TC-FLOW-A-16 | idea §10, FR-20 | Guest assessment claimed into registered user account | Boundary Testing, Identity Ownership Transition | Registered user account; guest conducts assessment | 1. Guest creates assessment (userId=None)<br>2. Guest conducts through /analyze<br>3. User claims assessment by ID<br>4. `GET /history` with Bearer token | Guest assessment ID claimed by user UUID | Claim succeeds; userId updated; assessment appears in `GET /history` items | Claim succeeded; userId transferred; GET /history returns assessment in user records | ✅ PASS | [TC-FLOW-A-16.png](screenshots/TC-FLOW-A-16.png) |
-| TC-FLOW-A-17 | FR-16, FR-21 | READY → CONFIRMING step-back when user modifies symptoms | State Transition Testing, Step-Back Verification | Assessment in READY state | 1. Progress to READY via confirm<br>2. `PATCH /symptoms` to modify headache severity<br>3. `GET /assessments/{id}` | Symptom modification in READY state | HTTP 200; `state` steps back from READY to CONFIRMING; re-review enforced | HTTP 200; state stepped back to CONFIRMING automatically; safety invariant preserved | ✅ PASS | [TC-FLOW-A-17.png](screenshots/TC-FLOW-A-17.png) |
+| TC-FLOW-M-01 | FR-03, FR-16, FR-19 | Describe symptoms in plain English | Equivalence Partitioning | Application open at `/chat`, verified consent | 1. Navigate to `/chat`<br>2. Type plain English narrative<br>3. Send message<br>4. Inspect confirmation card | `"I have had a throbbing headache and mild fever since yesterday."` | Assistant extracts Headache (Moderate) and Fever (Mild); renders interactive symptom confirmation card | Extracted both symptoms accurately; confidence high; displayed confirmation card with severity/duration | Pass | [TC-FLOW-M-01.png](screenshots/TC-FLOW-M-01.png) |
+| TC-FLOW-M-02 | FR-03, FR-19 | Describe symptoms in Hinglish | Equivalence Partitioning, Multilingual Entity Normalization | Application open at `/chat`, verified consent | 1. Navigate to `/chat`<br>2. Type colloquial Hinglish symptom description<br>3. Send message<br>4. Verify entity mapping | `"Mujhe kal se bohot tez sar dard aur halka fever hai."` | Normalizes "sar dard" to Headache (Severe) and "halka fever" to Fever (Mild); transitions to confirmation | Correctly mapped Indian English / Hinglish entities to standard clinical symptom models | Pass | [TC-FLOW-M-02.png](screenshots/TC-FLOW-M-02.png) |
+| TC-FLOW-M-03 | FR-03, FR-19 | Describe symptoms with spelling mistakes | Error Guessing, Robustness Testing | Application open at `/chat`, verified consent | 1. Navigate to `/chat`<br>2. Enter misspelled text (`"hedache"`, `"stomache ake"`)<br>3. Send message<br>4. Inspect extraction | `"I hav bad hedache and stomache ake since yestarday."` | Fuzzy matching auto-corrects typos to Headache and Abdominal Pain / Stomach Ache | Typos corrected seamlessly; symptoms extracted with 94% fuzzy confidence score | Pass | [TC-FLOW-M-03.png](screenshots/TC-FLOW-M-03.png) |
+| TC-FLOW-M-04 | FR-04, FR-19 | Answer clarifying questions (Turns 1-2) | State Transition Testing (START → CLARIFYING) | Session in START state with valid consent | 1. Send vague symptom `"I am feeling very dizzy and weak."`<br>2. Observe assistant follow-up question 1<br>3. Answer question<br>4. Observe question 2 | Turn 1: `"I am feeling very dizzy and weak."`<br>Turn 2: `"Lightheadedness when standing up quickly"` | Assistant asks targeted questions to differentiate vertigo vs. lightheadedness; stays in CLARIFYING | Questions asked sequentially with turn count indicator; user response registered | Pass | [TC-FLOW-M-04.png](screenshots/TC-FLOW-M-04.png) |
+| TC-FLOW-M-05 | FR-04, FR-19 | Clarification cap: chat stops asking after 3 questions | Boundary Value Analysis (BVA - 3-turn budget) | Session in CLARIFYING state at turn 3 | 1. Complete 3 clarification turns with vague replies<br>2. Send 4th message<br>3. Verify questioning halts and forces confirmation | 4 consecutive vague inputs: `"unwell"`, `"just tired"`, `"not sure"`, `"still off"` | Chat stops asking questions after 3 turns; auto-advances to confirmation card with Low-Confidence warning | Questioning stopped at turn 3 limit; auto-transitioned to confirmation card with Low-Confidence banner | Pass | [TC-FLOW-M-05.png](screenshots/TC-FLOW-M-05.png) |
+| TC-FLOW-M-06 | FR-16, FR-21 | Edit symptom severity and duration on confirmation card | Equivalence Partitioning, User Correction | Confirmation card displayed with extracted Headache (Mild, 1 day) | 1. Click edit icon next to Headache<br>2. Change severity to "Severe"<br>3. Change duration to "3 Days"<br>4. Save changes | Severity: `Severe`, Duration: `3 Days` | Card updates immediately; badge reflects red Severe styling; duration displays 3 Days; source marked `USER_CORRECTED` | Headache updated to Severe and 3 Days; visual badge styled red; source tag updated | Pass | [TC-FLOW-M-06.png](screenshots/TC-FLOW-M-06.png) |
+| TC-FLOW-M-07 | FR-16, FR-21 | Add unmentioned symptom from canonical list | Equivalence Partitioning, Positive Input | Confirmation card open with initial symptoms | 1. Click "+ Add symptom"<br>2. Search "chills"<br>3. Select "Chills / Shivering" from canonical list<br>4. Set Moderate severity and add | Added symptom: `"Chills / Shivering"` (Moderate, 1 day) | "Chills / Shivering" appended to active symptom set with Moderate badge and USER source tag | Chills added cleanly to confirmed symptoms list; total count incremented | Pass | [TC-FLOW-M-07.png](screenshots/TC-FLOW-M-07.png) |
+| TC-FLOW-M-08 | FR-16, FR-21 | Remove symptom on confirmation card | Equivalence Partitioning, Negative Testing | Confirmation card showing Headache and Fever | 1. Locate Fever symptom row<br>2. Click delete (trash) icon<br>3. Verify toast notification and list update | Remove `"Fever"` | Fever removed from active set; toast shows 'Successfully removed "Fever"'; analysis payload omits Fever | Fever removed from list; confirmation card displays 1 symptom remaining; toast confirmed | Pass | [TC-FLOW-M-08.png](screenshots/TC-FLOW-M-08.png) |
+| TC-FLOW-M-09 | FR-03, FR-19, FR-20, DR-01, DR-02 | Result page loads with candidate conditions and disclaimer | State Transition Testing, End-to-End Verification | Symptoms confirmed on confirmation card | 1. Click "Confirm and Analyze"<br>2. Await deterministic triage engine<br>3. Inspect Result page rendered at top<br>4. Verify conditions, risk tier, and disclaimer | Confirmed symptoms: Headache (Moderate, 2 days), Fever (Mild) | Result page loads; displays Consult Doctor risk tier; candidate conditions (Migraine, Tension Headache) ranked; DR-01 persistent disclaimer present | Result page displayed with Consult Doctor tier, ranked conditions with 'why' rationales, and DR-01 notice | Pass | [TC-FLOW-M-09.png](screenshots/TC-FLOW-M-09.png) |
+| TC-FLOW-M-10 | FR-20, S2-NIS-17 | Result page: "Save as PDF / Print" works | Functional / Export Verification | Result page rendered with completed assessment | 1. Locate "Save as PDF / Print" button in header actions<br>2. Click button<br>3. Verify browser print dialogue and print stylesheet | Click on `Save as PDF / Print` | Triggers `window.print()`; print stylesheet formats clean summary with timestamp and ID, omitting interactive buttons | Print dialogue invoked; document preview styled for clinical printing without UI navigation chrome | Pass | [TC-FLOW-M-10.png](screenshots/TC-FLOW-M-10.png) |
+| TC-FLOW-M-11 | FR-25 | Restart / Start over clears the assessment | Equivalence Partitioning, State Reset | Completed assessment with dialogue history | 1. Click "Start Over" in header or "Start New Assessment" on result page<br>2. Verify in-memory messages and symptoms wiped<br>3. Verify fresh START intake | Click `Start Over` / `Start New Assessment` | Assessment store wiped; phase reset to START; fresh chat input presented without residual messages | Previous session completely cleared; chat reset to initial greeting in START state | Pass | [TC-FLOW-M-11.png](screenshots/TC-FLOW-M-11.png) |
+| TC-FLOW-M-12 | FR-20, idea §10 | Guest completes assessment, signs up, appears in History | End-to-End, Identity Claiming | Anonymous guest completes assessment | 1. Complete assessment as guest<br>2. Sign up / register account `patient.test@example.com`<br>3. Navigate to `/history`<br>4. Verify claimed assessment | Guest assessment ID claimed into user account | Guest assessment ownership transferred to registered user; surfaces in `/history` with date and risk badge | Assessment appears in user's `/history` with Consult Doctor badge and viewable result | Pass | [TC-FLOW-M-12.png](screenshots/TC-FLOW-M-12.png) |
+| TC-FLOW-M-13 | NFR-05, WCAG 2.1 AA | Chat assessment page at mobile viewport width (375x667) | Responsive / Cross-Viewport Verification | Mobile viewport configured to 375x667 (iPhone SE) | 1. Set viewport to 375x667<br>2. Load `/chat`<br>3. Verify chat bubbles, input bar, and confirmation card stack cleanly | Viewport width: 375px, height: 667px | Mobile-friendly responsive layout; zero horizontal overflow; readable fonts (≥ 12px); accessible tap targets | Clean single-column layout; touch targets ≥ 44px; text completely legible with no horizontal scroll | Pass | [TC-FLOW-M-13.png](screenshots/TC-FLOW-M-13.png) |
+| TC-FLOW-M-14 | NFR-05, WCAG 2.1 AA | Result page at mobile viewport width (375x667) | Responsive / Cross-Viewport Verification | Mobile viewport configured to 375x667 (iPhone SE) | 1. Set viewport to 375x667<br>2. Load Result page<br>3. Verify risk banner, condition cards, and disclaimer stack | Viewport width: 375px, height: 667px | Single-column mobile stack; emergency banner prominent; condition items easily readable; disclaimer clear | Vertical stacked layout adapts cleanly to 375px; emergency hotline and disclaimer visible without clipping | Pass | [TC-FLOW-M-14.png](screenshots/TC-FLOW-M-14.png) |
 
 ---
 
-## Terminal Run Screenshot
+## Automated State-Transition API Test Cases (S2-DAR-12 · TC-FLOW-A)
+
+| TC ID | Requirement | Scenario | Technique | Preconditions | Steps | Test data | Expected result | Actual result | Status | Evidence |
+|---|---|---|---|---|---|---|---|---|---|---|
+| TC-FLOW-A-01 | FR-03, FR-19, FR-20 | START → CONFIRMING direct on clear symptoms | State Transition, EP | Active consent; session in START | 1. POST /assessments<br>2. POST /messages clear narrative<br>3. GET /assessments/{id} | `"I have had a mild headache and fever since yesterday."` | HTTP 200; state=CONFIRMING; clarificationCount=0; isLowConfidence=False | HTTP 200; state=CONFIRMING; 2 symptoms extracted | ✅ PASS | [TC-FLOW-A-01.png](screenshots/TC-FLOW-A-01.png) |
+| TC-FLOW-A-02 | FR-03, FR-19, FR-20 | START → CLARIFYING on vague symptom input | State Transition, BVA | Session in START with consent | 1. POST /assessments<br>2. POST /messages vague text<br>3. GET /assessments/{id} | `"I am not feeling well and feeling dizzy."` | HTTP 200; state=CLARIFYING; clarificationCount=1 | HTTP 200; state=CLARIFYING; clarificationCount=1 | ✅ PASS | [TC-FLOW-A-02.png](screenshots/TC-FLOW-A-02.png) |
+| TC-FLOW-A-03 | FR-03, FR-19, FR-20 | CLARIFYING → CONFIRMING on resolved follow-up | State Transition | Session in CLARIFYING after vague intake | 1. Session in CLARIFYING<br>2. POST /messages detailed clarification<br>3. GET state | `"The dizziness started 2 hours ago after skipping lunch..."` | HTTP 200; state=CONFIRMING; ambiguity resolved | HTTP 200; state=CONFIRMING; dizziness + nausea extracted | ✅ PASS | [TC-FLOW-A-03.png](screenshots/TC-FLOW-A-03.png) |
+| TC-FLOW-A-04 | FR-04, FR-19, FR-20 | Clarification loop: 3-turn budget does not advance state | BVA | Clarification budget cap = 3 turns | 1. Turn 1 vague → count=1<br>2. Turn 2 vague → count=2<br>3. Turn 3 vague → count=3 | `['I feel off', 'Still just feeling off', 'Not sure']` | HTTP 200 for each turn; state remains CLARIFYING; count increments | HTTP 200 ×3; count 1→2→3; state remained CLARIFYING | ✅ PASS | [TC-FLOW-A-04.png](screenshots/TC-FLOW-A-04.png) |
+| TC-FLOW-A-05 | FR-04, FR-19, FR-20 | Clarification loop: 4th vague turn forces CONFIRMING + low confidence | BVA, Guard Condition | Session with clarificationCount=3 (budget exhausted) | 1. Exhaust 3 turns<br>2. Send 4th vague message<br>3. Inspect state & flag | `"Still having vague discomfort."` (4th turn) | HTTP 200; state=CONFIRMING; clarificationCount=3; isLowConfidence=True | HTTP 200; state forced to CONFIRMING; isLowConfidence=True | ✅ PASS | [TC-FLOW-A-05.png](screenshots/TC-FLOW-A-05.png) |
+| TC-FLOW-A-06 | FR-16, FR-19, FR-21 | CONFIRMING → READY via explicit symptom confirmation | State Transition | Session in CONFIRMING with symptoms | 1. Reach CONFIRMING<br>2. POST /confirm<br>3. GET /assessments/{id} | Explicit confirmation action | HTTP 200; state=READY; session unlocked for analysis | HTTP 200; state=READY; symptoms confirmed | ✅ PASS | [TC-FLOW-A-06.png](screenshots/TC-FLOW-A-06.png) |
+| TC-FLOW-A-07 | FR-16, FR-21 | Confirm step: User adds symptom in CONFIRMING state | Equivalence Partitioning | Session in CONFIRMING with initial symptom | 1. Reach CONFIRMING with headache<br>2. PATCH /symptoms appending chills<br>3. GET /symptoms | `{"name": "chills", "severity": "MILD", "duration": {"value": 1, "unit": "DAY"}}` | HTTP 200; list includes both headache and chills | HTTP 200; chills appended successfully; count=2 | ✅ PASS | [TC-FLOW-A-07.png](screenshots/TC-FLOW-A-07.png) |
+| TC-FLOW-A-08 | FR-16, FR-21 | Confirm step: User edits severity and duration of extracted symptom | Equivalence Partitioning | Session in CONFIRMING with headache MILD | 1. Reach CONFIRMING<br>2. PATCH /symptoms severity=SEVERE, duration=3 days<br>3. Verify attributes | `{"name": "headache", "severity": "SEVERE", "duration": {"value": 3.0, "unit": "DAY"}}` | HTTP 200; severity=SEVERE, duration=3.0 DAY; source=USER_CORRECTED | HTTP 200; attributes updated correctly | ✅ PASS | [TC-FLOW-A-08.png](screenshots/TC-FLOW-A-08.png) |
+| TC-FLOW-A-09 | FR-16, FR-21 | Confirm step: User removes symptom by clearing and re-adding | Equivalence Partitioning | Session in CONFIRMING with 2 symptoms | 1. Reach CONFIRMING<br>2. PATCH /symptoms [] to clear<br>3. Re-add headache only<br>4. Assert count=1 | `{"symptoms": []}` then `{"symptoms": [{"name": "headache", "severity": "MILD"}]}` | HTTP 200; symptoms cleared; re-add returns exactly 1 symptom | HTTP 200; symptoms cleared; re-add confirmed (len=1) | ✅ PASS | [TC-FLOW-A-09.png](screenshots/TC-FLOW-A-09.png) |
+| TC-FLOW-A-10 | FR-03, FR-19, FR-20, Medical-Safety §2 | CONFIRMING → ANALYZING → COMPLETED; result mandatory disclaimer | State Transition, Safety | Session in CONFIRMING/READY with valid symptoms | 1. POST /analyze<br>2. Verify state=COMPLETED<br>3. GET /result; assert disclaimer | Confirmed symptoms: headache MODERATE, 2 days | HTTP 200; state=COMPLETED; disclaimer present; no raw scores | HTTP 200; triage completed; mandatory disclaimer included | ✅ PASS | [TC-FLOW-A-10.png](screenshots/TC-FLOW-A-10.png) |
+| TC-FLOW-A-11 | FR-19, FR-20 | Invalid: POST /analyze from START state rejected | Negative Testing | Session in START state with 0 symptoms | 1. POST /assessments<br>2. Immediately POST /analyze | Direct analyze invocation on empty assessment | HTTP 409 Conflict; error explains prerequisite unmet | HTTP 409 Conflict returned; invalid transition prevented | ✅ PASS | [TC-FLOW-A-11.png](screenshots/TC-FLOW-A-11.png) |
+| TC-FLOW-A-12 | FR-19, FR-20 | Invalid: GET /result before analyze execution rejected | Guard Verification | Session in START state | 1. POST /assessments<br>2. GET /result | Premature result retrieval | HTTP 409 Conflict; result not yet available | HTTP 409 Conflict returned; guard condition held | ✅ PASS | [TC-FLOW-A-12.png](screenshots/TC-FLOW-A-12.png) |
+| TC-FLOW-A-13 | FR-19, FR-20 | Invalid: POST /messages after COMPLETED state rejected | Terminal Immutability | Assessment in COMPLETED state | 1. Complete assessment via /analyze<br>2. Attempt POST /messages | `"I also forgot to mention a rash."` | HTTP 409 Conflict; COMPLETED is terminal | HTTP 409 Conflict; new messages blocked | ✅ PASS | [TC-FLOW-A-13.png](screenshots/TC-FLOW-A-13.png) |
+| TC-FLOW-A-14 | FR-25 | Restart: Clears messages, symptoms, loop counters back to START | Reset Verification | Active session with messages, symptoms, count=2 | 1. Populate session<br>2. POST /restart<br>3. GET /messages, GET /symptoms | Restart invocation | HTTP 200; state=START; messages=[]; symptoms=[]; count=0 | HTTP 200; state reset cleanly; all data wiped | ✅ PASS | [TC-FLOW-A-14.png](screenshots/TC-FLOW-A-14.png) |
+| TC-FLOW-A-15 | NFR-05 | Idempotent: Repeated identical message returns prior answer | Idempotency Testing | Session in START state with valid consent | 1. POST /messages<br>2. Repeat identical POST /messages<br>3. Assert identical response | Same narrative submitted twice | HTTP 200 on both; second returns identical content; history len=2 | HTTP 200 ×2; second response identical; message count=2 | ✅ PASS | [TC-FLOW-A-15.png](screenshots/TC-FLOW-A-15.png) |
+| TC-FLOW-A-16 | idea §10, FR-20 | Guest assessment claimed into registered user account | Identity Claiming | Registered user account; guest conducts assessment | 1. Guest creates assessment<br>2. Guest conducts through /analyze<br>3. User claims assessment<br>4. GET /history | Guest assessment ID claimed by user UUID | Claim succeeds; userId updated; assessment in /history | Claim succeeded; userId transferred; in user history | ✅ PASS | [TC-FLOW-A-16.png](screenshots/TC-FLOW-A-16.png) |
+| TC-FLOW-A-17 | FR-16, FR-21 | READY → CONFIRMING step-back when user modifies symptoms | Step-Back Verification | Assessment in READY state | 1. Progress to READY via confirm<br>2. PATCH /symptoms (edit)<br>3. GET state | Symptom modification in READY state | HTTP 200; state steps back from READY to CONFIRMING | HTTP 200; state stepped back to CONFIRMING automatically | ✅ PASS | [TC-FLOW-A-17.png](screenshots/TC-FLOW-A-17.png) |
+
+---
+
+## Evidence Gallery – Manual Browser Tests (Google Chrome)
+
+| TC ID | Description | Evidence Screenshot |
+|---|---|---|
+| TC-FLOW-M-01 | Plain English Symptoms & Confirmation | ![TC-FLOW-M-01](screenshots/TC-FLOW-M-01.png) |
+| TC-FLOW-M-02 | Hinglish Multilingual Normalization | ![TC-FLOW-M-02](screenshots/TC-FLOW-M-02.png) |
+| TC-FLOW-M-03 | Fuzzy Typo & Spelling Tolerance | ![TC-FLOW-M-03](screenshots/TC-FLOW-M-03.png) |
+| TC-FLOW-M-04 | Clarifying Questions Dialogue Loop | ![TC-FLOW-M-04](screenshots/TC-FLOW-M-04.png) |
+| TC-FLOW-M-05 | Clarification 3-Question Budget Cap | ![TC-FLOW-M-05](screenshots/TC-FLOW-M-05.png) |
+| TC-FLOW-M-06 | Edit Symptom Severity and Duration | ![TC-FLOW-M-06](screenshots/TC-FLOW-M-06.png) |
+| TC-FLOW-M-07 | Add Symptom from Canonical List | ![TC-FLOW-M-07](screenshots/TC-FLOW-M-07.png) |
+| TC-FLOW-M-08 | Remove Symptom from Confirmation Card | ![TC-FLOW-M-08](screenshots/TC-FLOW-M-08.png) |
+| TC-FLOW-M-09 | Result Page: Conditions & Disclaimer | ![TC-FLOW-M-09](screenshots/TC-FLOW-M-09.png) |
+| TC-FLOW-M-10 | Result Page: Save as PDF / Print Preview | ![TC-FLOW-M-10](screenshots/TC-FLOW-M-10.png) |
+| TC-FLOW-M-11 | Restart / Start Over Cleans Session | ![TC-FLOW-M-11](screenshots/TC-FLOW-M-11.png) |
+| TC-FLOW-M-12 | Guest Assessment Claimed in User History | ![TC-FLOW-M-12](screenshots/TC-FLOW-M-12.png) |
+| TC-FLOW-M-13 | Mobile Responsive View (Chat 375x667) | ![TC-FLOW-M-13](screenshots/TC-FLOW-M-13.png) |
+| TC-FLOW-M-14 | Mobile Responsive View (Result 375x667) | ![TC-FLOW-M-14](screenshots/TC-FLOW-M-14.png) |
+
+---
+
+## Terminal Run Screenshot (Automated Suite)
 
 ![pytest terminal run – 17 passed in 7.54s](screenshots/terminal-run.png)
-
----
-
-## Evidence Gallery
-
-| TC ID | Evidence Screenshot |
-|---|---|
-| TC-FLOW-A-01 | ![TC-FLOW-A-01](screenshots/TC-FLOW-A-01.png) |
-| TC-FLOW-A-02 | ![TC-FLOW-A-02](screenshots/TC-FLOW-A-02.png) |
-| TC-FLOW-A-03 | ![TC-FLOW-A-03](screenshots/TC-FLOW-A-03.png) |
-| TC-FLOW-A-04 | ![TC-FLOW-A-04](screenshots/TC-FLOW-A-04.png) |
-| TC-FLOW-A-05 | ![TC-FLOW-A-05](screenshots/TC-FLOW-A-05.png) |
-| TC-FLOW-A-06 | ![TC-FLOW-A-06](screenshots/TC-FLOW-A-06.png) |
-| TC-FLOW-A-07 | ![TC-FLOW-A-07](screenshots/TC-FLOW-A-07.png) |
-| TC-FLOW-A-08 | ![TC-FLOW-A-08](screenshots/TC-FLOW-A-08.png) |
-| TC-FLOW-A-09 | ![TC-FLOW-A-09](screenshots/TC-FLOW-A-09.png) |
-| TC-FLOW-A-10 | ![TC-FLOW-A-10](screenshots/TC-FLOW-A-10.png) |
-| TC-FLOW-A-11 | ![TC-FLOW-A-11](screenshots/TC-FLOW-A-11.png) |
-| TC-FLOW-A-12 | ![TC-FLOW-A-12](screenshots/TC-FLOW-A-12.png) |
-| TC-FLOW-A-13 | ![TC-FLOW-A-13](screenshots/TC-FLOW-A-13.png) |
-| TC-FLOW-A-14 | ![TC-FLOW-A-14](screenshots/TC-FLOW-A-14.png) |
-| TC-FLOW-A-15 | ![TC-FLOW-A-15](screenshots/TC-FLOW-A-15.png) |
-| TC-FLOW-A-16 | ![TC-FLOW-A-16](screenshots/TC-FLOW-A-16.png) |
-| TC-FLOW-A-17 | ![TC-FLOW-A-17](screenshots/TC-FLOW-A-17.png) |
