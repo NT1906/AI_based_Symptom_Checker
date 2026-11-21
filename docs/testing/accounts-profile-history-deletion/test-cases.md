@@ -1,31 +1,32 @@
-# Accounts, Profile, History and Deletion API – Test Cases and Evidence (Automated)
+# Accounts, Profile, History and Deletion – Test Cases and Evidence (Automated & Manual)
 
-> **Task:** S2-KAV-8 (Accounts, profile, history and deletion API tests: automated, with evidence)  
+> **Tasks:**  
+> - **S2-KAV-8:** Accounts, profile, history and deletion API tests (automated integration suite) · Issue [#334](https://github.com/NT1906/AI_based_Symptom_Checker/issues/334)  
+> - **S2-KAV-9:** Accounts, profile and history manual test cases (browser acceptance suite with evidence) · Issue [#335](https://github.com/NT1906/AI_based_Symptom_Checker/issues/335)  
 > **Author:** Kavya Nakrani (`202401125@dau.ac.in` / `@KAVY-OP`)  
-> **Issue:** [#334 – Accounts, profile, history and deletion API tests (automated, with evidence)](https://github.com/NT1906/AI_based_Symptom_Checker/issues/334)  
-> **Branch:** `kavya/334-accounts-profile-history-tests`  
-> **Requirements covered:** FR-01, FR-02, NFR-03, NFR-04, DR-02, DR-06, idea § 10  
+> **Branch:** `kavya/335-accounts-profile-manual-tests`  
+> **Requirements covered:** FR-01, FR-02, NFR-03, NFR-04, NFR-06, NFR-07, DR-01, DR-02, DR-06, idea § 10  
 
 ---
 
 ## Metrics Summary
 
-| Metric | Value |
-|---|---|
-| **Total test cases (TC)** | 18 (Automated Integration / API Suite) |
-| **Passed** | 18 |
-| **Failed** | 0 |
-| **Blocked / not run** | 0 |
-| **Pass rate (%)** | 100 % |
-| **Acceptance criteria (AC) met** | 6 / 6 (100 %) |
-| **Requirements covered** | FR-01, FR-02, NFR-03, NFR-04, DR-02, DR-06, idea § 10 |
-| **Defects found** | 0 (None) |
-| **Execution time** | 22.71 s (Pytest integration suite, dual-loop asyncio & trio) |
-| **Environment** | Windows 11 (win32), Python 3.13.15, Pytest 9.1.1, commit `develop` + S2-KAV-8, 2026-11-20, Tester: Kavya Nakrani (@KAVY-OP) |
+| Metric | Automated (S2-KAV-8) | Manual Browser (S2-KAV-9) | Combined Total |
+|---|---|---|---|
+| **Total test cases (TC)** | 18 | 12 | **30** |
+| **Passed** | 18 | 12 | **30** |
+| **Failed** | 0 | 0 | **0** |
+| **Blocked / not run** | 0 | 0 | **0** |
+| **Pass rate (%)** | 100 % | 100 % | **100 %** |
+| **Acceptance criteria (AC) met** | 6 / 6 (100 %) | 6 / 6 (100 %) | **12 / 12 (100 %)** |
+| **Requirements covered** | FR-01, FR-02, NFR-03, NFR-04, DR-02, DR-06, idea § 10 | FR-01, FR-02, NFR-03, NFR-04, NFR-06, NFR-07, DR-01, DR-02, DR-06, idea § 10 | **All 10 Requirement IDs** |
+| **Defects found** | 0 | 0 | **0 (Clean run)** |
+| **Execution evidence** | 18 cards + 1 terminal log | 12 browser execution cards | **31 PNG cards** |
+| **Environment** | Windows 11 (win32), Python 3.13.15, Pytest 9.1.1, PostgreSQL 16 (local) | Chrome 131, Vite 6.x (port 5173), FastAPI (port 8000), Local PostgreSQL | Commits: `develop` + S2-KAV-8 / S2-KAV-9 |
 
 ---
 
-## Automated Test Cases (S2-KAV-8 · TC-ACC-A)
+## Part 1: Automated Test Cases (S2-KAV-8 · TC-ACC-A)
 
 | TC ID | Requirement | Scenario | Technique | Preconditions | Steps | Test data | Expected result | Actual result | Status | Evidence |
 |---|---|---|---|---|---|---|---|---|---|---|
@@ -50,7 +51,28 @@
 
 ---
 
-## Evidence Gallery – Automated Accounts & Deletion Suite
+## Part 2: Manual Browser Test Cases (S2-KAV-9 · TC-ACC-M)
+
+Manual browser acceptance tests executed on the full running stack (Vite client on port 5173, FastAPI server on port 8000, local PostgreSQL 16 database). Every test case validates real user experience, visual layouts, session states, and DPDP Act 2023 data rights.
+
+| TC ID | Requirement | Scenario | Technique | Preconditions | Steps | Test data | Expected result | Actual result | Status | Evidence |
+|---|---|---|---|---|---|---|---|---|---|---|
+| TC-ACC-M-01 | FR-01, idea §10 | Account Registration & Welcome Toast | Use Case / Acceptance | Fresh guest session | 1. Navigate to `/register`<br>2. Enter email and valid password<br>3. Confirm password and submit | Email: `patient.test@example.com`, Password: `SecurePassword123!` | Account created; redirected to application; welcome toast displayed; header updates to show user avatar | HTTP 201; redirect succeeds; welcome notification displayed; user avatar initialized | Pass | [TC-ACC-M-01.png](screenshots/TC-ACC-M-01.png) |
+| TC-ACC-M-02 | FR-01, NFR-03 | Account Login & Authenticated Header State | Authentication Lifecycle | Registered user in database | 1. Navigate to `/login`<br>2. Fill in valid credentials<br>3. Click "Log in" | Email: `patient.test@example.com`, Password: `SecurePassword123!` | HTTP 200 OK; session cookies set; redirected to dashboard; header replaces "Log in/Sign up" with user email and avatar | Credentials verified; HttpOnly cookies set; header displays avatar "P" and `patient.test@example.com` | Pass | [TC-ACC-M-02.png](screenshots/TC-ACC-M-02.png) |
+| TC-ACC-M-03 | FR-01, NFR-03 | Header Account Dropdown Navigation & Session Logout | Session Management & State Reset | Active logged-in session | 1. Click user button in header to open dropdown<br>2. Inspect links ("My history", "My profile", "Privacy & data")<br>3. Click "Log out" | Active user session cookies | Dropdown renders all navigation links; clicking Logout clears session cookies, invalidates cache, and resets header to guest buttons | Dropdown opened cleanly; logout executed; `max_age=0` cookie clearing verified; header returned to guest state | Pass | [TC-ACC-M-03.png](screenshots/TC-ACC-M-03.png) |
+| TC-ACC-M-04 | FR-01, NFR-03 | Authenticated Password Change Lifecycle & Validation | Security State Transition | Logged-in user on `/profile` | 1. Navigate to Account Settings section<br>2. Enter current password and new password (min 8 chars)<br>3. Click "Change password"<br>4. Test re-authentication | Current: `SecurePassword123!`, New: `NewStrongPass2026!` | API responds 204 No Content; green success banner "Your password has been changed." displayed; old password fails; new password succeeds | Password rotated cleanly; success banner displayed; subsequent login with new password verified | Pass | [TC-ACC-M-04.png](screenshots/TC-ACC-M-04.png) |
+| TC-ACC-M-05 | FR-02, idea §10 | Clinical Profile Demographic Context (Age, Sex, Conditions) | Form Interaction & Equivalence Partitioning | Logged-in user on `/profile` | 1. Select Coarse Age Band: `Adult (36–64)`<br>2. Select Biological Sex: `Female`<br>3. Toggle chronic conditions: `Asthma`, `Hypertension`<br>4. Click "Save Profile" | Age: `adult`, Sex: `female`, Conditions: `["Asthma", "Hypertension"]` | Success toast displayed; selected pills turn blue with checkmarks; "Why we ask" transparency microcopy visible | Profile saved; success banner confirmed; pills highlight accurately; no-store verified | Pass | [TC-ACC-M-05.png](screenshots/TC-ACC-M-05.png) |
+| TC-ACC-M-06 | FR-02, idea §10 | Profile Data Persistence Across Reload & Navigation | Data Persistence & Rehydration | Profile previously saved (TC-ACC-M-05) | 1. Navigate to `/history`<br>2. Return to `/profile` (or press browser reload F5)<br>3. Inspect pre-selected values | Saved profile in PostgreSQL | Form fields automatically pre-populate with previously saved values fetched via `GET /api/v1/profile` | `Adult (36–64)`, `Female`, and `[Asthma, Hypertension]` accurately rehydrated from DB; no lost state | Pass | [TC-ACC-M-06.png](screenshots/TC-ACC-M-06.png) |
+| TC-ACC-M-07 | FR-02, DR-06 | Clinical Profile Context Reset & Erasure Confirmation | Privacy Controls & State Invalidation | User has saved profile data | 1. On `/profile`, click "Clear Profile"<br>2. Modal dialog asks for confirmation<br>3. Confirm reset | Active profile record in DB | Confirmation dialog prevents accidental clicks; DELETE `/api/v1/profile` returns 204; fields reset to default empty state | Dialog displayed; deletion confirmed; fields reset to unselected defaults; subsequent assessments run with generic defaults | Pass | [TC-ACC-M-07.png](screenshots/TC-ACC-M-07.png) |
+| TC-ACC-M-08 | FR-02, idea §10 | Assessment History Listing with Date, State, and Risk Badges | Query Listing & UI Presentation | User has 3 past completed assessments | 1. Navigate to `/history`<br>2. Inspect table rows, dates, symptoms, and risk badges<br>3. Verify pagination controls | Past assessments in database | Past assessments listed chronologically; risk badges color-coded (Amber: CONSULT_DOCTOR, Green: SELF_CARE, Red: URGENT); top condition visible | Table rendered cleanly; all 3 assessments present with accurate risk tiers and symptoms; pagination active | Pass | [TC-ACC-M-08.png](screenshots/TC-ACC-M-08.png) |
+| TC-ACC-M-09 | FR-02, DR-01, DR-02 | Assessment History Detail View with Medical Disclaimer | Clinical Safety & Regulatory Audit | Completed assessment in history | 1. Click "View Full Result →" on history row<br>2. Review detailed triage result view (`/history/:id`)<br>3. Verify conditions, guidance, and disclaimer | Assessment `asmt-8f3b2a` (CONSULT_DOCTOR) | Detailed triage view opens; shows risk banner, ranked conditions with qualitative confidence (Likely/Possible), specialist referral, and mandatory medical disclaimer | Complete triage result displayed; conditions ranked with why lines; map referral present; DR-01 disclaimer card verified | Pass | [TC-ACC-M-09.png](screenshots/TC-ACC-M-09.png) |
+| TC-ACC-M-10 | DR-06, NFR-04, DPDP Act 2023 | DPDP Statutory Data Export (Machine-Readable JSON Download) | Data Portability & Statutory Rights | Logged-in user with triage history | 1. Open Privacy & Data panel (`/privacy`)<br>2. Click "Download My Data"<br>3. Inspect downloaded JSON file | User account, profile, assessments, messages | Browser triggers download of `symptom-checker-data-export-YYYY-MM-DD.json`; contains full personal data inventory | Download executed; file contains valid JSON matching `UserDataExport` schema; success notification displayed | Pass | [TC-ACC-M-10.png](screenshots/TC-ACC-M-10.png) |
+| TC-ACC-M-11 | DR-06, NFR-04, DPDP Act 2023 | Permanent Account Erasure & Cascading Deletion Modal | Right to Forget & Relational Integrity | Logged-in user with active account | 1. In Account Settings / Privacy panel, click "Delete Account"<br>2. Modal dialog warns of permanent irreversible erasure<br>3. Tick confirmation checkbox and click "Delete Everything" | User account and all related database records | Modal requires affirmative confirmation; DELETE `/api/v1/privacy/data` cascades through 7 tables; session terminated; redirected to `/`; re-login fails | Irreversible warning modal displayed; cascading hard-deletion confirmed; session terminated; subsequent login rejected (401) | Pass | [TC-ACC-M-11.png](screenshots/TC-ACC-M-11.png) |
+| TC-ACC-M-12 | NFR-06, NFR-07 | Responsive Mobile Layout (375x667) & Dark Theme Compatibility | Responsive Design & WCAG 2.1 AA | Logged-in user on mobile viewport | 1. Switch theme to Dark Mode in header<br>2. Resize viewport to 375 × 667 px (iPhone SE)<br>3. Inspect `/profile` and `/history` pages | Mobile viewport (375 × 667), Dark Theme (`#0f172a`) | Single-column stacked layout; touch targets >= 44px; 0 px horizontal overflow; contrast ratio >= 7.8:1 (exceeds WCAG 2.1 AA 4.5:1) | Responsive stacking verified; zero sideways scroll; dark theme applied seamlessly; touch buttons comfortable | Pass | [TC-ACC-M-12.png](screenshots/TC-ACC-M-12.png) |
+
+---
+
+## Evidence Gallery – Automated Suite (S2-KAV-8)
 
 | TC ID | Description | Evidence Screenshot |
 |---|---|---|
@@ -78,3 +100,22 @@
 ## Terminal Run Screenshot (Automated Suite)
 
 ![pytest terminal run – 18 passed in 22.71s](screenshots/terminal-run.png)
+
+---
+
+## Evidence Gallery – Manual Browser Acceptance Suite (S2-KAV-9)
+
+| TC ID | Description | Evidence Screenshot |
+|---|---|---|
+| TC-ACC-M-01 | Account Registration with Email/Password & Welcome Toast | ![TC-ACC-M-01](screenshots/TC-ACC-M-01.png) |
+| TC-ACC-M-02 | Account Login with Credentials & Authenticated Header Avatar | ![TC-ACC-M-02](screenshots/TC-ACC-M-02.png) |
+| TC-ACC-M-03 | Header Account Dropdown Navigation & Session Logout | ![TC-ACC-M-03](screenshots/TC-ACC-M-03.png) |
+| TC-ACC-M-04 | Authenticated Password Change Lifecycle & Validation | ![TC-ACC-M-04](screenshots/TC-ACC-M-04.png) |
+| TC-ACC-M-05 | Clinical Profile Demographic Context (Age Band, Sex, Conditions) | ![TC-ACC-M-05](screenshots/TC-ACC-M-05.png) |
+| TC-ACC-M-06 | Profile Data Persistence Across Reload & Navigation | ![TC-ACC-M-06](screenshots/TC-ACC-M-06.png) |
+| TC-ACC-M-07 | Clinical Profile Context Reset & Erasure Confirmation | ![TC-ACC-M-07](screenshots/TC-ACC-M-07.png) |
+| TC-ACC-M-08 | Assessment History Listing with Date, State, and Risk Badges | ![TC-ACC-M-08](screenshots/TC-ACC-M-08.png) |
+| TC-ACC-M-09 | Assessment History Detail View with Medical Disclaimer | ![TC-ACC-M-09](screenshots/TC-ACC-M-09.png) |
+| TC-ACC-M-10 | DPDP Statutory Data Export (Machine-Readable JSON Download) | ![TC-ACC-M-10](screenshots/TC-ACC-M-10.png) |
+| TC-ACC-M-11 | Permanent Account Erasure & Cascading Deletion Modal | ![TC-ACC-M-11](screenshots/TC-ACC-M-11.png) |
+| TC-ACC-M-12 | Responsive Mobile Layout (375x667) & Dark Theme Compatibility | ![TC-ACC-M-12](screenshots/TC-ACC-M-12.png) |

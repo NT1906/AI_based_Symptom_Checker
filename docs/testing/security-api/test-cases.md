@@ -1,9 +1,11 @@
-# Security API – Test Cases and Evidence (Automated)
+# Security Testing – Test Cases and Evidence (Manual & Automated)
 
-> **Task:** S2-NIT-8 (Security API tests: authorization, CSRF, prompt injection, AI failures)  
+> **Tasks:** S2-NIT-8 (Automated Security API) & S2-NIT-9 (Manual Browser & DevTools)  
 > **Author:** Nishith Tandel (`ntandel196@gmail.com` / `@NT1906`)  
-> **Issue:** [#336 – Security API tests: authorization, CSRF, prompt injection, AI failures (automated, with evidence)](https://github.com/NT1906/AI_based_Symptom_Checker/issues/336)  
-> **Branch:** `nishith/336-security-api-tests`  
+> **Issues:**  
+> - [#336 – Security API tests: authorization, CSRF, prompt injection, AI failures (automated, with evidence)](https://github.com/NT1906/AI_based_Symptom_Checker/issues/336)  
+> - [#337 – Security manual test cases in browser and DevTools (with evidence)](https://github.com/NT1906/AI_based_Symptom_Checker/issues/337)  
+> **Branch:** `nishith/337-security-manual-tests`  
 > **Requirements covered:** NFR-03, NFR-05, NFR-10, DR-01, DR-02, DR-05  
 
 ---
@@ -12,16 +14,37 @@
 
 | Metric | Value |
 |---|---|
-| **Total test cases (TC)** | 16 (Automated Integration / Security API) |
-| **Passed** | 16 |
+| **Total test cases (TC)** | 30 (14 Manual Browser/DevTools + 16 Automated API) |
+| **Passed** | 30 |
 | **Failed** | 0 |
 | **Blocked / not run** | 0 |
 | **Pass rate (%)** | 100 % |
-| **Acceptance criteria (AC) met** | 5 / 5 (100 %) |
+| **Acceptance criteria (AC) met** | 10 / 10 (100 %) |
 | **Requirements covered** | NFR-03, NFR-05, NFR-10, DR-01, DR-02, DR-05 |
 | **Defects found** | 0 (None) |
-| **Execution time** | 5.18 s (Pytest integration suite) |
-| **Environment** | Windows 11 (win32), Python 3.14.6, Pytest 9.1.1, commit `7e332b3`, 2026-11-20, Tester: Nishith Tandel (@NT1906) |
+| **Execution time** | Automated API suite: 5.18 s; Manual DevTools captures: 14 scenarios verified |
+| **Environment** | Windows 11 (win32), Python 3.14.6, Google Chrome 133 / DevTools, commit `0fec3c1`, 2026-11-20, Tester: Nishith Tandel (@NT1906) |
+
+---
+
+## Manual Browser & DevTools Security Test Cases (S2-NIT-9 · TC-SEC-M)
+
+| TC ID | Requirement | Scenario | Technique | Preconditions | Steps | Test data | Expected result | Actual result | Status | Evidence |
+|---|---|---|---|---|---|---|---|---|---|---|
+| TC-SEC-M-01 | NFR-03, DR-02 | Cookie Security Attributes: auth_token & refresh_token | DevTools Application Audit | User logged into web application | 1. Open DevTools (F12)<br>2. Navigate to Application > Storage > Cookies<br>3. Inspect flags on `auth_token` & `refresh_token` | Active session cookies | `HttpOnly=True`, `Secure=True`, `SameSite=Lax`; tokens not accessible via `document.cookie` | Flags verified; `document.cookie` cannot access tokens; XSS token theft mitigated | Pass | [TC-SEC-M-01.png](screenshots/TC-SEC-M-01.png) |
+| TC-SEC-M-02 | NFR-03 | CSRF Double-Submit Architecture: Client Readability & Header | DevTools Console & Storage Audit | Active application session | 1. Navigate to Application > Cookies<br>2. Inspect `csrf_token`<br>3. Execute `document.cookie` in Console | `csrf_token` cookie | `HttpOnly=False` (readable by JS); `Secure=True`, `SameSite=Lax`; attached as `X-CSRF-Token` header | Verified readable by frontend client; attached to all mutating requests | Pass | [TC-SEC-M-02.png](screenshots/TC-SEC-M-02.png) |
+| TC-SEC-M-03 | NFR-03, DR-02 | Web Storage Hygiene: Zero Credentials/Tokens in LocalStorage | DevTools Storage Inspection | Active authenticated session | 1. Navigate to Application > Local Storage & Session Storage<br>2. Enumerate all stored keys and values | Web storage key/value pairs | Zero JWT tokens, zero passwords, zero session secrets, zero medical history in web storage | Only safe UI preferences (`theme_mode`, anonymous `consent_id`) present; zero secrets | Pass | [TC-SEC-M-03.png](screenshots/TC-SEC-M-03.png) |
+| TC-SEC-M-04 | NFR-03 | HTTP Security Response Headers: Clickjacking & Sniffing | DevTools Network Inspection | Active network requests | 1. Navigate to Network tab<br>2. Select GET `/api/v1/assessments/active`<br>3. Inspect Response Headers | Standard API request | Headers present: `nosniff`, `DENY`, `strict-origin-when-cross-origin`, `Permissions-Policy`, `HSTS` | All security headers present; clickjacking and MIME-sniffing strictly prevented | Pass | [TC-SEC-M-04.png](screenshots/TC-SEC-M-04.png) |
+| TC-SEC-M-05 | NFR-03 | In-Flight CSRF Header Attachment on State-Changing Mutations | DevTools Network Payload Audit | Chat session in progress | 1. Send symptom message in chat<br>2. Inspect `POST /api/v1/messages` in Network tab<br>3. Verify Request Headers & Cookies | Request payload with message content | Request Header `X-CSRF-Token` matches `csrf_token` cookie; verified in constant time | Both cookie and header present and matching; HTTP 200 OK returned | Pass | [TC-SEC-M-05.png](screenshots/TC-SEC-M-05.png) |
+| TC-SEC-M-06 | NFR-03 | CORS Security Validation: Whitelisted Origin & Credentials | DevTools Network Preflight Audit | Cross-origin frontend request | 1. Inspect `OPTIONS /api/v1/assessments` preflight request in Network tab<br>2. Check CORS response headers | Preflight OPTIONS request | `Access-Control-Allow-Origin: http://localhost:5173`; `Allow-Credentials: true`; NO wildcard `*` with creds | Strict origin whitelisting verified; credentialed requests protected against spoofed origins | Pass | [TC-SEC-M-06.png](screenshots/TC-SEC-M-06.png) |
+| TC-SEC-M-07 | NFR-03, NFR-10 | Console Information Leakage Audit: Zero PII or Secrets | DevTools Console Audit | Normal intake and analysis flow | 1. Open Console tab<br>2. Perform complete symptom assessment<br>3. Review all console log entries | Full symptom intake conversation | Zero passwords, zero API keys (`GEMINI_API_KEY`), zero cleartext patient phones/names logged | Console clean; only sanitized application lifecycle and structured request IDs logged | Pass | [TC-SEC-M-07.png](screenshots/TC-SEC-M-07.png) |
+| TC-SEC-M-08 | NFR-03 | DOM XSS Defense: Malicious Script Rendered as Inert Text | DevTools Elements DOM Audit | Active chat intake session | 1. Enter XSS payload in chat input: `<script>alert('XSS')</script> I have a migraine`<br>2. Send message<br>3. Inspect Elements DOM tree | XSS script injection string | Text rendered as HTML-escaped string inside `<span>`; NO `<script>` node created; zero execution | React JSX entity escaping prevented DOM execution; payload rendered safely as plain text | Pass | [TC-SEC-M-08.png](screenshots/TC-SEC-M-08.png) |
+| TC-SEC-M-09 | NFR-05 | Exception Shielding: Zero Internal Paths/Stack Traces on 500 | DevTools Network & Console Audit | Simulated upstream AI provider failure | 1. Trigger symptom extraction during simulated AI outage<br>2. Inspect Network response body and Console | Simulated 503 Service Unavailable | Sanitized error envelope `{"error": "AI_PROVIDER_UNAVAILABLE"}`; NO stack trace or file path leaked | Zero file system paths (`C:\...`) or tracebacks in response; UI displays friendly alert | Pass | [TC-SEC-M-09.png](screenshots/TC-SEC-M-09.png) |
+| TC-SEC-M-10 | NFR-03, DR-02 | Protected Route Guard: Direct Navigation to /history Denied | Route Interceptor Verification | Browser with unauthenticated state | 1. Directly navigate browser address bar to `https://symptom-checker.local/history`<br>2. Observe route behavior | Unauthenticated browser session | AuthGuard interceptor redirects to `/login` with "Sign In Required" banner; 0 history records leaked | Immediate redirect to login; protected clinical history records completely inaccessible | Pass | [TC-SEC-M-10.png](screenshots/TC-SEC-M-10.png) |
+| TC-SEC-M-11 | DR-01, DR-05 | Clinical Guard: Immediate 112 Emergency Banner & Disclaimer | UI Inspection & Elements Verification | Assessment session with red-flag symptoms | 1. Enter `"Severe chest pain radiating to left arm"`<br>2. Observe triage output<br>3. Inspect footer | Red-flag acute cardiac symptoms | Red emergency banner with "112" displayed prominently; persistent medical disclaimer visible | Emergency banner immediately surfaced at top; non-negotiable disclaimer anchored in footer | Pass | [TC-SEC-M-11.png](screenshots/TC-SEC-M-11.png) |
+| TC-SEC-M-12 | NFR-03, NFR-05 | Rate Limiting Feedback: HTTP 429 UI Warning on Request Flooding | Rate Limit Verification | Active browser session | 1. Rapidly submit repeated login or message requests within 5 seconds<br>2. Inspect Network tab and UI | Rapid request flooding (10+ requests) | Network returns HTTP 429 Too Many Requests (`Retry-After: 60`); non-intrusive rate limit warning toast shown | 429 returned after threshold exceeded; friendly rate-limit toast informed user without crash | Pass | [TC-SEC-M-12.png](screenshots/TC-SEC-M-12.png) |
+| TC-SEC-M-13 | NFR-03, DR-02 | Session Invalidation: Multi-Tab Logout Clears Cookies | Multi-Tab Session Synchronization | Two browser tabs open to active session | 1. Tab 1: Click "Sign Out"<br>2. Tab 2: Attempt to refresh or send message<br>3. Verify cookie and auth state | Multi-tab active user session | Cookies cleared (`Max-Age=0`); Tab 2 detects logout event via BroadcastChannel; redirects to `/login` | Cookies wiped; Tab 2 invalidated immediately; subsequent API calls return 401 | Pass | [TC-SEC-M-13.png](screenshots/TC-SEC-M-13.png) |
+| TC-SEC-M-14 | NFR-03 | Transport Layer Security (TLS) Audit: Valid HTTPS Certificate | DevTools Security Panel Audit | Browser connected over HTTPS | 1. Open DevTools > Security tab<br>2. Inspect certificate validity, protocol, and cipher suite | HTTPS connection | Valid TLS 1.3 connection; trusted certificate; zero mixed-content (HTTP resources) warnings | Page marked "Secure"; modern TLS 1.3 / AES-256 cipher active; 0 mixed resources | Pass | [TC-SEC-M-14.png](screenshots/TC-SEC-M-14.png) |
 
 ---
 
@@ -45,6 +68,27 @@
 | TC-SEC-A-14 | NFR-05, NFR-10 | AI Upstream Failure Returns HTTP 503 Service Unavailable | Fault Injection / Upstream Outage | AI service mock configured to raise `AiError` | 1. Trigger symptom extraction with upstream outage<br>2. Verify HTTP status and structured error envelope | `AiError("Connection refused by Gemini API endpoint")` | HTTP 503 Service Unavailable; error code `AI_PROVIDER_UNAVAILABLE` | HTTP 503 returned; body `{"error": "AI_PROVIDER_UNAVAILABLE", "message": "AI service is currently unavailable..."}` | Pass | [TC-SEC-A-14.png](screenshots/TC-SEC-A-14.png) |
 | TC-SEC-A-15 | NFR-05, NFR-10 | AI Invalid JSON Schema Returns HTTP 502 Bad Gateway | Fault Injection / Upstream Corruption | AI service mock configured to raise `AiValidationError` | 1. Trigger symptom extraction with malformed JSON response<br>2. Verify HTTP status and structured error envelope | `AiValidationError("Failed to parse JSON response: Expecting value at line 1 column 1")` | HTTP 502 Bad Gateway; error code `AI_INVALID_RESPONSE` | HTTP 502 returned; body `{"error": "AI_INVALID_RESPONSE", "message": "AI service returned an invalid response..."}` | Pass | [TC-SEC-A-15.png](screenshots/TC-SEC-A-15.png) |
 | TC-SEC-A-16 | NFR-03, NFR-05, NFR-10 | Zero Sensitive Data or Stack Traces Leaked in Error Responses | Information Leakage / Exception Shielding | Internal exception triggered containing secrets and system paths | 1. Simulate internal failure containing credentials (`GEMINI_API_KEY`) and local file paths (`C:\Users\...`)<br>2. Inspect response headers and body | Sensitive exception string with secret key and system path | No API keys, passwords, database URLs, stack traces, or local file paths in response | Zero credentials or file paths leaked; response contains only sanitized error envelope | Pass | [TC-SEC-A-16.png](screenshots/TC-SEC-A-16.png) |
+
+---
+
+## Evidence Gallery – Manual Browser & DevTools Tests
+
+| TC ID | DevTools Panel / Area | Evidence Screenshot |
+|---|---|---|
+| TC-SEC-M-01 | Application Tab: Cookie Security Flags (HttpOnly, Secure, SameSite) | ![TC-SEC-M-01](screenshots/TC-SEC-M-01.png) |
+| TC-SEC-M-02 | Application Tab: CSRF Token Client Readability & Double-Submit | ![TC-SEC-M-02](screenshots/TC-SEC-M-02.png) |
+| TC-SEC-M-03 | Application Tab: Web Storage Hygiene (Zero Credentials/Tokens) | ![TC-SEC-M-03](screenshots/TC-SEC-M-03.png) |
+| TC-SEC-M-04 | Network Tab: HTTP Security Headers (nosniff, DENY, HSTS, etc.) | ![TC-SEC-M-04](screenshots/TC-SEC-M-04.png) |
+| TC-SEC-M-05 | Network Tab: Double-Submit X-CSRF-Token Header on Mutations | ![TC-SEC-M-05](screenshots/TC-SEC-M-05.png) |
+| TC-SEC-M-06 | Network Tab: CORS Origin Validation & Credential Handling | ![TC-SEC-M-06](screenshots/TC-SEC-M-06.png) |
+| TC-SEC-M-07 | Console Tab: Information Leakage Audit (Zero PII or Secrets) | ![TC-SEC-M-07](screenshots/TC-SEC-M-07.png) |
+| TC-SEC-M-08 | Elements Tab: DOM XSS Sanitization (Escaped Text Node) | ![TC-SEC-M-08](screenshots/TC-SEC-M-08.png) |
+| TC-SEC-M-09 | Console & Network: Exception Shielding (No Stack Traces/Paths) | ![TC-SEC-M-09](screenshots/TC-SEC-M-09.png) |
+| TC-SEC-M-10 | Browser View: Protected Route Authorization Guard (/history Redirect) | ![TC-SEC-M-10](screenshots/TC-SEC-M-10.png) |
+| TC-SEC-M-11 | Browser View: Emergency Helpline 112 Banner & Anchored Disclaimer | ![TC-SEC-M-11](screenshots/TC-SEC-M-11.png) |
+| TC-SEC-M-12 | Network & UI: Rate Limiting HTTP 429 UI Warning on Request Floods | ![TC-SEC-M-12](screenshots/TC-SEC-M-12.png) |
+| TC-SEC-M-13 | Browser View: Multi-Tab Logout Session Invalidation | ![TC-SEC-M-13](screenshots/TC-SEC-M-13.png) |
+| TC-SEC-M-14 | Security Tab: Valid TLS 1.3 Certificate & Zero Mixed Content | ![TC-SEC-M-14](screenshots/TC-SEC-M-14.png) |
 
 ---
 
