@@ -9,19 +9,22 @@ Responsibilities:
     - Run "analyze" as confirm-then-result, and keep the finished result so
       ``GET /result`` returns the same answer every time (DR-02).
     - Map "no such assessment" and "wrong state" to 404 and 409.
+    - Treat the confirmed symptom list as the whole list: symptoms the user
+      removed on the confirmation card are dropped, not kept (#351).
     - Start text-only when the configured image analyzer is unavailable (for
       example ``CV_PROVIDER=onnx`` before the CV model exists), so text
       assessments never fail because of the optional photo step (S2-NIS-14).
 
 Owner: Nisarg (integration), Darshil (persistence)
 Task: S2-NIS-13, S2-DAR-11, S2-NIS-16
+Confirmed symptom list replaces the stored one: Nisarg · S2-NIS-29 (#351)
 Requirements: FR-01, FR-02, FR-03, FR-06, FR-20, DR-02
 """
 
 import asyncio
 from collections.abc import Iterator
 from contextlib import contextmanager
-from uuid import UUID
+from uuid import UUID, uuid4
 
 from sqlalchemy import Engine
 from sqlalchemy.orm import Session, sessionmaker
@@ -35,7 +38,7 @@ from app.schemas.assessment import (
     AssessmentRead,
     AssessmentStateResponse,
 )
-from app.schemas.enums import AssessmentState
+from app.schemas.enums import AssessmentState, Severity, SymptomSource
 from app.schemas.message import MessageRead
 from app.models.assessment import Assessment
 from app.schemas.result import AssessmentResult
@@ -188,8 +191,19 @@ class OrchestratorAssessmentService:
     async def update_symptoms(
         self, assessment_id: UUID, symptoms: list[SymptomUpdate]
     ) -> list[SymptomRead]:
-        """Replace the symptom list with the user's edited list."""
-        return await self._orchestrator.update_symptoms(assessment_id, symptoms)
+        """Replace the symptom list with the user's edited list.
+
+        The confirmation card sends every symptom the user kept. Anything not
+        in the request was removed by the user and must not reach the analysis
+        (#351), so the stored list is replaced, not merged.
+
+        Raises:
+            AssessmentServiceError: If the assessment does not exist (404).
+            InvalidStateTransitionError: If symptoms cannot be edited now (409).
+        """
+        current = self._orchestrator.get_symptoms(assessment_id)
+        replacement = _replacement_list(current, symptoms)
+        return await self._orchestrator.update_symptoms(assessment_id, replacement)
 
     async def confirm_symptoms(self, assessment_id: UUID) -> AnalyzeResponse:
         """Confirm the current symptoms; the assessment becomes READY."""
@@ -349,3 +363,49 @@ def build_orchestrator_service(
     )
     logger.info("assessment_service_ready", cv_provider=settings.cv_provider)
     return OrchestratorAssessmentService(orchestrator, session_factory=session_factory)
+
+
+def _replacement_list(
+    current: list[SymptomRead], updates: list[SymptomUpdate]
+) -> list[SymptomRead]:
+    """Build the full confirmed list from the user's edits (#351).
+
+    Each update is matched to a stored symptom by ID, then by name. A match
+    keeps its ID and any field the update leaves out; an update with no match
+    is a new symptom, and is skipped if it has no name. Stored symptoms that
+    no update matches are left out: the user removed them.
+
+    Args:
+        current: The symptoms stored for the assessment.
+        updates: The symptoms the user confirmed, in their order.
+
+    Returns:
+        The complete list to store, in the user's order.
+    """
+    by_id = {s.id: s for s in current}
+    by_name = {s.name.lower(): s for s in current}
+    result: list[SymptomRead] = []
+    for update in updates:
+        match = by_id.get(update.id) if update.id else None
+        if match is None and update.name:
+            match = by_name.get(update.name.lower())
+        if match is not None:
+            changes = {
+                field: getattr(update, field)
+                for field in update.model_fields_set - {"id"}
+                if getattr(update, field) is not None
+            }
+            changes["source"] = update.source or SymptomSource.USER_CORRECTED
+            result.append(match.model_copy(update=changes))
+        elif update.name:
+            result.append(
+                SymptomRead(
+                    id=update.id or uuid4(),
+                    name=update.name,
+                    severity=update.severity or Severity.UNKNOWN,
+                    duration=update.duration,
+                    body_location=update.body_location,
+                    source=update.source or SymptomSource.USER,
+                )
+            )
+    return result

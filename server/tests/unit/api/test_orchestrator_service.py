@@ -10,8 +10,11 @@ Covers:
     - The CV model being unavailable never stops a text assessment (S2-NIS-14).
     - Edge and failure cases: result before analysis (409), repeated analysis,
       a message after confirmation (409, not 500), unknown IDs (404).
+    - The confirmed symptom list replaces the stored one: a symptom the user
+      removed no longer counts, kept ones keep their ID and details (#351).
 
 Owner: Nisarg (integration) · Task: S2-NIS-13 · Requirements: FR-01, FR-06, DR-01, DR-02
+Symptom list replacement: Nisarg · S2-NIS-29 (#351)
 """
 
 from collections.abc import AsyncIterator, Iterator
@@ -23,8 +26,11 @@ import pytest
 from app.api.deps import get_ai_gateway_dep, get_assessment_service, get_session_factory
 from app.api.orchestrator_service import (
     UnavailableImageAnalyzer,
+    _replacement_list,
     build_orchestrator_service,
 )
+from app.schemas.enums import DurationUnit, Severity, SymptomSource
+from app.schemas.symptom import Duration, SymptomRead, SymptomUpdate
 from app.services.image.analyzer import ImageAnalysisError
 from app.services.image.mock_analyzer import MockImageAnalyzer
 from app.core.config import Settings
@@ -246,3 +252,62 @@ def test_unavailable_provider_gets_a_text_only_stand_in(
 async def test_stand_in_never_invents_a_finding() -> None:
     with pytest.raises(ImageAnalysisError):
         await UnavailableImageAnalyzer("onnx").analyze(b"\xff\xd8 fake jpeg")
+
+
+# --- confirmed list replaces the stored one (S2-NIS-29, #351) --------------------
+
+HEADACHE = SymptomRead(
+    name="headache",
+    severity=Severity.MILD,
+    duration=Duration(value=2, unit=DurationUnit.DAY),
+    source=SymptomSource.AI_EXTRACTED,
+)
+CHEST_PAIN = SymptomRead(name="chest_pain", source=SymptomSource.AI_EXTRACTED)
+
+
+def test_symptom_left_out_of_the_update_is_removed() -> None:
+    kept = _replacement_list(
+        [CHEST_PAIN, HEADACHE], [SymptomUpdate(id=HEADACHE.id, name="headache")]
+    )
+
+    assert [s.name for s in kept] == ["headache"]
+
+
+def test_kept_symptom_keeps_its_id_and_unedited_details() -> None:
+    kept = _replacement_list(
+        [HEADACHE], [SymptomUpdate(id=HEADACHE.id, severity=Severity.MODERATE)]
+    )
+
+    assert kept[0].id == HEADACHE.id
+    assert kept[0].name == "headache"
+    assert kept[0].severity is Severity.MODERATE
+    assert kept[0].duration == HEADACHE.duration
+    assert kept[0].source is SymptomSource.USER_CORRECTED
+
+
+def test_update_without_id_matches_by_name() -> None:
+    kept = _replacement_list([HEADACHE], [SymptomUpdate(name="Headache")])
+
+    assert [s.id for s in kept] == [HEADACHE.id]
+
+
+def test_new_symptom_is_added_in_the_users_order() -> None:
+    kept = _replacement_list(
+        [HEADACHE],
+        [
+            SymptomUpdate(name="fever", severity=Severity.MILD),
+            SymptomUpdate(id=HEADACHE.id, name="headache"),
+        ],
+    )
+
+    assert [s.name for s in kept] == ["fever", "headache"]
+    assert kept[0].source is SymptomSource.USER
+    assert kept[0].severity is Severity.MILD
+
+
+def test_new_symptom_without_a_name_is_skipped() -> None:
+    assert _replacement_list([HEADACHE], [SymptomUpdate(id=uuid4())]) == []
+
+
+def test_empty_update_removes_everything() -> None:
+    assert _replacement_list([CHEST_PAIN, HEADACHE], []) == []

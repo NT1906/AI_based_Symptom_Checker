@@ -55,7 +55,7 @@ pytest server/tests/integration/test_accounts_profile_history_deletion_api.py -v
 # From the server/ directory:
 pytest tests/integration/test_safety_api.py tests/integration/test_prediction_result_api.py -v
 ```
-* **Coverage:** 20 automated tests: safety decision table and boundaries (11) and condition prediction / result content (9). All 20 pass. TC-SAF-A-17 found defect [#348](https://github.com/NT1906/AI_based_Symptom_Checker/issues/348) on the first run; it is fixed and the test passes.
+* **Coverage:** 22 automated tests: safety decision table and boundaries (11), condition prediction / result content (9) and confirmation-card edits (2). All 22 pass. TC-SAF-A-17 found defect [#348](https://github.com/NT1906/AI_based_Symptom_Checker/issues/348) on the first run; it is fixed and the test passes. TC-SAF-A-21 and 22 are regression tests for [#351](https://github.com/NT1906/AI_based_Symptom_Checker/issues/351).
 * **Manual (`S2-NIS-24`):** 12 browser test cases on the result page (TC-SAF-M-01 to 12), all passed.
 * **Test Report & Traceability:** [`docs/testing/safety/test-cases.md`](safety/test-cases.md)
 
@@ -73,14 +73,14 @@ Numbers are taken from each area's `test-cases.md` metrics table.
 | Assessment flow | Darshil | 17 | 14 | 31 | 31 | 0 | 100 % | FR-03, FR-04, FR-16, FR-19, FR-20, FR-21, FR-25, NFR-05, DR-01, DR-02 | [assessment-flow/](assessment-flow/test-cases.md) · 32 PNG |
 | Accounts, profile, history & deletion | Kavya | 18 | 12 | 30 | 30 | 0 | 100 % | FR-01, FR-02, NFR-03, NFR-04, NFR-06, NFR-07, DR-01, DR-02, DR-06, idea §10 | [accounts-profile-history-deletion/](accounts-profile-history-deletion/test-cases.md) · 31 PNG |
 | Security | Nishith | 16 | 14 | 30 | 30 | 0 | 100 % | NFR-03, NFR-05, NFR-10, DR-01, DR-02, DR-05 | [security-api/](security-api/test-cases.md) · 31 PNG |
-| Safety & condition-prediction result | Nisarg | 20 | 12 | 32 | 32 | 0 (1 found and fixed: [#348](https://github.com/NT1906/AI_based_Symptom_Checker/issues/348)) | 100 % | DR-01, DR-02, FR-05, FR-06, FR-07, FR-08, FR-22, FR-23, NFR-07 | [safety/](safety/test-cases.md) · 36 PNG |
-| **Total** | 4 testers | **71** | **52** | **123** | **123** | **0** | **100 %** | 24 requirement IDs (see below) | **130 PNG** + 4 pytest logs |
+| Safety & condition-prediction result | Nisarg | 22 | 12 | 34 | 34 | 0 (2 found and fixed: [#348](https://github.com/NT1906/AI_based_Symptom_Checker/issues/348), [#351](https://github.com/NT1906/AI_based_Symptom_Checker/issues/351)) | 100 % | DR-01, DR-02, FR-03, FR-05, FR-06, FR-07, FR-08, FR-16, FR-22, FR-23, NFR-07 | [safety/](safety/test-cases.md) · 41 PNG |
+| **Total** | 4 testers | **73** | **52** | **125** | **125** | **0** | **100 %** | 25 requirement IDs (see below) | **135 PNG** + 4 pytest logs |
 
 All four testing areas across automated API and manual browser / DevTools acceptance suites are complete.
 
-**Requirements covered (all areas):** FR-01, FR-02, FR-03, FR-04, FR-05, FR-06, FR-07, FR-08, FR-16, FR-19, FR-20, FR-21, FR-22, FR-23, FR-25, NFR-03, NFR-04, NFR-05, NFR-07, NFR-10, DR-01, DR-02, DR-05, DR-06 and idea §7 / §9 / §10 rules.
+**Requirements covered (all areas):** FR-01, FR-02, FR-03, FR-04, FR-05, FR-06, FR-07, FR-08, FR-16, FR-19, FR-20, FR-21, FR-22, FR-23, FR-25, NFR-03, NFR-04, NFR-05, NFR-06, NFR-07, NFR-10, DR-01, DR-02, DR-05, DR-06 and idea §7 / §9 / §10 rules.
 
-**Defects found:** 1, [#348](https://github.com/NT1906/AI_based_Symptom_Checker/issues/348): analysis fails (422) and the assessment stays in `ANALYZING` when none of the confirmed symptoms is known to the model (found by TC-SAF-A-17; **fixed** in S2-NIS-28 and re-tested).
+**Defects found:** 2, both fixed and re-tested. [#348](https://github.com/NT1906/AI_based_Symptom_Checker/issues/348): analysis failed (422) and the assessment stayed in `ANALYZING` when none of the confirmed symptoms was known to the model (found by TC-SAF-A-17). [#351](https://github.com/NT1906/AI_based_Symptom_Checker/issues/351): a symptom removed on the confirmation card was still analysed (found while re-testing #348 on the local app; now covered by TC-SAF-A-21 and 22).
 
 ### Testing methods used
 

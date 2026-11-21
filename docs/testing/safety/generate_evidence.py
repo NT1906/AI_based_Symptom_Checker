@@ -14,6 +14,7 @@ Usage (from the repository root, with the server virtualenv):
 
 Owner: Nisarg · Task: S2-NIS-23 · Issue: #330
 TC-SAF-A-17 passes after the #348 fix: Nisarg · S2-NIS-28 (#348)
+Records card edits for TC-SAF-A-21/22: Nisarg · S2-NIS-29 (#351)
 Requirements: DR-01, DR-02, FR-05, FR-06, FR-08, FR-22, FR-23
 """
 
@@ -73,6 +74,27 @@ def pytest_configure(config: Any) -> None:
         return run
 
     safety_support.run_assessment = recording_run
+
+    original_edit = safety_support.run_card_edit
+
+    async def recording_edit(client, message, keep, add=()):  # type: ignore[no-untyped-def]
+        run = await original_edit(client, message, keep, add)
+        _RUNS.setdefault(_CURRENT["tc"], []).append(
+            {
+                "message": message,
+                "extracted": run.extracted,
+                "confirmed": run.confirmed,
+                "symptoms": [list(s) for s in add],
+                "signedIn": False,
+                "analyzeStatus": run.analyze_status,
+                "analyzeBody": run.bodies[-2],
+                "resultStatus": run.result_status,
+                "result": run.result,
+            }
+        )
+        return run
+
+    safety_support.run_card_edit = recording_edit
 
 
 def pytest_runtest_setup(item: Any) -> None:
@@ -180,7 +202,16 @@ def draw_terminal(lines: list[str], name: str, title: str) -> None:
 def _summarise(run: dict[str, Any]) -> list[str]:
     """Plain-text lines describing one captured run."""
     symptoms = ", ".join(f"{n} ({s.lower()})" for n, s in run["symptoms"])
-    lines = [f"Input: {symptoms}" + ("   [signed-in user]" if run["signedIn"] else "")]
+    if "message" in run:
+        lines = [
+            f'Chat: "{run["message"]}"',
+            f"AI extracted: {run['extracted']}",
+            f"Stored after the card's PATCH /symptoms: {run['confirmed']}",
+        ]
+    else:
+        lines = [
+            f"Input: {symptoms}" + ("   [signed-in user]" if run["signedIn"] else "")
+        ]
     result = run["result"]
     if run["resultStatus"] != 200:
         analyze = json.loads(run["analyzeBody"])
@@ -356,6 +387,17 @@ CASES: list[dict[str, Any]] = [
      "req": "FR-06, DR-02", "technique": "EP (one run per tier)",
      "expected": "SELF_CARE: home care steps; CONSULT: 'Book a visit'; "
      "URGENT: 'Call 112 now', no home-care step", "max_runs": 3},
+    {"id": "TC-SAF-A-21", "title": "Removed red flag no longer counts (#351)",
+     "req": "FR-16, DR-02", "technique": "Error guessing / regression",
+     "expected": "card keeps only headache -> stored list = [headache]; result "
+     "not URGENT; no 'chest pain' in any why line",
+     "extra": "Before the #351 fix the stored list stayed [chest_pain, headache] "
+     "and the result was URGENT."},
+    {"id": "TC-SAF-A-22", "title": "Card edit replaces the list (#351)",
+     "req": "FR-03, FR-16", "technique": "State / regression",
+     "expected": "remove headache + add fever -> only fever; empty list -> "
+     "stored [] and analyze refused (400)",
+     "extra": "Before the #351 fix the stored list stayed [headache, fever]."},
 ]
 
 

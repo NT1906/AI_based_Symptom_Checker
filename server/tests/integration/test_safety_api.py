@@ -10,12 +10,15 @@ Responsibilities:
     - Every completed result carries the medical disclaimer (DR-01).
     - No response anywhere in the flow contains a raw percentage or
       probability (AI_RULES.md §2.3, FR-22).
+    - A symptom removed on the confirmation card no longer counts, even a
+      red flag; removing everything is still refused (#351, FR-16).
 
 Each test is one test case (TC-SAF-A-xx) in docs/testing/safety/test-cases.md.
 Only the mock AI provider is used; no real Groq/OpenAI key is ever read.
 
 Owner: Nisarg · Task: S2-NIS-23 · Issue: #330
 Requirements: DR-01, DR-02, FR-05, FR-06, FR-22
+Regression tests TC-SAF-A-21/22 for #351: Nisarg · S2-NIS-29
 """
 
 import json
@@ -27,8 +30,10 @@ from httpx import AsyncClient
 
 from app.schemas.result import DEFAULT_DISCLAIMER
 from tests.integration.safety_support import (
+    BASE_URL,
     completed_result,
     run_assessment,
+    run_card_edit,
 )
 
 URGENT_GUIDANCE = "Call 112 now, or go to the nearest emergency department."
@@ -277,6 +282,66 @@ async def test_tc_saf_a_11_every_result_has_disclaimer_and_no_percentages(
             v for v in _walk_values(json.loads(run.bodies[-1])) if isinstance(v, float)
         ]
         assert floats == [], floats
+
+
+# ===========================================================================
+# Confirmation card edits (regression for #351)
+# ===========================================================================
+
+
+@pytest.mark.anyio
+async def test_tc_saf_a_21_removed_red_flag_no_longer_counts(
+    safety_client: AsyncClient,
+) -> None:
+    """TC-SAF-A-21: chest pain removed on the card does not make the result urgent.
+
+    The AI extracts chest pain and headache; the user removes chest pain and
+    keeps headache. Before #351 the removed chest pain was still analysed and
+    the result was URGENT ("Because you reported chest pain").
+    """
+    run = await run_card_edit(
+        safety_client,
+        "I have chest pain and a mild headache since yesterday",
+        keep=["headache"],
+    )
+    assert "chest_pain" in run.extracted
+    assert run.confirmed == ["headache"]
+    assert run.result_status == 200, run.result
+    assert run.result["riskLevel"] != "URGENT"
+    whys = " ".join(c["why"] for c in run.result["conditions"])
+    assert "chest pain" not in whys
+    assert "headache" in whys
+
+
+@pytest.mark.anyio
+async def test_tc_saf_a_22_card_edit_replaces_the_list(
+    safety_client: AsyncClient,
+) -> None:
+    """TC-SAF-A-22: the edited list replaces the stored one; empty is refused.
+
+    Removing headache and adding fever leaves only fever (stored and in the
+    result). Sending an empty list clears it, and analysis then refuses to
+    run on nothing (400), as before.
+    """
+    run = await run_card_edit(
+        safety_client,
+        "I have a mild headache since yesterday",
+        keep=[],
+        add=[("fever", "MILD")],
+    )
+    assert run.extracted == ["headache"]
+    assert run.confirmed == ["fever"]
+    whys = " ".join(c["why"] for c in run.result["conditions"])
+    assert "fever" in whys and "headache" not in whys
+
+    run = await run_card_edit(
+        safety_client, "I have a mild headache since yesterday", keep=[]
+    )
+    assert run.confirmed == []
+    assert run.analyze_status == 400
+    assert run.result_status == 409
+    stored = await safety_client.get(f"{BASE_URL}/{run.assessment_id}/symptoms")
+    assert stored.json() == []
 
 
 def _walk_values(node: Any) -> list[Any]:
