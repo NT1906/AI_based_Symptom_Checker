@@ -5,25 +5,27 @@ rootdir: server
 configfile: pyproject.toml
 plugins: cov-7.1.0, asyncio-1.4.0, anyio-4.15.1
 asyncio: mode=Mode.AUTO, debug=False, asyncio_default_fixture_loop_scope=None, asyncio_default_test_loop_scope=function
-collecting ... collected 20 items
+collecting ... collected 22 items
 
-tests/integration/test_safety_api.py::test_tc_saf_a_01_chest_pain_with_breathlessness_is_urgent[asyncio] PASSED [  5%]
-tests/integration/test_safety_api.py::test_tc_saf_a_02_stroke_sign_is_urgent[asyncio] PASSED [ 10%]
-tests/integration/test_safety_api.py::test_tc_saf_a_03_serious_bleeding_is_urgent_without_condition[asyncio] PASSED [ 15%]
-tests/integration/test_safety_api.py::test_tc_saf_a_04_meningitis_signs_are_urgent[asyncio] PASSED [ 20%]
-tests/integration/test_safety_api.py::test_tc_saf_a_05_self_harm_is_urgent_with_helpline[asyncio] PASSED [ 25%]
-tests/integration/test_safety_api.py::test_tc_saf_a_06_chest_pain_severity_boundary[asyncio] PASSED [ 30%]
-tests/integration/test_safety_api.py::test_tc_saf_a_07_unknown_severity_never_lowers_risk[asyncio] PASSED [ 35%]
-tests/integration/test_safety_api.py::test_tc_saf_a_08_mild_symptoms_are_not_urgent[asyncio] PASSED [ 40%]
-tests/integration/test_safety_api.py::test_tc_saf_a_09_low_confidence_raises_self_care[asyncio] PASSED [ 45%]
-tests/integration/test_safety_api.py::test_tc_saf_a_10_low_confidence_never_lowers_a_tier[asyncio] PASSED [ 50%]
-tests/integration/test_safety_api.py::test_tc_saf_a_11_every_result_has_disclaimer_and_no_percentages[asyncio] PASSED [ 55%]
-tests/integration/test_prediction_result_api.py::test_tc_saf_a_12_confidence_labels_are_only_three_partitions[asyncio] PASSED [ 60%]
-tests/integration/test_prediction_result_api.py::test_tc_saf_a_13_conditions_are_ranked_with_why_and_specialty[asyncio] PASSED [ 65%]
-tests/integration/test_prediction_result_api.py::test_tc_saf_a_14_single_symptom_lower_boundary[asyncio] PASSED [ 70%]
-tests/integration/test_prediction_result_api.py::test_tc_saf_a_15_many_symptoms_upper_boundary[asyncio] PASSED [ 75%]
-tests/integration/test_prediction_result_api.py::test_tc_saf_a_16_unknown_symptoms_mixed_with_known_fall_back_safely[asyncio] PASSED [ 80%]
-tests/integration/test_prediction_result_api.py::test_tc_saf_a_17_only_unknown_symptoms_fall_back_to_general_physician[asyncio] PASSED [ 85%]
+tests/integration/test_safety_api.py::test_tc_saf_a_01_chest_pain_with_breathlessness_is_urgent[asyncio] PASSED [  4%]
+tests/integration/test_safety_api.py::test_tc_saf_a_02_stroke_sign_is_urgent[asyncio] PASSED [  9%]
+tests/integration/test_safety_api.py::test_tc_saf_a_03_serious_bleeding_is_urgent_without_condition[asyncio] PASSED [ 13%]
+tests/integration/test_safety_api.py::test_tc_saf_a_04_meningitis_signs_are_urgent[asyncio] PASSED [ 18%]
+tests/integration/test_safety_api.py::test_tc_saf_a_05_self_harm_is_urgent_with_helpline[asyncio] PASSED [ 22%]
+tests/integration/test_safety_api.py::test_tc_saf_a_06_chest_pain_severity_boundary[asyncio] PASSED [ 27%]
+tests/integration/test_safety_api.py::test_tc_saf_a_07_unknown_severity_never_lowers_risk[asyncio] PASSED [ 31%]
+tests/integration/test_safety_api.py::test_tc_saf_a_08_mild_symptoms_are_not_urgent[asyncio] PASSED [ 36%]
+tests/integration/test_safety_api.py::test_tc_saf_a_09_low_confidence_raises_self_care[asyncio] PASSED [ 40%]
+tests/integration/test_safety_api.py::test_tc_saf_a_10_low_confidence_never_lowers_a_tier[asyncio] PASSED [ 45%]
+tests/integration/test_safety_api.py::test_tc_saf_a_11_every_result_has_disclaimer_and_no_percentages[asyncio] PASSED [ 50%]
+tests/integration/test_safety_api.py::test_tc_saf_a_21_removed_red_flag_no_longer_counts[asyncio] PASSED [ 54%]
+tests/integration/test_safety_api.py::test_tc_saf_a_22_card_edit_replaces_the_list[asyncio] PASSED [ 59%]
+tests/integration/test_prediction_result_api.py::test_tc_saf_a_12_confidence_labels_are_only_three_partitions[asyncio] PASSED [ 63%]
+tests/integration/test_prediction_result_api.py::test_tc_saf_a_13_conditions_are_ranked_with_why_and_specialty[asyncio] PASSED [ 68%]
+tests/integration/test_prediction_result_api.py::test_tc_saf_a_14_single_symptom_lower_boundary[asyncio] PASSED [ 72%]
+tests/integration/test_prediction_result_api.py::test_tc_saf_a_15_many_symptoms_upper_boundary[asyncio] PASSED [ 77%]
+tests/integration/test_prediction_result_api.py::test_tc_saf_a_16_unknown_symptoms_mixed_with_known_fall_back_safely[asyncio] PASSED [ 81%]
+tests/integration/test_prediction_result_api.py::test_tc_saf_a_17_only_unknown_symptoms_fall_back_to_general_physician[asyncio] PASSED [ 86%]
 tests/integration/test_prediction_result_api.py::test_tc_saf_a_18_same_symptoms_give_the_same_result[asyncio] PASSED [ 90%]
 tests/integration/test_prediction_result_api.py::test_tc_saf_a_19_referral_has_specialty_and_no_personal_data[asyncio] PASSED [ 95%]
 tests/integration/test_prediction_result_api.py::test_tc_saf_a_20_guidance_matches_the_risk_tier[asyncio] PASSED [100%]
@@ -44,4 +46,4 @@ app/api/v1/history.py:227
     router = create_history_router(get_history_user_id, get_history_service)
 
 -- Docs: https://docs.pytest.org/en/stable/how-to/capture-warnings.html
-======================== 20 passed, 8 warnings in 3.91s ========================
+======================== 22 passed, 8 warnings in 4.76s ========================
